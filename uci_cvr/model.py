@@ -4,19 +4,22 @@ import tensorflow as tf
 
 KIND_DEFAULT = 'default'
 KIND_NORMALIZATION = 'normalization'
-KIND_CONCATENATION = 'concatenation'
+KIND_CONCAT_POS = 'concat-pos'
+KIND_CONCAT_NEG = 'concat-neg'
 KIND_AUGMENT_NORMAL = 'augment-normal'  # normal value로 augment하는 기법.
-KIND = KIND_AUGMENT_NORMAL
+KIND = KIND_CONCAT_POS
 
-if KIND == KIND_CONCATENATION:
+if KIND == KIND_CONCAT_POS or KIND == KIND_CONCAT_NEG:
     n_units = [16 * 2, 32, 32, 2]
 else:
     n_units = [16, 32, 32, 2]
 
 
 def _forward(x, m, weights, biases, activation_fn=tf.nn.relu):
-    if KIND == KIND_CONCATENATION:
+    if KIND == KIND_CONCAT_NEG:
         layer = tf.concat([x, 1 - m], 1)
+    elif KIND == KIND_CONCAT_POS:
+        layer = tf.concat([x, m], 1)
     elif KIND == KIND_AUGMENT_NORMAL:
         layer = x + 0.5 * (1 - m)
     else:
@@ -65,7 +68,7 @@ def init_models():
 
     y_hat = _forward(x, m, weights, biases)
 
-    costs = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_hat)
+    costs = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=y_hat)
     loss = tf.reduce_sum(costs)
     accuracy = _get_accuracy(y, y_hat)
     optimizer = tf.train.AdamOptimizer(1e-3)

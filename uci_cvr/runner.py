@@ -3,11 +3,11 @@ import random
 import tensorflow as tf
 import numpy as np
 
-from model import init_models
+from .model import init_models
 
 
 def _prepare_x_y_m():
-    f = open('data.csv', 'r')
+    f = open('uci_cvr/data.csv', 'r')
     x = []
     m = []
     y = []
