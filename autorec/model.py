@@ -11,7 +11,7 @@ ACTIVATION_FUNCTION = tf.nn.sigmoid
 def _init_weights(n_col, args):
     weights, biases = [], []
 
-    n_units = [n_col, args.n_hidden_unit, n_col]
+    n_units = [n_col] + [args.n_hidden_unit] * args.n_hidden_layer + [n_col]
 
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
         # if i == 1 and hidden_unit_numbers[0] == column_number:
@@ -30,24 +30,29 @@ def _init_weights(n_col, args):
     return weights, biases
 
 
-def _forward(train_x, weights, biases):
+def _forward(train_x, weights, biases, training, args):
     assert len(weights) == len(biases)
 
     layer = train_x
+    m = _get_mask(train_x)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
 
-        if i == 0:
+        if i == 0 and args.normalize_first_layer:
+            d = m
+            # d = train_X
             layer /= tf.matmul(
-                tf.maximum(tf.reduce_sum(train_x, axis=1, keepdims=True), 1),
+                tf.maximum(tf.reduce_sum(d, axis=1, keepdims=True), 1),
                 tf.ones([1, layer.shape[1]]))
 
         layer = layer + bias
 
         if i < len(biases) - 1:
             layer = tf.nn.sigmoid(layer)
-            # layer = tf.layers.dropout(
-            #     layer, rate=dropout_rate, training=training)
+            # layer = tf.nn.tanh(layer)
+
+            # layer = tf.nn.relu(layer)
+            # layer = tf.layers.dropout(layer, rate=0.5, training=training)
 
     return layer
 
@@ -61,9 +66,16 @@ def _get_mask(y):
 
 def _get_loss(y, y_hat, weights, args):
     m = _get_mask(y)
-    rec_loss = tf.reduce_sum(tf.square(m * (y - y_hat)))
-    return rec_loss + 0.5 * args.lambda_wd * tf.reduce_sum(
-        [tf.reduce_sum(tf.square(w)) for w in weights])
+    m_user = _get_mask(tf.reduce_sum(m, axis=1))
+    error = tf.square(m * (y - y_hat))
+    user_error = tf.reduce_sum(error, axis=1)
+    rec_loss = tf.reduce_sum(user_error * m_user)
+
+    if args.normalize_first_layer:
+        weights = weights[1:]
+    reg_loss = tf.reduce_sum([tf.reduce_sum(tf.square(w)) for w in weights])
+
+    return rec_loss + 0.5 * args.lambda_wd * reg_loss
 
 
 def _get_rmse(y, y_hat, epsilon=0):
@@ -76,10 +88,11 @@ def _get_rmse(y, y_hat, epsilon=0):
 def init_models(n_col, args):
     train_x = tf.placeholder(tf.float32, [None, n_col], name="train_x")
     test_y = tf.placeholder(tf.float32, [None, n_col], name="test_y")
+    training = tf.placeholder(tf.bool, name="training")
 
     # init weights
     weights, biases = _init_weights(n_col, args)
-    y_hat = _forward(train_x, weights, biases)
+    y_hat = _forward(train_x, weights, biases, training, args)
     loss = _get_loss(train_x, y_hat, weights, args)
     train_rmse = _get_rmse(train_x, y_hat)
     test_rmse = _get_rmse(test_y, y_hat)
@@ -88,6 +101,7 @@ def init_models(n_col, args):
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
+        'training': training,
         'train_op': train_op,
         'train_x': train_x,
         'train_rmse': train_rmse,
