@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 
-from dataset import Dataset
+from movielens.dataset import Dataset
 from .batch import BatchManager
 from .configs import *
 from .model import init_models
@@ -94,7 +94,7 @@ def _train(args):
 
     batch_manager = BatchManager(train_x)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.245)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, dataset.n_class, args)
@@ -206,7 +206,7 @@ def main():
     parser.add_argument(
         '--normalize_1st_layer',
         type=bool,
-        default=False,
+        default=True,
         help='normalize 1st layer')
     parser.add_argument(
         '--learning_rate',
@@ -224,13 +224,10 @@ def main():
         default=False,
         help='Whether use ordinal cost')
 
-    # l = 0.02
-    # l = 1.0
-    l = 50.0
     parser.add_argument(
-        '--lambda_1', type=float, default=l, help='lambda for weight decay.')
+        '--lambda_1', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
-        '--lambda_2', type=float, default=l, help='lambda for weight decay.')
+        '--lambda_2', type=float, default=10.0, help='lambda for weight decay.')
     parser.add_argument(
         '--dropout_rate', type=float, default=0., help='dropout_rate')
     parser.add_argument(

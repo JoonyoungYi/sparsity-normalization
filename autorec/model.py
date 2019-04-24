@@ -4,6 +4,7 @@ import math
 import tensorflow as tf
 
 from .configs import *
+from .rprop import RPropOptimizer
 
 ACTIVATION_FUNCTION = tf.nn.sigmoid
 
@@ -97,7 +98,13 @@ def init_models(n_col, args):
     train_rmse = _get_rmse(train_x, y_hat)
     test_rmse = _get_rmse(test_y, y_hat)
 
-    optimizer = tf.train.AdamOptimizer(args.learning_rate)
+    if args.optimizer == 'adam':
+        optimizer = tf.train.AdamOptimizer(args.learning_rate)
+    elif args.optimizer == 'rprop':
+        optimizer = RPropOptimizer()
+    else:
+        raise NotImplementedError()
+
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {

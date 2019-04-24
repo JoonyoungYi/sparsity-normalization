@@ -162,12 +162,12 @@ def main():
     parser.add_argument(
         '--normalize_first_layer',
         type=bool,
-        default=False,
+        default=True,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
         type=bool,
-        default=False,
+        default=True,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -177,13 +177,19 @@ def main():
     parser.add_argument(
         '--lambda_wd',
         type=float,
-        default=500,
+        default=1000,
         help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
         default=10000,
         help='the number of iteration for early stop.')
+    parser.add_argument(
+        '--optimizer',
+        type=str,
+        choices=['rprop', 'adam'],
+        default='rprop',
+        help='Optimizer')
     parser.add_argument(
         '--data_seed', type=int, default=1, help='the seed for dataset')
 
