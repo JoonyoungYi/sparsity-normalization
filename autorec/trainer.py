@@ -117,12 +117,23 @@ def _train(args):
             batch_x = train_x[np.random.randint(
                 0, high=n_row - 1, size=args.n_batch)]
 
+        # results = session.run(
+        #     [models['train_op']],
+        #     feed_dict={
+        #         models['train_x']: batch_x,
+        #         models['training']: False,
+        #     }, )
+        # print(results)
+        # input('')
+
         session.run(
             (models['train_op']),
             feed_dict={
                 models['train_x']: batch_x,
                 models['training']: True,
             }, )
+
+        continue
 
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(

@@ -42,7 +42,7 @@ def _forward(train_x, weights, biases, training, args):
 
         if i == 0 and args.normalize_first_layer:
             d = m
-            # d = train_X
+            # d = train_x
             layer /= tf.matmul(
                 tf.maximum(tf.reduce_sum(d, axis=1, keepdims=True), 1),
                 tf.ones([1, layer.shape[1]]))
@@ -77,11 +77,11 @@ def _get_loss(y, y_hat, weights, args):
         tf.reduce_sum(tf.square(w)) * l
         for l, w in zip([args.lambda_w1, args.lambda_w2], weights)
     ])
-
     return rec_loss + 0.5 * reg_loss
 
 
-def _get_rmse(y, y_hat, epsilon=0):
+def _get_rmse(y, y_hat, epsilon=0.0):
+    # y_hat = tf.clip_by_value(y_hat, 1, 5)
     m = _get_mask(y)
     return tf.sqrt(
         (tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m)) + epsilon) /
@@ -89,9 +89,7 @@ def _get_rmse(y, y_hat, epsilon=0):
 
 
 def init_models(n_col, args):
-    # train_x = tf.sparse.placeholder(tf.float32, name="train_x")
     train_x = tf.placeholder(tf.float32, [None, n_col], name="train_x")
-    # train_y = tf.sparse.placeholder(tf.float32, name="train_y")
     test_y = tf.placeholder(tf.float32, [None, n_col], name="test_y")
     training = tf.placeholder(tf.bool, name="training")
 
