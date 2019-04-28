@@ -87,8 +87,8 @@ def _train(args):
     }
 
     if args.dataset == Dataset.KIND_MOVIELENS_100k:
-        gpu_memory_fraction = 0.1
-        input('should reduce gpu_memory_fraction...')
+        gpu_memory_fraction = 0.05
+        # input('should reduce gpu_memory_fraction...')
     elif args.dataset == Dataset.KIND_MOVIELENS_1M:
         gpu_memory_fraction = 0.1
     elif args.dataset == Dataset.KIND_MOVIELENS_10M:
@@ -182,8 +182,8 @@ def main():
     parser.add_argument(
         '--normalize_first_layer',
         type=bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
@@ -204,12 +204,12 @@ def main():
         default=1000,
         help='the number of iteration for early stop.')
 
-    l = 0.0
+    l = 300.0
     parser.add_argument(
         '--lambda_w1',
         type=float,
-        # default=0.0,
-        default=l,
+        default=0.0,
+        # default=l,
         help='lambda for weight decay.')
     parser.add_argument(
         '--lambda_w2', type=float, default=l, help='lambda for weight decay.')
@@ -228,12 +228,12 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_10M,
+        default=Dataset.KIND_MOVIELENS_100k,
         help='Optimizer')
     parser.add_argument(
         '--n_batch',
         type=int,
-        default=200,
+        default=None,
         help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()

@@ -38,10 +38,7 @@ def _forward(train_x, weights, biases, training, args):
     layer = train_x
     m = _get_mask(train_x)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        if i == 0:
-            layer = tf.sparse.matmul(layer, weight)
-        else:
-            layer = tf.matmul(layer, weight)
+        layer = tf.matmul(layer, weight)
 
         if i == 0 and args.normalize_first_layer:
             d = m
