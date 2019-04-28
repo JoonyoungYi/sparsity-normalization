@@ -52,10 +52,11 @@ def _validate(
 
 
 def _train(args):
+    # if args.normalize_first_layer:
+    #     assert args.lambda_w1 <= 1e-8
+
     dataset = Dataset(
-        Dataset.KIND_MOVIELENS_100k,
-        Dataset.SPLIT_DEFAULT_10_PERCENT,
-        seed=args.data_seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.data_seed)
 
     n_user, n_item = dataset.get_n_user_and_n_item()
 
@@ -66,8 +67,10 @@ def _train(args):
     test_y = dataset.test_matrix
 
     if args.use_user_vector:
+        n_row = n_user
         n_col = n_item
     else:
+        n_row = n_item
         n_col = n_user
         train_x = train_x.T
         valid_x = valid_x.T
@@ -83,7 +86,17 @@ def _train(args):
         'test_y': test_y,
     }
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
+    if args.dataset == Dataset.KIND_MOVIELENS_100k:
+        gpu_memory_fraction = 0.1
+        input('should reduce gpu_memory_fraction...')
+    elif args.dataset == Dataset.KIND_MOVIELENS_1M:
+        gpu_memory_fraction = 0.1
+    elif args.dataset == Dataset.KIND_MOVIELENS_10M:
+        gpu_memory_fraction = 1.0
+    else:
+        gpu_memory_fraction = 1.0
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, args)
@@ -97,10 +110,17 @@ def _train(args):
     final_train_rmse = float('inf')
 
     for iter_idx in range(1, args.max_iter):
+        if args.n_batch is None:
+            batch_x = train_x
+        else:
+            assert type(args.n_batch) == int
+            batch_x = train_x[np.random.randint(
+                0, high=n_row - 1, size=args.n_batch)]
+
         session.run(
             (models['train_op']),
             feed_dict={
-                models['train_x']: train_x,
+                models['train_x']: batch_x,
                 models['training']: True,
             }, )
 
@@ -108,13 +128,13 @@ def _train(args):
             train_rmse, valid_rmse, test_rmse = _validate(
                 session, models, **data_for_validation)
 
-            if min_valid_rmse > valid_rmse:
+            if min_valid_rmse - 1e-5 > valid_rmse:
                 min_valid_rmse = valid_rmse
                 final_test_rmse = test_rmse
                 final_train_rmse = train_rmse
                 min_valid_rmse_iter_idx = iter_idx
 
-            if min_test_rmse > test_rmse:
+            if min_test_rmse - 1e-5 > test_rmse:
                 min_test_rmse = test_rmse
                 min_test_rmse_iter_idx = iter_idx
 
@@ -162,12 +182,14 @@ def main():
     parser.add_argument(
         '--normalize_first_layer',
         type=bool,
-        default=True,
+        # default=True,
+        default=False,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
         type=bool,
-        default=True,
+        # default=True,
+        default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -175,23 +197,44 @@ def main():
         default=1e-3,
         help='learning rate for optimizer.')
     parser.add_argument(
-        '--lambda_wd',
-        type=float,
-        default=1000,
-        help='lambda for weight decay.')
+        '--data_seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
-        default=10000,
+        default=1000,
         help='the number of iteration for early stop.')
+
+    l = 0.0
+    parser.add_argument(
+        '--lambda_w1',
+        type=float,
+        # default=0.0,
+        default=l,
+        help='lambda for weight decay.')
+    parser.add_argument(
+        '--lambda_w2', type=float, default=l, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
         choices=['rprop', 'adam'],
-        default='rprop',
+        # default='rprop',
+        default='adam',
         help='Optimizer')
     parser.add_argument(
-        '--data_seed', type=int, default=1, help='the seed for dataset')
+        '--dataset',
+        type=str,
+        choices=[
+            Dataset.KIND_MOVIELENS_100k,
+            Dataset.KIND_MOVIELENS_1M,
+            Dataset.KIND_MOVIELENS_10M,
+        ],
+        default=Dataset.KIND_MOVIELENS_10M,
+        help='Optimizer')
+    parser.add_argument(
+        '--n_batch',
+        type=int,
+        default=200,
+        help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()
     _train(args)

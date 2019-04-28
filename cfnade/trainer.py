@@ -206,7 +206,7 @@ def main():
     parser.add_argument(
         '--normalize_1st_layer',
         type=bool,
-        default=True,
+        default=False,
         help='normalize 1st layer')
     parser.add_argument(
         '--learning_rate',
@@ -221,13 +221,14 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=bool,
-        default=False,
+        default=True,
         help='Whether use ordinal cost')
 
+    _lambda = 200.0
     parser.add_argument(
         '--lambda_1', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
-        '--lambda_2', type=float, default=10.0, help='lambda for weight decay.')
+        '--lambda_2', type=float, default=_lambda, help='lambda for weight decay.')
     parser.add_argument(
         '--dropout_rate', type=float, default=0., help='dropout_rate')
     parser.add_argument(

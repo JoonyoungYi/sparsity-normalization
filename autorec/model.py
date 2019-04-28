@@ -12,6 +12,7 @@ ACTIVATION_FUNCTION = tf.nn.sigmoid
 def _init_weights(n_col, args):
     weights, biases = [], []
 
+    assert args.n_hidden_layer == 1
     n_units = [n_col] + [args.n_hidden_unit] * args.n_hidden_layer + [n_col]
 
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
@@ -37,7 +38,10 @@ def _forward(train_x, weights, biases, training, args):
     layer = train_x
     m = _get_mask(train_x)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        layer = tf.matmul(layer, weight)
+        if i == 0:
+            layer = tf.sparse.matmul(layer, weight)
+        else:
+            layer = tf.matmul(layer, weight)
 
         if i == 0 and args.normalize_first_layer:
             d = m
@@ -72,11 +76,12 @@ def _get_loss(y, y_hat, weights, args):
     user_error = tf.reduce_sum(error, axis=1)
     rec_loss = tf.reduce_sum(user_error * m_user)
 
-    if args.normalize_first_layer:
-        weights = weights[1:]
-    reg_loss = tf.reduce_sum([tf.reduce_sum(tf.square(w)) for w in weights])
+    reg_loss = tf.reduce_sum([
+        tf.reduce_sum(tf.square(w)) * l
+        for l, w in zip([args.lambda_w1, args.lambda_w2], weights)
+    ])
 
-    return rec_loss + 0.5 * args.lambda_wd * reg_loss
+    return rec_loss + 0.5 * reg_loss
 
 
 def _get_rmse(y, y_hat, epsilon=0):
@@ -87,7 +92,9 @@ def _get_rmse(y, y_hat, epsilon=0):
 
 
 def init_models(n_col, args):
+    # train_x = tf.sparse.placeholder(tf.float32, name="train_x")
     train_x = tf.placeholder(tf.float32, [None, n_col], name="train_x")
+    # train_y = tf.sparse.placeholder(tf.float32, name="train_y")
     test_y = tf.placeholder(tf.float32, [None, n_col], name="test_y")
     training = tf.placeholder(tf.bool, name="training")
 

@@ -2,7 +2,6 @@ import random
 import os
 import zipfile
 
-import requests
 import numpy as np
 
 DATA_PATH = '/home/joonyoung/data/'
@@ -30,6 +29,7 @@ def _get_data_from_user_dict(user_dict,
 class Dataset:
     KIND_MOVIELENS_100k = 'movielens-100k'
     KIND_MOVIELENS_1M = 'movielens-1m'
+    KIND_MOVIELENS_10M = 'movielens-10m'
 
     # test with random. train:valid:test = 0.882:0.018:0.1
     SPLIT_DEFAULT_10_PERCENT = 'default-10-percent'
@@ -59,9 +59,12 @@ class Dataset:
             url = 'http://files.grouplens.org/datasets/movielens/ml-100k.zip'
         elif self.kind == self.KIND_MOVIELENS_1M:
             url = 'http://files.grouplens.org/datasets/movielens/ml-1m.zip'
+        elif self.kind == self.KIND_MOVIELENS_10M:
+            url = 'http://files.grouplens.org/datasets/movielens/ml-10m.zip'
         else:
             raise NotImplementedError()
 
+        import requests
         r = requests.get(url, stream=True)
         if r.status_code != 200:
             print("url이 유효하지 않습니다.")
@@ -81,6 +84,8 @@ class Dataset:
             folderpath = os.path.join(DATA_PATH, self.kind, 'ml-100k')
         elif self.kind == self.KIND_MOVIELENS_1M:
             folderpath = os.path.join(DATA_PATH, self.kind, 'ml-1m')
+        elif self.kind == self.KIND_MOVIELENS_10M:
+            folderpath = os.path.join(DATA_PATH, self.kind, 'ml-10m')
         else:
             raise NotImplementedError()
 
@@ -108,6 +113,10 @@ class Dataset:
         elif self.kind == self.KIND_MOVIELENS_1M:
             original_filepath = os.path.join(DATA_PATH, self.kind, 'ml-1m',
                                              'ratings.dat')
+            split_token = '::'
+        elif self.kind == self.KIND_MOVIELENS_10M:
+            original_filepath = os.path.join(DATA_PATH, self.kind,
+                                             'ml-10M100K', 'ratings.dat')
             split_token = '::'
         else:
             raise NotImplementedError()
@@ -140,8 +149,10 @@ class Dataset:
                 lines.append([u, i, cols[2], cols[3]])
 
         data = np.array(lines)
-        # print(current_u, current_i)
         np.save(filepath, data)
+
+        print(current_u, current_i)
+        input('should complete get_n_user_and_n_item function.')
         return True
 
     def __split_npy(self):
@@ -249,6 +260,8 @@ class Dataset:
             return 943, 1682
         elif self.kind == self.KIND_MOVIELENS_1M:
             return 6040, 3706
+        elif self.kind == self.KIND_MOVIELENS_10M:
+            return 69878, 10677
         else:
             raise NotImplementedError()
 
@@ -339,6 +352,8 @@ class Dataset:
             self.n_class = 5
         elif self.kind == self.KIND_MOVIELENS_1M:
             self.n_class = 5
+        elif self.kind == self.KIND_MOVIELENS_10M:
+            self.n_class = 10
         else:
             raise NotImplementedError()
 
