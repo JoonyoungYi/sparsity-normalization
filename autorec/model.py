@@ -8,6 +8,9 @@ from .rprop import RPropOptimizer
 
 ACTIVATION_FUNCTION = tf.nn.sigmoid
 
+# ACTIVATION_FUNCTION = tf.nn.tanh
+# ACTIVATION_FUNCTION = tf.nn.relu
+
 
 def _init_weights(n_col, args):
     weights, biases = [], []
@@ -36,26 +39,13 @@ def _forward(train_x, weights, biases, training, args):
     assert len(weights) == len(biases)
 
     layer = train_x
-    m = _get_mask(train_x)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
-
-        if i == 0 and args.normalize_first_layer:
-            d = m
-            # d = train_x
-            layer /= tf.matmul(
-                tf.maximum(tf.reduce_sum(d, axis=1, keepdims=True), 1),
-                tf.ones([1, layer.shape[1]]))
-
         layer = layer + bias
 
         if i < len(biases) - 1:
-            layer = tf.nn.sigmoid(layer)
-            # layer = tf.nn.tanh(layer)
-
-            # layer = tf.nn.relu(layer)
+            layer = ACTIVATION_FUNCTION(layer)
             # layer = tf.layers.dropout(layer, rate=0.5, training=training)
-
     return layer
 
 
@@ -89,16 +79,15 @@ def _get_rmse(y, y_hat, epsilon=0.0):
 
 
 def init_models(n_col, args):
-    train_x = tf.placeholder(tf.float32, [None, n_col], name="train_x")
-    test_y = tf.placeholder(tf.float32, [None, n_col], name="test_y")
+    x = tf.placeholder(tf.float32, [None, n_col], name="x")
+    y = tf.placeholder(tf.float32, [None, n_col], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
     # init weights
     weights, biases = _init_weights(n_col, args)
-    y_hat = _forward(train_x, weights, biases, training, args)
-    loss = _get_loss(train_x, y_hat, weights, args)
-    train_rmse = _get_rmse(train_x, y_hat)
-    test_rmse = _get_rmse(test_y, y_hat)
+    y_hat = _forward(x, weights, biases, training, args)
+    loss = _get_loss(y, y_hat, weights, args)
+    rmse = _get_rmse(y, y_hat)
 
     if args.optimizer == 'adam':
         optimizer = tf.train.AdamOptimizer(args.learning_rate)
@@ -110,11 +99,10 @@ def init_models(n_col, args):
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
+        'x': x,
+        'y': y,
         'training': training,
         'train_op': train_op,
-        'train_x': train_x,
-        'train_rmse': train_rmse,
+        'rmse': rmse,
         'loss': loss,
-        'test_y': test_y,
-        'test_rmse': test_rmse
     }

@@ -9,43 +9,31 @@ import tensorflow as tf
 from movielens.dataset import Dataset
 from .configs import *
 from .model import init_models
+from .batch import Batch
 
 
-def _init_mask(matrix):
-    mask = np.zeros(matrix.shape)
-    mask[matrix > 0.1] = 1
-    return mask
-
-
-def _validate(
-        session,
-        models,
-        train_x,
-        valid_x,
-        valid_y,
-        test_x,
-        test_y, ):
+def _validate(session, models, batch):
     train_rmse = session.run(
-        models['test_rmse'],
+        models['rmse'],
         feed_dict={
-            models['train_x']: train_x,
-            models['test_y']: train_x,
+            models['x']: batch.train_x,
+            models['y']: batch.train_y,
             models['training']: False,
         }, )
 
     valid_rmse = session.run(
-        models['test_rmse'],
+        models['rmse'],
         feed_dict={
-            models['train_x']: valid_x,
-            models['test_y']: valid_y,
+            models['x']: batch.valid_x,
+            models['y']: batch.valid_y,
             models['training']: False,
         }, )
 
     test_rmse = session.run(
-        (models['test_rmse']),
+        (models['rmse']),
         feed_dict={
-            models['train_x']: test_x,
-            models['test_y']: test_y,
+            models['x']: batch.test_x,
+            models['y']: batch.test_y,
             models['training']: False,
         }, )
     return train_rmse, valid_rmse, test_rmse
@@ -57,34 +45,6 @@ def _train(args):
 
     dataset = Dataset(
         args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.data_seed)
-
-    n_user, n_item = dataset.get_n_user_and_n_item()
-
-    train_x = dataset.train_matrix
-    valid_x = dataset.train_matrix
-    valid_y = dataset.valid_matrix
-    test_x = dataset.train_matrix + dataset.valid_matrix
-    test_y = dataset.test_matrix
-
-    if args.use_user_vector:
-        n_row = n_user
-        n_col = n_item
-    else:
-        n_row = n_item
-        n_col = n_user
-        train_x = train_x.T
-        valid_x = valid_x.T
-        valid_y = valid_y.T
-        test_x = test_x.T
-        test_y = test_y.T
-
-    data_for_validation = {
-        'train_x': train_x,
-        'valid_x': valid_x,
-        'valid_y': valid_y,
-        'test_x': test_x,
-        'test_y': test_y,
-    }
 
     if args.dataset == Dataset.KIND_MOVIELENS_100k:
         gpu_memory_fraction = 0.05
@@ -99,7 +59,9 @@ def _train(args):
         per_process_gpu_memory_fraction=gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
-    models = init_models(n_col, args)
+    batch = Batch(dataset, args)
+
+    models = init_models(batch.n_col, args)
     session.run(tf.global_variables_initializer())
 
     min_valid_rmse = float('inf')
@@ -110,34 +72,24 @@ def _train(args):
     final_train_rmse = float('inf')
 
     for iter_idx in range(1, args.max_iter):
-        if args.n_batch is None:
-            batch_x = train_x
-        else:
-            assert type(args.n_batch) == int
-            batch_x = train_x[np.random.randint(
-                0, high=n_row - 1, size=args.n_batch)]
-
-        # results = session.run(
-        #     [models['train_op']],
-        #     feed_dict={
-        #         models['train_x']: batch_x,
-        #         models['training']: False,
-        #     }, )
-        # print(results)
-        # input('')
+        # if args.n_batch is None:
+        #     batch_x = train_x
+        # else:
+        #     assert type(args.n_batch) == int
+        #     batch_x = train_x[np.random.randint(
+        #         0, high=n_row - 1, size=args.n_batch)]
 
         session.run(
             (models['train_op']),
             feed_dict={
-                models['train_x']: batch_x,
+                models['x']: batch.train_x,
+                models['y']: batch.train_y,
                 models['training']: True,
             }, )
 
-        continue
-
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
-                session, models, **data_for_validation)
+                session, models, batch)
 
             if min_valid_rmse - 1e-5 > valid_rmse:
                 min_valid_rmse = valid_rmse
@@ -157,11 +109,6 @@ def _train(args):
             msg += '  - test  rmse: {:12.8f}    (min: {:12.8f}, iter: {:d})\n'.format(
                 test_rmse, min_test_rmse, min_test_rmse_iter_idx)
             print(msg)
-
-            # if (iter_idx > min_valid_rmse_iter_idx + args.iter_early_stop) or (
-            #         min_valid_rmse < 0.95 and
-            #         min_valid_rmse + 0.04 < valid_rmse):
-            #     break
 
             if (iter_idx > min_valid_rmse_iter_idx + args.iter_early_stop):
                 break
@@ -241,11 +188,11 @@ def main():
         ],
         default=Dataset.KIND_MOVIELENS_100k,
         help='Optimizer')
-    parser.add_argument(
-        '--n_batch',
-        type=int,
-        default=None,
-        help='None for full batch. integer for batch number.')
+    # parser.add_argument(
+    #     '--n_batch',
+    #     type=int,
+    #     default=None,
+    #     help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()
     _train(args)
