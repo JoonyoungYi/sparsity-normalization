@@ -319,7 +319,7 @@ class Dataset:
             matrix[u][i] = r
         return matrix
 
-    def _init_full_matrices(self):
+    def init_full_matrices(self):
         self.train_matrix = self.__init_full_matrix(self.train_data)
         self.valid_matrix = self.__init_full_matrix(self.valid_data)
         self.test_matrix = self.__init_full_matrix(self.test_data)
@@ -358,8 +358,6 @@ class Dataset:
             raise NotImplementedError()
 
         self._init_npys()
-        if self.split == self.SPLIT_DEFAULT_10_PERCENT:
-            self._init_full_matrices()
         elif self.split == self.SPLIT_NEW_20_50:
             self._init_full_vectors()
 

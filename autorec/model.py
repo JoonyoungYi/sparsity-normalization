@@ -102,7 +102,7 @@ def init_models(n_col, args):
         'x': x,
         'y': y,
         'training': training,
-        'train_op': train_op,
-        'rmse': rmse,
         'loss': loss,
+        'rmse': rmse,
+        'train_op': train_op,
     }

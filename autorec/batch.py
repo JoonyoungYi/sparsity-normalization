@@ -3,6 +3,7 @@ import numpy as np
 
 class Batch:
     def __init__(self, dataset, args):
+        dataset.init_full_matrices()
         n_user, n_item = dataset.get_n_user_and_n_item()
 
         train_x = dataset.train_matrix
