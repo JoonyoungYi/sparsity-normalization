@@ -40,7 +40,10 @@ def _forward(train_x, weights, biases, training, args):
 
     layer = train_x
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        layer = tf.matmul(layer, weight)
+        if i == 0 and args.sparse_tensor:
+            layer = tf.sparse.matmul(layer, weight)
+        else:
+            layer = tf.matmul(layer, weight)
         layer = layer + bias
 
         if i < len(biases) - 1:
@@ -57,11 +60,15 @@ def _get_mask(y):
 
 
 def _get_loss(y, y_hat, weights, args):
-    m = _get_mask(y)
-    m_user = _get_mask(tf.reduce_sum(m, axis=1))
-    error = tf.square(m * (y - y_hat))
-    user_error = tf.reduce_sum(error, axis=1)
-    rec_loss = tf.reduce_sum(user_error * m_user)
+    if args.sparse_tensor:
+        _y_hat = tf.gather_nd(y_hat, y.indices)
+        rec_loss = tf.reduce_sum(tf.square(y.values - _y_hat))
+    else:
+        m = _get_mask(y)
+        m_user = _get_mask(tf.reduce_sum(m, axis=1))
+        error = tf.square(m * (y - y_hat))
+        user_error = tf.reduce_sum(error, axis=1)
+        rec_loss = tf.reduce_sum(user_error * m_user)
 
     reg_loss = tf.reduce_sum([
         tf.reduce_sum(tf.square(w)) * l
@@ -70,24 +77,32 @@ def _get_loss(y, y_hat, weights, args):
     return rec_loss + 0.5 * reg_loss
 
 
-def _get_rmse(y, y_hat, epsilon=0.0):
+def _get_rmse(y, y_hat, args, epsilon=0.0):
     # y_hat = tf.clip_by_value(y_hat, 1, 5)
-    m = _get_mask(y)
-    return tf.sqrt(
-        (tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m)) + epsilon) /
-        (tf.reduce_sum(m) + epsilon))
+    if args.sparse_tensor:
+        _y_hat = tf.gather_nd(y_hat, y.indices)
+        return tf.sqrt(tf.reduce_mean(tf.square(y.values - _y_hat)))
+    else:
+        m = _get_mask(y)
+        return tf.sqrt(
+            (tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m)) + epsilon) /
+            (tf.reduce_sum(m) + epsilon))
 
 
 def init_models(n_col, args):
-    x = tf.placeholder(tf.float32, [None, n_col], name="x")
-    y = tf.placeholder(tf.float32, [None, n_col], name="y")
+    if args.sparse_tensor:
+        x = tf.sparse.placeholder(tf.float32, name="x")
+        y = tf.sparse.placeholder(tf.float32, name="y")
+    else:
+        x = tf.placeholder(tf.float32, [None, n_col], name="x")
+        y = tf.placeholder(tf.float32, [None, n_col], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
     # init weights
     weights, biases = _init_weights(n_col, args)
     y_hat = _forward(x, weights, biases, training, args)
     loss = _get_loss(y, y_hat, weights, args)
-    rmse = _get_rmse(y, y_hat)
+    rmse = _get_rmse(y, y_hat, args)
 
     if args.optimizer == 'adam':
         optimizer = tf.train.AdamOptimizer(args.learning_rate)

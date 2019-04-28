@@ -40,9 +40,6 @@ def _validate(session, models, batch):
 
 
 def _train(args):
-    # if args.normalize_first_layer:
-    #     assert args.lambda_w1 <= 1e-8
-
     dataset = Dataset(
         args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.data_seed)
 
@@ -188,6 +185,11 @@ def main():
         ],
         default=Dataset.KIND_MOVIELENS_100k,
         help='Optimizer')
+    parser.add_argument(
+        '--sparse_tensor',
+        type=bool,
+        default=True,
+        help='whether use sparse tensor.')
     # parser.add_argument(
     #     '--n_batch',
     #     type=int,
@@ -195,6 +197,12 @@ def main():
     #     help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()
+
+    # if args.normalize_first_layer:
+    #     assert args.lambda_w1 <= 1e-8
+    if args.sparse_tensor:
+        assert args.optimizer != 'rprop'
+
     _train(args)
 
 

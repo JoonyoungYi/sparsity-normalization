@@ -358,7 +358,7 @@ class Dataset:
             raise NotImplementedError()
 
         self._init_npys()
-        elif self.split == self.SPLIT_NEW_20_50:
+        if self.split == self.SPLIT_NEW_20_50:
             self._init_full_vectors()
 
 
