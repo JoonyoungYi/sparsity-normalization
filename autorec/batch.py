@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.sparse import csr_matrix
 
 
 def _sparse__swith_row_col(_x):
@@ -26,8 +27,14 @@ def _sparse__tensor(x, n_row, n_col):
     return (x[:, :2], x[:, 2], (n_row, n_col))
 
 
+def _sparse__csr_matrix(x, n_row, n_col):
+    return csr_matrix((x[:, 2], (x[:, 0], x[:, 1])), shape=(n_row, n_col))
+
+
 class Batch:
     def __init__(self, dataset, args):
+        self.n_batch = args.n_batch
+
         if args.sparse_tensor:
             n_user, n_item = dataset.get_n_user_and_n_item()
 
@@ -58,6 +65,14 @@ class Batch:
                 test_c = np.clip(
                     _sparse__get_count(test_x, n_row), a_min=1, a_max=None)
                 test_x = _sparse__normalize(test_x, test_c)
+
+            # self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
+            self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
+            self.train_csr_y = _sparse__csr_matrix(train_y, n_row, n_col)
+            self.valid_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
+            self.valid_csr_y = _sparse__csr_matrix(valid_y, n_row, n_col)
+            self.test_csr_x = _sparse__csr_matrix(test_x, n_row, n_col)
+            self.test_csr_y = _sparse__csr_matrix(test_y, n_row, n_col)
 
             self.train_x = _sparse__tensor(train_x, n_row, n_col)
             self.train_y = _sparse__tensor(train_y, n_row, n_col)
@@ -110,3 +125,23 @@ class Batch:
 
             self.n_row = n_row
             self.n_col = n_col
+
+    def get_batch(self):
+        if self.n_batch is None:
+            batch_x = self.train_x
+            batch_y = self.train_y
+            return batch_x, batch_y
+        else:
+            assert type(self.n_batch) == int
+            batch_indices = np.random.randint(
+                0, high=self.n_row - 1, size=self.n_batch)
+
+            batch_x = self.train_csr_x[batch_indices].tocoo()
+            batch_y = self.train_csr_y[batch_indices].tocoo()
+
+            _x = (np.mat([batch_x.row, batch_x.col]).transpose(), batch_x.data,
+                  (self.n_batch, self.n_col))
+            _y = (np.mat([batch_y.row, batch_y.col]).transpose(), batch_y.data,
+                  (self.n_batch, self.n_col))
+
+            return _x, _y

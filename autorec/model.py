@@ -46,6 +46,7 @@ def _forward(train_x, weights, biases, training, args):
             layer = tf.matmul(layer, weight)
         layer = layer + bias
 
+
         if i < len(biases) - 1:
             layer = ACTIVATION_FUNCTION(layer)
             # layer = tf.layers.dropout(layer, rate=0.5, training=training)

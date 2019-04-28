@@ -49,7 +49,7 @@ def _train(args):
     elif args.dataset == Dataset.KIND_MOVIELENS_1M:
         gpu_memory_fraction = 0.1
     elif args.dataset == Dataset.KIND_MOVIELENS_10M:
-        gpu_memory_fraction = 1.0
+        gpu_memory_fraction = 0.9
     else:
         gpu_memory_fraction = 1.0
     gpu_options = tf.GPUOptions(
@@ -69,20 +69,19 @@ def _train(args):
     final_train_rmse = float('inf')
 
     for iter_idx in range(1, args.max_iter):
-        # if args.n_batch is None:
-        #     batch_x = train_x
-        # else:
-        #     assert type(args.n_batch) == int
-        #     batch_x = train_x[np.random.randint(
-        #         0, high=n_row - 1, size=args.n_batch)]
+        # input('!!!!!')
+        batch_x, batch_y = batch.get_batch()
 
         session.run(
             (models['train_op']),
             feed_dict={
-                models['x']: batch.train_x,
-                models['y']: batch.train_y,
+                models['x']: batch_x,
+                models['y']: batch_y,
                 models['training']: True,
             }, )
+
+        print('!!')
+        input('>>')
 
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
@@ -137,14 +136,14 @@ def main():
     parser.add_argument(
         '--normalize_first_layer',
         type=bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
         type=bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -159,12 +158,12 @@ def main():
         default=1000,
         help='the number of iteration for early stop.')
 
-    l = 300.0
+    l = 0.0
     parser.add_argument(
         '--lambda_w1',
         type=float,
-        default=0.0,
-        # default=l,
+        # default=0.0,
+        default=l,
         help='lambda for weight decay.')
     parser.add_argument(
         '--lambda_w2', type=float, default=l, help='lambda for weight decay.')
@@ -183,18 +182,21 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_1M,
+        default=Dataset.KIND_MOVIELENS_10M,
         help='Optimizer')
     parser.add_argument(
         '--sparse_tensor',
         type=bool,
         default=True,
         help='whether use sparse tensor.')
-    # parser.add_argument(
-    #     '--n_batch',
-    #     type=int,
-    #     default=None,
-    #     help='None for full batch. integer for batch number.')
+    parser.add_argument(
+        '--n_batch',
+        type=int,
+        # default=None,
+        default=1,
+        help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()
 
