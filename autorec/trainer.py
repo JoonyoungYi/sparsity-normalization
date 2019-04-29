@@ -13,6 +13,8 @@ from .batch import Batch
 
 
 def _validate(session, models, batch):
+    #TODO: 이 부분 데이터 크기 너무 큰 movielens 10m 이상일 경우 나눠서 처리해야 함.
+
     train_rmse = session.run(
         models['rmse'],
         feed_dict={
@@ -62,28 +64,35 @@ def _train(args):
     session.run(tf.global_variables_initializer())
 
     min_valid_rmse = float('inf')
-    min_valid_rmse_iter_idx = 0
+    min_valid_rmse_epoch_idx = 0
     min_test_rmse = float('inf')
-    min_test_rmse_iter_idx = 0
+    min_test_rmse_epoch_idx = 0
     final_test_rmse = float('inf')
     final_train_rmse = float('inf')
 
-    for iter_idx in range(1, args.max_iter):
-        # input('!!!!!')
-        batch_x, batch_y = batch.get_batch()
+    for epoch_idx in range(1, args.max_epoch):
 
-        session.run(
-            (models['train_op']),
-            feed_dict={
-                models['x']: batch_x,
-                models['y']: batch_y,
-                models['training']: True,
-            }, )
+        if args.n_batch is None:
+            batch_x, batch_y = batch.get_batch()
+            session.run(
+                (models['train_op']),
+                feed_dict={
+                    models['x']: batch_x,
+                    models['y']: batch_y,
+                    models['training']: True,
+                }, )
+        else:
+            for iter_idx in range(batch.n_row // args.n_batch):
+                batch_x, batch_y = batch.get_batch(iter_idx)
+                session.run(
+                    (models['train_op']),
+                    feed_dict={
+                        models['x']: batch_x,
+                        models['y']: batch_y,
+                        models['training']: True,
+                    }, )
 
-        print('!!')
-        input('>>')
-
-        if (iter_idx) % args.iter_validation == 0:
+        if (epoch_idx) % args.epoch_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
                 session, models, batch)
 
@@ -91,22 +100,22 @@ def _train(args):
                 min_valid_rmse = valid_rmse
                 final_test_rmse = test_rmse
                 final_train_rmse = train_rmse
-                min_valid_rmse_iter_idx = iter_idx
+                min_valid_rmse_epoch_idx = epoch_idx
 
             if min_test_rmse - 1e-5 > test_rmse:
                 min_test_rmse = test_rmse
-                min_test_rmse_iter_idx = iter_idx
+                min_test_rmse_epoch_idx = epoch_idx
 
-            msg = '\n[EPOCH %6d]\n' % (iter_idx)
+            msg = '\n[EPOCH %6d]\n' % (epoch_idx)
             msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
-            msg += '  - valid rmse: {:12.8f}    (min: {:12.8f}, iter: {:d}, final: {:12.8f})\n'.format(
-                valid_rmse, min_valid_rmse, min_valid_rmse_iter_idx,
+            msg += '  - valid rmse: {:12.8f}    (min: {:12.8f}, epoch: {:d}, final: {:12.8f})\n'.format(
+                valid_rmse, min_valid_rmse, min_valid_rmse_epoch_idx,
                 final_test_rmse)
-            msg += '  - test  rmse: {:12.8f}    (min: {:12.8f}, iter: {:d})\n'.format(
-                test_rmse, min_test_rmse, min_test_rmse_iter_idx)
+            msg += '  - test  rmse: {:12.8f}    (min: {:12.8f}, epoch: {:d})\n'.format(
+                test_rmse, min_test_rmse, min_test_rmse_epoch_idx)
             print(msg)
 
-            if (iter_idx > min_valid_rmse_iter_idx + args.iter_early_stop):
+            if (epoch_idx > min_valid_rmse_epoch_idx + args.epoch_early_stop):
                 break
 
     session.close()
@@ -117,12 +126,12 @@ def main():
 
     parser = argparse.ArgumentParser(description='AutoRec')
     parser.add_argument(
-        '--iter_validation',
+        '--epoch_validation',
         type=int,
         default=1,
-        help='Iteration unit for validation')
+        help='epoch unit for validation')
     parser.add_argument(
-        '--max_iter', type=int, default=100000, help='Max Iteration')
+        '--max_epoch', type=int, default=100000, help='Max epoch')
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
@@ -142,8 +151,8 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -153,10 +162,10 @@ def main():
     parser.add_argument(
         '--data_seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
-        '--iter_early_stop',
+        '--epoch_early_stop',
         type=int,
         default=1000,
-        help='the number of iteration for early stop.')
+        help='the number of epochation for early stop.')
 
     l = 0.0
     parser.add_argument(
@@ -182,9 +191,9 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_100k,
         # default=Dataset.KIND_MOVIELENS_1M,
-        default=Dataset.KIND_MOVIELENS_10M,
+        # default=Dataset.KIND_MOVIELENS_10M,
         help='Optimizer')
     parser.add_argument(
         '--sparse_tensor',
@@ -195,7 +204,7 @@ def main():
         '--n_batch',
         type=int,
         # default=None,
-        default=1,
+        default=1682,
         help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()
@@ -203,6 +212,7 @@ def main():
     # if args.normalize_first_layer:
     #     assert args.lambda_w1 <= 1e-8
     if args.sparse_tensor:
+        # RProp optimizer can be used only for dense tensor.
         assert args.optimizer != 'rprop'
 
     _train(args)

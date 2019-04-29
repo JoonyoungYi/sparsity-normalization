@@ -42,10 +42,10 @@ def _forward(train_x, weights, biases, training, args):
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         if i == 0 and args.sparse_tensor:
             layer = tf.sparse.matmul(layer, weight)
+            layer = tf.where(tf.is_nan(layer), tf.zeros_like(layer), layer)
         else:
             layer = tf.matmul(layer, weight)
         layer = layer + bias
-
 
         if i < len(biases) - 1:
             layer = ACTIVATION_FUNCTION(layer)

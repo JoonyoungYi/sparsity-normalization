@@ -126,22 +126,22 @@ class Batch:
             self.n_row = n_row
             self.n_col = n_col
 
-    def get_batch(self):
-        if self.n_batch is None:
+    def get_batch(self, iter_idx=None):
+        if iter_idx is None:
             batch_x = self.train_x
             batch_y = self.train_y
             return batch_x, batch_y
         else:
             assert type(self.n_batch) == int
-            batch_indices = np.random.randint(
-                0, high=self.n_row - 1, size=self.n_batch)
+            start_idx = iter_idx * self.n_batch
+            end_idx = min((iter_idx + 1) * self.n_batch, self.n_row)
 
-            batch_x = self.train_csr_x[batch_indices].tocoo()
-            batch_y = self.train_csr_y[batch_indices].tocoo()
+            batch_x = self.train_csr_x[start_idx:end_idx].tocoo()
+            batch_y = self.train_csr_y[start_idx:end_idx].tocoo()
 
             _x = (np.mat([batch_x.row, batch_x.col]).transpose(), batch_x.data,
-                  (self.n_batch, self.n_col))
+                  (end_idx - start_idx, self.n_col))
             _y = (np.mat([batch_y.row, batch_y.col]).transpose(), batch_y.data,
-                  (self.n_batch, self.n_col))
+                  (end_idx - start_idx, self.n_col))
 
             return _x, _y
