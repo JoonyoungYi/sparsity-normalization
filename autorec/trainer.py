@@ -12,32 +12,41 @@ from .model import init_models
 from .batch import Batch
 
 
-def _validate(session, models, batch):
-    #TODO: 이 부분 데이터 크기 너무 큰 movielens 10m 이상일 경우 나눠서 처리해야 함.
+def __get_rmse(session, models, batch, key, args):
+    func = getattr(batch, 'batch_' + key)
 
-    train_rmse = session.run(
-        models['rmse'],
-        feed_dict={
-            models['x']: batch.train_x,
-            models['y']: batch.train_y,
-            models['training']: False,
-        }, )
+    if args.n_batch is None:
+        x, y = func()
+        rmse = session.run(
+            models['rmse'],
+            feed_dict={
+                models['x']: x,
+                models['y']: y,
+                models['training']: False,
+            }, )
+        return rmse
+    else:
+        sse, n = 0.0, 0.0
+        for iter_idx in range(batch.n_row // args.n_batch):
+            x, y = func(iter_idx)
+            _rmse = session.run(
+                (models['rmse']),
+                feed_dict={
+                    models['x']: x,
+                    models['y']: y,
+                    models['training']: False,
+                }, )
+            _n = x[2][0]
+            _sse = math.pow(_rmse, 2) * _n
+            n += _n
+            sse += _sse
+        return math.sqrt(sse / n)
 
-    valid_rmse = session.run(
-        models['rmse'],
-        feed_dict={
-            models['x']: batch.valid_x,
-            models['y']: batch.valid_y,
-            models['training']: False,
-        }, )
 
-    test_rmse = session.run(
-        (models['rmse']),
-        feed_dict={
-            models['x']: batch.test_x,
-            models['y']: batch.test_y,
-            models['training']: False,
-        }, )
+def _validate(session, models, batch, args):
+    train_rmse = __get_rmse(session, models, batch, 'train', args)
+    valid_rmse = __get_rmse(session, models, batch, 'valid', args)
+    test_rmse = __get_rmse(session, models, batch, 'test', args)
     return train_rmse, valid_rmse, test_rmse
 
 
@@ -47,11 +56,10 @@ def _train(args):
 
     if args.dataset == Dataset.KIND_MOVIELENS_100k:
         gpu_memory_fraction = 0.05
-        # input('should reduce gpu_memory_fraction...')
     elif args.dataset == Dataset.KIND_MOVIELENS_1M:
         gpu_memory_fraction = 0.1
     elif args.dataset == Dataset.KIND_MOVIELENS_10M:
-        gpu_memory_fraction = 0.9
+        gpu_memory_fraction = 0.18
     else:
         gpu_memory_fraction = 1.0
     gpu_options = tf.GPUOptions(
@@ -73,7 +81,7 @@ def _train(args):
     for epoch_idx in range(1, args.max_epoch):
 
         if args.n_batch is None:
-            batch_x, batch_y = batch.get_batch()
+            batch_x, batch_y = batch.batch_train()
             session.run(
                 (models['train_op']),
                 feed_dict={
@@ -83,7 +91,11 @@ def _train(args):
                 }, )
         else:
             for iter_idx in range(batch.n_row // args.n_batch):
-                batch_x, batch_y = batch.get_batch(iter_idx)
+                batch_x, batch_y = batch.batch_train(iter_idx)
+                if epoch_idx == 1:
+                    # print(list(batch_x[1]))
+                    assert batch_x[1][batch_x[1] < 1e-8].shape[0] == 0
+
                 session.run(
                     (models['train_op']),
                     feed_dict={
@@ -94,7 +106,7 @@ def _train(args):
 
         if (epoch_idx) % args.epoch_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
-                session, models, batch)
+                session, models, batch, args)
 
             if min_valid_rmse - 1e-5 > valid_rmse:
                 min_valid_rmse = valid_rmse
@@ -145,8 +157,8 @@ def main():
     parser.add_argument(
         '--normalize_first_layer',
         type=bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
@@ -157,7 +169,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--data_seed', type=int, default=1, help='the seed for dataset')
@@ -167,12 +179,12 @@ def main():
         default=1000,
         help='the number of epochation for early stop.')
 
-    l = 0.0
+    l = 10.0
     parser.add_argument(
         '--lambda_w1',
         type=float,
-        # default=0.0,
-        default=l,
+        default=0.0,
+        # default=l,
         help='lambda for weight decay.')
     parser.add_argument(
         '--lambda_w2', type=float, default=l, help='lambda for weight decay.')
@@ -191,9 +203,9 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_100k,
         # default=Dataset.KIND_MOVIELENS_1M,
-        # default=Dataset.KIND_MOVIELENS_10M,
+        default=Dataset.KIND_MOVIELENS_10M,
         help='Optimizer')
     parser.add_argument(
         '--sparse_tensor',
@@ -204,7 +216,7 @@ def main():
         '--n_batch',
         type=int,
         # default=None,
-        default=1682,
+        default=1000,
         help='None for full batch. integer for batch number.')
 
     args = parser.parse_args()

@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from scipy.sparse import csr_matrix
 
@@ -56,6 +58,10 @@ class Batch:
                 valid_y = _sparse__swith_row_col(valid_y)
                 test_x = _sparse__swith_row_col(test_x)
                 test_y = _sparse__swith_row_col(test_y)
+
+            row_indices = list(range(n_row))
+            random.shuffle(row_indices)
+            self.row_indices = row_indices
 
             if args.normalize_first_layer:
                 train_c = np.clip(
@@ -126,22 +132,43 @@ class Batch:
             self.n_row = n_row
             self.n_col = n_col
 
-    def get_batch(self, iter_idx=None):
+    def batch_train(self, iter_idx=None):
+        return self._batch(
+            self.train_x,
+            self.train_y,
+            self.train_csr_x,
+            self.train_csr_y,
+            iter_idx=iter_idx)
+
+    def batch_valid(self, iter_idx=None):
+        return self._batch(
+            self.valid_x,
+            self.valid_y,
+            self.valid_csr_x,
+            self.valid_csr_y,
+            iter_idx=iter_idx)
+
+    def batch_test(self, iter_idx=None):
+        return self._batch(
+            self.test_x,
+            self.test_y,
+            self.test_csr_x,
+            self.test_csr_y,
+            iter_idx=iter_idx)
+
+    def _batch(self, x, y, csr_x, csr_y, iter_idx=None):
         if iter_idx is None:
-            batch_x = self.train_x
-            batch_y = self.train_y
-            return batch_x, batch_y
+            return x, y
         else:
             assert type(self.n_batch) == int
             start_idx = iter_idx * self.n_batch
             end_idx = min((iter_idx + 1) * self.n_batch, self.n_row)
 
-            batch_x = self.train_csr_x[start_idx:end_idx].tocoo()
-            batch_y = self.train_csr_y[start_idx:end_idx].tocoo()
+            batch_x = csr_x[self.row_indices[start_idx:end_idx]].tocoo()
+            batch_y = csr_y[self.row_indices[start_idx:end_idx]].tocoo()
 
             _x = (np.mat([batch_x.row, batch_x.col]).transpose(), batch_x.data,
                   (end_idx - start_idx, self.n_col))
             _y = (np.mat([batch_y.row, batch_y.col]).transpose(), batch_y.data,
                   (end_idx - start_idx, self.n_col))
-
             return _x, _y
