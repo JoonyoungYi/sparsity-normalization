@@ -59,7 +59,7 @@ def _train(args):
     elif args.dataset == Dataset.KIND_MOVIELENS_1M:
         gpu_memory_fraction = 0.1
     elif args.dataset == Dataset.KIND_MOVIELENS_10M:
-        gpu_memory_fraction = 0.18
+        gpu_memory_fraction = 0.17
     else:
         gpu_memory_fraction = 1.0
     gpu_options = tf.GPUOptions(
@@ -179,7 +179,7 @@ def main():
         default=1000,
         help='the number of epochation for early stop.')
 
-    l = 80.0
+    l = 4.0
     parser.add_argument(
         '--lambda_w1',
         type=float,
