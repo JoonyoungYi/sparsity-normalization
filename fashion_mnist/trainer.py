@@ -62,9 +62,13 @@ def train(args):
                 models['x']: test_x,
                 models['y']: test_y,
             })
-        print('%5d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
-              '%.4f' % valid_acc, '%.4f' % test_acc, '%.4f' % max_valid_acc,
-              '%.4f' % final_test_acc, '%.4f' % max_test_acc)
+
+        print('')
+        print('%6d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
+              '%.4f' % valid_acc, '%.4f' % test_acc)
+        print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_acc,
+              '%.4f' % final_test_acc)
+        print('%6d' % max_test_iter_idx, '%.4f' % max_test_acc)
 
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
