@@ -179,7 +179,7 @@ def main():
         default=1000,
         help='the number of epochation for early stop.')
 
-    l = 10.0
+    l = 80.0
     parser.add_argument(
         '--lambda_w1',
         type=float,

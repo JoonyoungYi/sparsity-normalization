@@ -3,8 +3,7 @@ import os
 import zipfile
 
 import numpy as np
-
-DATA_PATH = '/home/joonyoung/data/'
+from configs.local import DATA_PATH
 
 
 def _get_data_from_user_dict(user_dict,
