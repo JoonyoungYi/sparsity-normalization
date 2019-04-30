@@ -7,20 +7,41 @@ import numpy as np
 from .model import init_models
 
 
-def train(args):
+def _init_x_and_y(args):
+    # load data
     fashion_mnist = keras.datasets.fashion_mnist
     (train_x, train_y), (test_x, test_y) = fashion_mnist.load_data()
+
+    # normalize
     train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
+    # split
+    np.random.seed(seed=args.data_seed)
+    perm = np.random.permutation(train_x.shape[0])
+    train_x = train_x[perm]
+    train_y = train_y[perm]
+
+    return train_x[:50000], train_y[:50000], train_x[50000:], train_y[
+        50000:], test_x, test_y
+
+
+def train(args):
+    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
+
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.03)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args)
     session.run(tf.global_variables_initializer())
 
+    max_valid_acc = 0.0
+    max_valid_iter_idx = 0
+    final_test_acc = 0.0
+
     max_test_acc = 0.0
     max_test_iter_idx = 0
+
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
             [models['train_op'], models['loss'], models['accuracy']],
@@ -29,6 +50,12 @@ def train(args):
                 models['y']: train_y,
             })
 
+        valid_acc = session.run(
+            models['accuracy'],
+            feed_dict={
+                models['x']: valid_x,
+                models['y']: valid_y,
+            })
         test_acc = session.run(
             models['accuracy'],
             feed_dict={
@@ -36,13 +63,19 @@ def train(args):
                 models['y']: test_y,
             })
         print('%5d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
-              '%.4f' % test_acc, '%.4f' % max_test_acc)
+              '%.4f' % valid_acc, '%.4f' % test_acc, '%.4f' % max_valid_acc,
+              '%.4f' % final_test_acc, '%.4f' % max_test_acc)
 
-        if max_test_acc < test_acc:
+        if max_valid_acc + 1e-5 < valid_acc:
+            max_valid_acc = valid_acc
+            max_valid_iter_idx = iter_idx
+            final_test_acc = test_acc
+
+        if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
             max_test_iter_idx = iter_idx
 
-        if iter_idx > max_test_iter_idx + args.epoch_early_stop:
+        if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
             break
 
 
@@ -67,6 +100,8 @@ def main():
         type=int,
         default=100,
         help='the number of hidden unit of each layer.')
+    parser.add_argument(
+        '--data_seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
         '--learning_rate',
         type=float,

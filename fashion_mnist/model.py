@@ -3,7 +3,7 @@ import math
 import tensorflow as tf
 
 
-def _forward(x, weights, biases, activation_fn=tf.nn.relu, args):
+def _forward(x, weights, biases, args, activation_fn=tf.nn.relu):
     layer = x
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
@@ -46,7 +46,7 @@ def init_models(args):
     x = tf.placeholder(tf.float32, [None, 784], name="x")
     y = tf.placeholder(tf.int32, [None], name="y")
     y_hot = tf.one_hot(y, 10)
-    weights, biases = _init_weights()
+    weights, biases = _init_weights(args)
 
     y_hat = _forward(x, weights, biases, args)
 
