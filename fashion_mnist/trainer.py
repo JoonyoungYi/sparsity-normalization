@@ -7,7 +7,7 @@ import numpy as np
 from .model import init_models
 
 
-def main():
+def train(args):
     fashion_mnist = keras.datasets.fashion_mnist
     (train_x, train_y), (test_x, test_y) = fashion_mnist.load_data()
     train_x = train_x.reshape([-1, 28 * 28])
@@ -29,13 +29,14 @@ def main():
                 models['y']: train_y,
             })
 
-        test_loss, test_acc = session.run(
-            [models['loss'], models['accuracy']],
+        test_acc = session.run(
+            [models['accuracy']],
             feed_dict={
                 models['x']: test_x,
                 models['y']: test_y,
             })
-        print(train_loss, train_acc, test_loss, test_acc, max_test_acc)
+        print('%05d' % iter_idx, '%6f' % train_loss, train_acc, test_acc,
+              max_test_acc)
 
         if max_test_acc < test_acc:
             max_test_acc = test_acc
@@ -45,5 +46,21 @@ def main():
             break
 
 
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description='FashionMNIST')
+    # parser.add_argument(
+    #     '--use_user_vector',
+    #     type=bool,
+    #     # default=True,
+    #     default=False,
+    #     help='Whether use user vector.')
+
+    args = parser.parse_args()
+    train(args)
+
+
 if __name__ == '__main__':
+
     main()
