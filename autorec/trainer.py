@@ -10,6 +10,7 @@ from movielens.dataset import Dataset
 from .configs import *
 from .model import init_models
 from .batch import Batch
+from common.utils import str2bool
 
 
 def __get_rmse(session, models, batch, key, args):
@@ -156,13 +157,13 @@ def main():
         help='The number of hidden unit')
     parser.add_argument(
         '--normalize_first_layer',
-        type=bool,
+        type=str2bool,
         default=True,
         # default=False,
         help='Whether normalize 1st layer.')
     parser.add_argument(
         '--use_user_vector',
-        type=bool,
+        type=str2bool,
         # default=True,
         default=False,
         help='Whether use user vector.')
@@ -209,7 +210,7 @@ def main():
         help='Optimizer')
     parser.add_argument(
         '--sparse_tensor',
-        type=bool,
+        type=str2bool,
         default=True,
         help='whether use sparse tensor.')
     parser.add_argument(

@@ -10,7 +10,7 @@ from movielens.dataset import Dataset
 from .batch import BatchManager
 from .configs import *
 from .model import init_models
-
+from common.utils import str2bool
 
 def _validate(
         session,
@@ -200,12 +200,12 @@ def main():
         help='The number of hidden unit')
     parser.add_argument(
         '--parameter_sharing',
-        type=bool,
+        type=str2bool,
         default=False,
         help='parameter sharing')
     parser.add_argument(
         '--normalize_1st_layer',
-        type=bool,
+        type=str2bool,
         default=False,
         help='normalize 1st layer')
     parser.add_argument(
@@ -215,12 +215,12 @@ def main():
         help='learning rate for optimizer.')
     parser.add_argument(
         '--use_ordinal_cost',
-        type=bool,
+        type=str2bool,
         default=False,
         help='Whether use ordinal cost')
     parser.add_argument(
         '--use_user_vector',
-        type=bool,
+        type=str2bool,
         default=True,
         help='Whether use ordinal cost')
 

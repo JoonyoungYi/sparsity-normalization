@@ -29,7 +29,7 @@ def _init_x_and_y(args):
 def train(args):
     train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.03)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args)
@@ -48,6 +48,7 @@ def train(args):
             feed_dict={
                 models['x']: train_x,
                 models['y']: train_y,
+                models['training']: True,
             })
 
         valid_acc = session.run(
@@ -55,12 +56,14 @@ def train(args):
             feed_dict={
                 models['x']: valid_x,
                 models['y']: valid_y,
+                models['training']: False,
             })
         test_acc = session.run(
             models['accuracy'],
             feed_dict={
                 models['x']: test_x,
                 models['y']: test_y,
+                models['training']: False,
             })
 
         print('')
@@ -88,7 +91,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='FashionMNIST')
     parser.add_argument(
-        '--max_epoch', type=int, default=100000, help='Max epoch')
+        '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
@@ -97,7 +100,7 @@ def main():
     parser.add_argument(
         '--n_hidden_layer',
         type=int,
-        default=3,
+        default=2,
         help='the number of hidden layers.')
     parser.add_argument(
         '--n_hidden_unit',
@@ -105,7 +108,15 @@ def main():
         default=100,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
+        '--activation_fn',
+        type=str,
+        default='tanh',
+        choices=['relu', 'tanh'],
+        help='the activation function')
+    parser.add_argument(
         '--data_seed', type=int, default=1, help='the seed for dataset')
+    parser.add_argument(
+        '--drop_rate', type=float, default=0.0, help='drop rate.')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -115,8 +126,7 @@ def main():
     parser.add_argument(
         '--normalize',
         type=bool,
-        default=True,
-        # default=False,
+        default=False,
         help='Whether normalize input layer by our method.')
 
     args = parser.parse_args()

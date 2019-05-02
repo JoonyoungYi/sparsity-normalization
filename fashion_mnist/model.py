@@ -3,12 +3,21 @@ import math
 import tensorflow as tf
 
 
-def _forward(x, weights, biases, args, activation_fn=tf.nn.relu):
+def _forward(x, weights, biases, training, args):
+    if args.activation_fn == 'relu':
+        activation_fn = tf.nn.relu
+    elif args.activation_fn == 'tanh':
+        activation_fn = tf.nn.tanh
+    else:
+        assert False
+
     layer = x
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
         if i < len(biases) - 1:
             layer = activation_fn(layer)
+            layer = tf.layers.dropout(
+                layer, rate=args.drop_rate, training=training)
 
             if args.normalize:
                 divider = tf.maximum(
@@ -17,6 +26,8 @@ def _forward(x, weights, biases, args, activation_fn=tf.nn.relu):
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),
                     tf.ones([1, layer.shape[1]]))
+                if args.drop_rate and args.drop_rate > 1e-8:
+                    divider /= tf.where(training, args.drop_rate, 1.0)
                 layer /= divider
 
     return layer
@@ -45,10 +56,12 @@ def _get_accuracy(y_hot, y_hat):
 def init_models(args):
     x = tf.placeholder(tf.float32, [None, 784], name="x")
     y = tf.placeholder(tf.int32, [None], name="y")
+    training = tf.placeholder(tf.bool, name="training")
+
     y_hot = tf.one_hot(y, 10)
     weights, biases = _init_weights(args)
 
-    y_hat = _forward(x, weights, biases, args)
+    y_hat = _forward(x, weights, biases, training, args)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -59,9 +72,10 @@ def init_models(args):
     train_op = optimizer.minimize(loss)
 
     return {
-        'loss': loss,
-        'accuracy': accuracy,
         'x': x,
         'y': y,
+        'training': training,
+        'loss': loss,
+        'accuracy': accuracy,
         'train_op': train_op,
     }
