@@ -191,6 +191,13 @@ def main():
         'the seeds for dataset. if seeds is not None, ignore seed. ex. 1,2,3,4,5'
     )
     parser.add_argument(
+        '--column_multipliers',
+        type=str,
+        default=None,
+        help=
+        'the column_multipliers. if column_multipliers is not None, ignore column_multiplier. ex. 1,2,3,4,5'
+    )
+    parser.add_argument(
         '--column_multiplier', type=int, default=1, help='column multiplier')
     parser.add_argument(
         '--drop_rate', type=float, default=0.0, help='drop rate.')
@@ -215,8 +222,18 @@ def main():
 
     args = parser.parse_args()
 
-    column_multiplier_unit = 100
-    for column_multiplier in range(3, 101):
+    if args.column_multipliers:
+        try:
+            column_multipliers = [
+                int(t) for t in args.column_multipliers.split(',')
+            ]
+        except:
+            print('column_multipliers is not valid.')
+            assert False
+    else:
+        column_multipliers = [args.column_multiplier]
+
+    for column_multiplier in column_multipliers:
         if args.seeds:
             try:
                 seeds = [int(t) for t in args.seeds.split(',')]
