@@ -49,7 +49,6 @@ def _init_weights(args, n_feature):
     return weights, biases
 
 
-
 def init_models(args, n_feature):
     x = tf.placeholder(tf.float32, [None, n_feature], name="x")
     y = tf.placeholder(tf.float32, [None], name="y")
@@ -59,7 +58,7 @@ def init_models(args, n_feature):
     y_hat = tf.reshape(_forward(x, weights, biases, training, args), [-1])
 
     loss = tf.reduce_sum(tf.square(y - y_hat))
-    accuracy = tf.sqrt(tf.reduce_mean(tf.square(y - y_hat)))
+    rmse = tf.sqrt(tf.reduce_mean(tf.square(y - y_hat)))
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss)
@@ -69,6 +68,6 @@ def init_models(args, n_feature):
         'y': y,
         'training': training,
         'loss': loss,
-        'accuracy': accuracy,
+        'rmse': rmse,
         'train_op': train_op,
     }
