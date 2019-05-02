@@ -18,6 +18,17 @@ def _forward(x, weights, biases, training, args):
             layer = activation_fn(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
+
+            if args.normalize_hidden:
+                divider = tf.maximum(
+                    tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
+                    1)
+                divider = tf.matmul(
+                    tf.expand_dims(divider, axis=1),
+                    tf.ones([1, layer.shape[1]]))
+                if args.drop_rate and args.drop_rate > 1e-8:
+                    divider /= tf.where(training, args.drop_rate, 1.0)
+                layer /= divider
     return layer
 
 

@@ -6,33 +6,37 @@ import numpy as np
 
 from .model import init_models
 
-
-def _make_sparse(_x, normalize=False):
-    x = _x.copy()
-    for i in range(x.shape[0]):
-        row = x[i]
-
-        # if random.random() < 0.5:
-        #     portion = 0.9
-        # else:
-        #     portion = 0.1
-        portion = random.random() * 0.8
-
-        row[np.random.random(784) < portion] = 0
-        if normalize:
-            count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-            # print(count_nonzero)
-            row /= count_nonzero
-        x[i] = row
-    # input('')
-    return x
+# def _make_sparse(_x, normalize=False):
+#     x = _x.copy()
+#     for i in range(x.shape[0]):
+#         row = x[i]
+#
+#         # if random.random() < 0.5:
+#         #     portion = 0.9
+#         # else:
+#         #     portion = 0.1
+#         portion = random.random() * 0.8
+#
+#         row[np.random.random(784) < portion] = 0
+#         if normalize:
+#             count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+#             # print(count_nonzero)
+#             row /= count_nonzero
+#         x[i] = row
+#     # input('')
+#     return x
 
 
 def _init_x_and_y(args):
     # load data
-    fashion_mnist = keras.datasets.mnist
-    # fashion_mnist = keras.datasets.fashion_mnist
-    (train_x, train_y), (test_x, test_y) = fashion_mnist.load_data()
+    if args.dataset == 'default':
+        dataset = keras.datasets.mnist
+    elif args.dataset == 'fashion':
+        dataset = keras.datasets.fashion_mnist
+    else:
+        raise NotImplementedError()
+
+    (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
     # normalize
     train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255
@@ -50,9 +54,9 @@ def _init_x_and_y(args):
     valid_y = train_y[50000:]
     train_y = train_y[:50000]
 
-    train_x = _make_sparse(train_x, normalize=args.normalize)
-    valid_x = _make_sparse(valid_x, normalize=args.normalize)
-    test_x = _make_sparse(test_x, normalize=args.normalize)
+    # train_x = _make_sparse(train_x, normalize=args.normalize)
+    # valid_x = _make_sparse(valid_x, normalize=args.normalize)
+    # test_x = _make_sparse(test_x, normalize=args.normalize)
 
     return train_x, train_y, valid_x, valid_y, test_x, test_y
 
@@ -60,7 +64,7 @@ def _init_x_and_y(args):
 def train(args):
     train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.15)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args)
@@ -120,13 +124,20 @@ def train(args):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='SparseMNIST')
+    parser = argparse.ArgumentParser(description='MNIST')
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        # default='default',
+        default='fashion',
+        choices=['default', 'fashion'],
+        help='MNIST or Fashion MNIST')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=1000,
+        default=100,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -136,7 +147,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=100,
+        default=200,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -156,11 +167,11 @@ def main():
         help='learning rate of optimizer')
 
     parser.add_argument(
-        '--normalize',
+        '--normalize_hidden',
         type=bool,
-        default=True,
-        # default=False,
-        help='Whether normalize input layer by our method.')
+        # default=True,
+        default=False,
+        help='Whether normalize hidden layers')
 
     args = parser.parse_args()
     train(args)
