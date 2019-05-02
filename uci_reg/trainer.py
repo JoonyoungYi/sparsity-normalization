@@ -11,19 +11,17 @@ from .model import init_models
 from common.utils import str2bool
 
 
-def _init_x_and_y(args):
-    # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
-    if args.dataset == 'california':
-        dataset = fetch_california_housing()
+def _init_x_and_y(args, column_multiplier):
+    if args.dataset == 'boston':
+        dataset = load_boston()
     elif args.dataset == 'diabetes':
         dataset = load_diabetes()
-    elif args.dataset == 'boston':
-        dataset = load_boston()
+    elif args.dataset == 'california':
+        dataset = fetch_california_housing()
     else:
         raise NotImplementedError()
 
     x = dataset.data
-    x = np.concatenate([x] * args.column_multiplier, axis=1)
     y = dataset.target
 
     # feature-wise normalization min-max=0-1
@@ -33,6 +31,9 @@ def _init_x_and_y(args):
         for j in range(x.shape[1]):
             x[:, j] = (x[:, j] - feature_min[j]) / (
                 feature_max[j] - feature_min[j])
+
+    # augment features
+    x = np.concatenate([x] * column_multiplier, axis=1)
 
     # sparsity injection
     for i in range(x.shape[0]):
@@ -66,16 +67,22 @@ def _init_x_and_y(args):
     valid_y = y[int(x.shape[0] * 0.6):int(x.shape[0] * 0.8)]
     test_y = y[int(x.shape[0] * 0.8):]
 
+    mean = np.mean(train_y)
+    print('>> Baseline (mean predictor) RMSE:',
+          np.sqrt(np.mean(np.square(mean - test_y))))
+    # input('')
+
     return train_x, train_y, valid_x, valid_y, test_x, test_y
 
 
-def _train(args, seed):
+def _train(args, seed, column_multiplier):
     # set seed
     random.seed(seed)
     np.random.seed(seed=seed)
     tf.random.set_random_seed(seed)
 
-    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
+    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(
+        args, column_multiplier)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -144,9 +151,9 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='boston',
+        # default='boston',
+        default='diabetes',
         # default='california',
-        # default='diabetes',
         choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
@@ -202,28 +209,36 @@ def main():
     parser.add_argument(
         '--normalize_feature',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether normalize each features by min 0, max 1.')
 
     args = parser.parse_args()
 
-    if args.seeds:
-        try:
-            seeds = [int(t) for t in args.seeds.split(',')]
-        except:
-            print('seeds is not valid.')
-            assert False
+    for column_multiplier in range(1, 101):
+        if args.seeds:
+            try:
+                seeds = [int(t) for t in args.seeds.split(',')]
+            except:
+                print('seeds is not valid.')
+                assert False
 
-        rmses = []
-        for seed in seeds:
-            rmse = _train(args, seed=seed)
-            rmses.append(rmse)
-        print('\n>> average final_test_rmse:', sum(rmses) / len(seeds))
+            rmses = []
+            for seed in seeds:
+                rmse = _train(
+                    args, seed=seed, column_multiplier=column_multiplier * 10)
+                rmses.append(rmse)
+            rmse = sum(rmses) / len(seeds)
+            print('\n>> average final_test_rmse:', rmse)
+            f = open('uci_reg/results-{}-{}.txt'.format(
+                args.dataset, args.normalize_input), 'a')
+            f.write('{}\t{}\n'.format(column_multiplier * 10, rmse))
+            f.close()
 
-    else:
-        rmse = _train(args, seed=args.seed)
-        print('\n>> final_test_rmse:', rmse)
+        else:
+            rmse = _train(
+                args, seed=args.seed, column_multiplier=args.column_multiplier)
+            print('\n>> final_test_rmse:', rmse)
 
 
 if __name__ == '__main__':
