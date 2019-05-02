@@ -140,7 +140,7 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='boston',
+        default='california',
         choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
@@ -175,13 +175,13 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-4,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=True,
+        default=False,
         # default=False,
         help='Whether normalize input layer by our method.')
     parser.add_argument(
