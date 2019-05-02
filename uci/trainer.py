@@ -23,6 +23,7 @@ def _init_x_and_y(args):
         raise NotImplementedError()
 
     x = dataset.data
+    x = np.concatenate([x] * 10, axis=1)
     y = dataset.target
 
     # feature-wise normalization min-max=0-1
@@ -40,9 +41,9 @@ def _init_x_and_y(args):
         m = None
         while m is None or m[0].shape[0] >= x.shape[1]:
             if random.random() < 0.5:
-                m = np.where(np.random.random(x.shape[1]) < 0)
+                m = np.where(np.random.random(x.shape[1]) < 0.2)
             else:
-                m = np.where(np.random.random(x.shape[1]) < 0.5)
+                m = np.where(np.random.random(x.shape[1]) < 0.8)
 
         row[m] = 0
         if args.normalize_input:
@@ -140,7 +141,9 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='california',
+        # default='boston',
+        # default='california',
+        default='diabetes',
         choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
@@ -181,8 +184,8 @@ def main():
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
+        # default=True,
         default=False,
-        # default=False,
         help='Whether normalize input layer by our method.')
     parser.add_argument(
         '--normalize_feature',

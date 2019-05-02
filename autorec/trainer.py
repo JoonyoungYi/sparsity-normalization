@@ -180,20 +180,17 @@ def main():
         default=1000,
         help='the number of epochation for early stop.')
 
-    l = 4.0
     parser.add_argument(
         '--lambda_w1',
         type=float,
         default=0.0,
-        # default=l,
         help='lambda for weight decay.')
     parser.add_argument(
-        '--lambda_w2', type=float, default=l, help='lambda for weight decay.')
+        '--lambda_w2', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
         choices=['rprop', 'adam'],
-        # default='rprop',
         default='adam',
         help='Optimizer')
     parser.add_argument(
