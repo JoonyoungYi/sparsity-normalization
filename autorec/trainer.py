@@ -60,7 +60,7 @@ def _train(args):
     elif args.dataset == Dataset.KIND_MOVIELENS_1M:
         gpu_memory_fraction = 0.1
     elif args.dataset == Dataset.KIND_MOVIELENS_10M:
-        gpu_memory_fraction = 0.17
+        gpu_memory_fraction = 0.18
     else:
         gpu_memory_fraction = 1.0
     gpu_options = tf.GPUOptions(
