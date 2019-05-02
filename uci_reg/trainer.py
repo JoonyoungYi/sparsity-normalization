@@ -12,11 +12,15 @@ from common.utils import str2bool
 
 
 def _init_x_and_y(args, column_multiplier):
+    # https://scikit-learn.org/stable/datasets/index.html
+    # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
+    # https://datascienceschool.net/view-notebook/577a01e24d4f456bb5060da6e47054e1/
     if args.dataset == 'boston':
         dataset = load_boston()
     elif args.dataset == 'diabetes':
         dataset = load_diabetes()
     elif args.dataset == 'california':
+        # tf 16~19에서 돌리는 중.
         dataset = fetch_california_housing()
     else:
         raise NotImplementedError()
@@ -191,12 +195,10 @@ def main():
         'the seeds for dataset. if seeds is not None, ignore seed. ex. 1,2,3,4,5'
     )
     parser.add_argument(
-        '--column_multipliers',
-        type=str,
-        default=None,
-        help=
-        'the column_multipliers. if column_multipliers is not None, ignore column_multiplier. ex. 1,2,3,4,5'
-    )
+        '--incremental_column_multipliers',
+        type=str2bool,
+        default=False,
+        help='the incremental column_multipliers.')
     parser.add_argument(
         '--column_multiplier', type=int, default=1, help='column multiplier')
     parser.add_argument(
@@ -222,14 +224,9 @@ def main():
 
     args = parser.parse_args()
 
-    if args.column_multipliers:
-        try:
-            column_multipliers = [
-                int(t) for t in args.column_multipliers.split(',')
-            ]
-        except:
-            print('column_multipliers is not valid.')
-            assert False
+    if args.incremental_column_multipliers:
+        column_multipliers = list(range(1, 10)) + list(
+            range(10, 100, 10)) + list(range(100, 1000, 100))
     else:
         column_multipliers = [args.column_multiplier]
 
@@ -244,17 +241,13 @@ def main():
             rmses = []
             for seed in seeds:
                 rmse = _train(
-                    args,
-                    seed=seed,
-                    column_multiplier=column_multiplier *
-                    column_multiplier_unit)
+                    args, seed=seed, column_multiplier=column_multiplier)
                 rmses.append(rmse)
             rmse = sum(rmses) / len(seeds)
             print('\n>> average final_test_rmse:', rmse)
             f = open('results/uci_reg/{}-{}.txt'.format(
                 args.dataset, args.normalize_input), 'a')
-            f.write('{}\t{}\n'.format(column_multiplier *
-                                      column_multiplier_unit, rmse))
+            f.write('{}\t{}\n'.format(column_multiplier, rmse))
             f.close()
 
         else:
