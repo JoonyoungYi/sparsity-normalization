@@ -4,13 +4,20 @@ import random
 import tensorflow as tf
 import numpy as np
 from sklearn.datasets import fetch_california_housing
+from sklearn.datasets import load_diabetes
 
 from .model import init_models
 from common.utils import str2bool
 
 
 def _init_x_and_y(args):
-    dataset = fetch_california_housing()
+    if args.dataset == 'california':
+        dataset = fetch_california_housing()
+    elif args.dataset == 'diabetes':
+        dataset = load_diabetes()
+    else:
+        raise NotImplementedError()
+
     x = dataset.data
     y = dataset.target
 
@@ -21,11 +28,6 @@ def _init_x_and_y(args):
         for j in range(x.shape[1]):
             x[:, j] = (x[:, j] - feature_min[j]) / (
                 feature_max[j] - feature_min[j])
-
-    # set seed
-    random.seed(args.data_seed)
-    np.random.seed(seed=args.data_seed)
-    tf.random.set_random_seed(args.data_seed)
 
     # sparsity injection
     for i in range(x.shape[0]):
@@ -39,7 +41,7 @@ def _init_x_and_y(args):
                 m = np.where(np.random.random(x.shape[1]) < 0.5)
 
         row[m] = 0
-        if args.normalize:
+        if args.normalize_input:
             # print(row)
             row /= (x.shape[1] - m[0].shape[0])
             # print(row)
@@ -63,6 +65,11 @@ def _init_x_and_y(args):
 
 
 def train(args):
+    # set seed
+    random.seed(args.seed)
+    np.random.seed(seed=args.seed)
+    tf.random.set_random_seed(args.seed)
+
     train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
@@ -127,6 +134,12 @@ def main():
 
     parser = argparse.ArgumentParser(description='sklearn-dataset')
     parser.add_argument(
+        '--dataset',
+        type=str,
+        default='diabetes',
+        choices=['california', 'diabetes'],
+        help='dataset.')
+    parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
@@ -152,7 +165,7 @@ def main():
         choices=['relu', 'tanh', 'sigmoid'],
         help='the activation function')
     parser.add_argument(
-        '--data_seed', type=int, default=1, help='the seed for dataset')
+        '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
         '--drop_rate', type=float, default=0.0, help='drop rate.')
     parser.add_argument(
