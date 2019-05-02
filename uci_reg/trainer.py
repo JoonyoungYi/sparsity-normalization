@@ -152,8 +152,8 @@ def main():
         '--dataset',
         type=str,
         # default='boston',
-        default='diabetes',
-        # default='california',
+        # default='diabetes',
+        default='california',
         choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
@@ -215,7 +215,8 @@ def main():
 
     args = parser.parse_args()
 
-    for column_multiplier in range(1, 101):
+    column_multiplier_unit = 100
+    for column_multiplier in range(3, 101):
         if args.seeds:
             try:
                 seeds = [int(t) for t in args.seeds.split(',')]
@@ -226,13 +227,17 @@ def main():
             rmses = []
             for seed in seeds:
                 rmse = _train(
-                    args, seed=seed, column_multiplier=column_multiplier * 10)
+                    args,
+                    seed=seed,
+                    column_multiplier=column_multiplier *
+                    column_multiplier_unit)
                 rmses.append(rmse)
             rmse = sum(rmses) / len(seeds)
             print('\n>> average final_test_rmse:', rmse)
-            f = open('uci_reg/results-{}-{}.txt'.format(
+            f = open('results/uci_reg/{}-{}.txt'.format(
                 args.dataset, args.normalize_input), 'a')
-            f.write('{}\t{}\n'.format(column_multiplier * 10, rmse))
+            f.write('{}\t{}\n'.format(column_multiplier *
+                                      column_multiplier_unit, rmse))
             f.close()
 
         else:
