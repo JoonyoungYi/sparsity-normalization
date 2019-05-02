@@ -5,16 +5,20 @@ import tensorflow as tf
 import numpy as np
 from sklearn.datasets import fetch_california_housing
 from sklearn.datasets import load_diabetes
+from sklearn.datasets import load_boston
 
 from .model import init_models
 from common.utils import str2bool
 
 
 def _init_x_and_y(args):
+    # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
     if args.dataset == 'california':
         dataset = fetch_california_housing()
     elif args.dataset == 'diabetes':
         dataset = load_diabetes()
+    elif args.dataset == 'boston':
+        dataset = load_boston()
     else:
         raise NotImplementedError()
 
@@ -136,8 +140,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='diabetes',
-        choices=['california', 'diabetes'],
+        default='boston',
+        choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
