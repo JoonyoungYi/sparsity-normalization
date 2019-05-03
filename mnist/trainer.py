@@ -6,33 +6,16 @@ import numpy as np
 
 from .model import init_models
 from common.utils import str2bool
+from common.utils import inject_sparsity
+from common.utils import split_sparse_and_dense_group
 
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR100-dataset_fig4_317679430
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR10-dataset_fig5_317679430
-# def _make_sparse(_x, normalize=False):
-#     x = _x.copy()
-#     for i in range(x.shape[0]):
-#         row = x[i]
-#
-#         # if random.random() < 0.5:
-#         #     portion = 0.9
-#         # else:
-#         #     portion = 0.1
-#         portion = random.random() * 0.8
-#
-#         row[np.random.random(784) < portion] = 0
-#         if normalize:
-#             count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-#             # print(count_nonzero)
-#             row /= count_nonzero
-#         x[i] = row
-#     # input('')
-#     return x
 
 
 def _init_x_and_y(args):
     # load data
-    if args.dataset == 'default':
+    if args.dataset == 'mnist':
         dataset = keras.datasets.mnist
     elif args.dataset == 'fashion':
         dataset = keras.datasets.fashion_mnist
@@ -47,26 +30,9 @@ def _init_x_and_y(args):
     train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255
 
-    # # print(train_x)
-    # value = np.sum(train_x, axis=1)
-    # print(value)
-    # for i in range(10):
-    #     _value = value[train_y == i]
-    #     print(np.mean(_value), np.std(_value))
-    #     # print()
-    # # print(np.sum(train_x))
-    #
-    # assert False
-
-    # normalize_input
-    if args.normalize_input:
-        c = np.sum(train_x > 1e-8, axis=1).reshape([-1, 1])
-        train_x = train_x / c
-
-        c = np.sum(test_x > 1e-8, axis=1).reshape([-1, 1])
-        test_x = test_x / c
-        # print(c)
-        # assert False
+    # sparsity injection
+    train_x = inject_sparsity(train_x)
+    test_x = inject_sparsity(test_x)
 
     # split
     random.seed(args.data_seed)
@@ -80,14 +46,11 @@ def _init_x_and_y(args):
     valid_y = train_y[50000:]
     train_y = train_y[:50000]
 
-    # train_x = _make_sparse(train_x, normalize=args.normalize)
-    # valid_x = _make_sparse(valid_x, normalize=args.normalize)
-    # test_x = _make_sparse(test_x, normalize=args.normalize)
-
     return train_x, train_y, valid_x, valid_y, test_x, test_y
 
 
-def train(args):
+def train(args, seed):
+    set_seed(seed)
     train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
@@ -102,6 +65,8 @@ def train(args):
 
     max_test_acc = 0.0
     max_test_iter_idx = 0
+
+    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -154,10 +119,10 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        # default='default',
-        default='fashion',
+        default='mnist',
+        # default='fashion',
         # default='cifar10',
-        choices=['default', 'fashion', 'cifar10'],
+        choices=['mnist', 'fashion', 'cifar10'],
         help='MNIST or Fashion MNIST or CIFAR-10')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
@@ -184,7 +149,7 @@ def main():
         choices=['relu', 'tanh'],
         help='the activation function')
     parser.add_argument(
-        '--data_seed', type=int, default=1, help='the seed for dataset')
+        '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
         '--drop_rate', type=float, default=0.0, help='drop rate.')
     parser.add_argument(
@@ -192,6 +157,11 @@ def main():
         type=float,
         default=1e-2,
         help='learning rate of optimizer')
+    parser.add_argument(
+        '--inject_sparsity',
+        type=str2bool,
+        default=True,
+        help='Whether inject sparsity.')
 
     parser.add_argument(
         '--normalize_hidden',
@@ -207,7 +177,7 @@ def main():
         help='Whether normalize input layers')
 
     args = parser.parse_args()
-    train(args)
+    train(args, args.seed)
 
 
 if __name__ == '__main__':

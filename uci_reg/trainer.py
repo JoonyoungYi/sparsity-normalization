@@ -9,6 +9,9 @@ from sklearn.datasets import load_boston
 
 from .model import init_models
 from common.utils import str2bool
+from common.utils import set_seed
+from common.utils import inject_sparsity
+from common.utils import split_sparse_and_dense_group
 
 
 def _init_x_and_y(args, column_multiplier):
@@ -40,24 +43,7 @@ def _init_x_and_y(args, column_multiplier):
     x = np.concatenate([x] * column_multiplier, axis=1)
 
     # sparsity injection
-    if args.inject_sparsity:
-        for i in range(x.shape[0]):
-            row = x[i]
-
-            m = None
-            while m is None or m[0].shape[0] >= x.shape[1]:
-                if random.random() < 0.5:
-                    m = np.where(np.random.random(x.shape[1]) < 0.2)
-                else:
-                    m = np.where(np.random.random(x.shape[1]) < 0.8)
-
-            row[m] = 0
-            if args.normalize_input:
-                # print(row)
-                row /= (x.shape[1] - m[0].shape[0])
-                # print(row)
-                # input('')
-            x[i] = row
+    x = inject_sparsity(x, args)
 
     # split
     perm = np.random.permutation(x.shape[0])
@@ -84,18 +70,8 @@ def _init_x_and_y(args, column_multiplier):
     return train_x, train_y, valid_x, valid_y, test_x, test_y
 
 
-def _split_sparse_and_dense_group(test_x):
-    sparse_group = np.sum(test_x > 1e-8, axis=1) <= (test_x.shape[1] // 2)
-    dense_group = np.sum(test_x > 1e-8, axis=1) > (test_x.shape[1] // 2)
-    return test_x[sparse_group], test_x[dense_group]
-
-
 def _train(args, seed, column_multiplier):
-    # set seed
-    random.seed(seed)
-    np.random.seed(seed=seed)
-    tf.random.set_random_seed(seed)
-
+    set_seed(seed)
     train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(
         args, column_multiplier)
 
@@ -112,7 +88,7 @@ def _train(args, seed, column_multiplier):
     max_test_rmse = float('inf')
     max_test_iter_idx = 0
 
-    sparse_test_x, dense_test_x = _split_sparse_and_dense_group(test_x)
+    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_rmse = session.run(
