@@ -31,8 +31,8 @@ def _init_x_and_y(args):
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255
 
     # sparsity injection
-    train_x = inject_sparsity(train_x, args)
-    test_x = inject_sparsity(test_x, args)
+    train_x, train_g = inject_sparsity(train_x, args)
+    test_x, test_g = inject_sparsity(test_x, args)
 
     # split
     train_perm = np.random.permutation(train_x.shape[0])
@@ -44,12 +44,12 @@ def _init_x_and_y(args):
     valid_y = train_y[50000:]
     train_y = train_y[:50000]
 
-    return train_x, train_y, valid_x, valid_y, test_x, test_y
+    return train_x, train_y, valid_x, valid_y, test_x, test_y, test_g
 
 
 def train(args, seed):
     set_seed(seed)
-    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
+    train_x, train_y, valid_x, valid_y, test_x, test_y, test_g = _init_x_and_y(args)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -64,7 +64,8 @@ def train(args, seed):
     max_test_acc = 0.0
     max_test_iter_idx = 0
 
-    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x)
+    # 이렇게 하면 안된다. 애초에 너무 0이 많음....
+    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x, test_g)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -101,6 +102,29 @@ def train(args, seed):
             max_valid_acc = valid_acc
             max_valid_iter_idx = iter_idx
             final_test_acc = test_acc
+
+            test_activations = session.run(
+                models['activations'],
+                feed_dict={
+                    models['x']: test_x,
+                    models['training']: False,
+                })
+            test_sparse_activations = session.run(
+                models['activations'],
+                feed_dict={
+                    models['x']: sparse_test_x,
+                    models['training']: False,
+                })
+            test_dense_activations = session.run(
+                models['activations'],
+                feed_dict={
+                    models['x']: dense_test_x,
+                    models['training']: False,
+                })
+
+            print(test_sparse_activations)
+            print(test_activations)
+            print(test_dense_activations)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc

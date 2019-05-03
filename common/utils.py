@@ -15,6 +15,7 @@ def str2bool(v):
 
 
 def inject_sparsity(x, args):
+    g = np.zeros(x.shape[0])
     if args.inject_sparsity:
         for i in range(x.shape[0]):
             row = x[i]
@@ -23,8 +24,10 @@ def inject_sparsity(x, args):
             while m is None or m[0].shape[0] >= x.shape[1]:
                 if random.random() < 0.5:
                     m = np.where(np.random.random(x.shape[1]) < 0.2)
+                    g[i] = 1
                 else:
                     m = np.where(np.random.random(x.shape[1]) < 0.8)
+                    g[i] = -1
 
             row[m] = 0
             if args.normalize_input:
@@ -33,13 +36,11 @@ def inject_sparsity(x, args):
                 # print(row)
                 # input('')
             x[i] = row
-    return x
+    return x, g
 
 
-def split_sparse_and_dense_group(test_x):
-    sparse_group = np.sum(test_x > 1e-8, axis=1) <= (test_x.shape[1] // 2)
-    dense_group = np.sum(test_x > 1e-8, axis=1) > (test_x.shape[1] // 2)
-    return test_x[sparse_group], test_x[dense_group]
+def split_sparse_and_dense_group(test_x, g):
+    return test_x[g < -0.5], test_x[g > 0.5]
 
 
 def set_seed(seed):

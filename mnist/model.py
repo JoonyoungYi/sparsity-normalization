@@ -8,14 +8,18 @@ def _forward(x, weights, biases, training, args):
         activation_fn = tf.nn.relu
     elif args.activation_fn == 'tanh':
         activation_fn = tf.nn.tanh
+    elif args.activation_fn == 'sigmoid':
+        activation_fn = tf.nn.sigmoid
     else:
-        assert False
+        raise NotImplementedError()
 
     layer = x
+    layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
         if i < len(biases) - 1:
             layer = activation_fn(layer)
+            layers.append(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
 
@@ -29,7 +33,9 @@ def _forward(x, weights, biases, training, args):
                 if args.drop_rate and args.drop_rate > 1e-8:
                     divider /= tf.where(training, args.drop_rate, 1.0)
                 layer /= divider
-    return layer
+        else:
+            layers.append(layer)
+    return layers
 
 
 def _init_weights(args):
@@ -60,7 +66,9 @@ def init_models(args):
     y_hot = tf.one_hot(y, 10)
     weights, biases = _init_weights(args)
 
-    y_hat = _forward(x, weights, biases, training, args)
+    layers = _forward(x, weights, biases, training, args)
+    y_hat = layers[-1]
+    activations = [tf.reduce_mean(layer) for layer in layers]
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -76,5 +84,6 @@ def init_models(args):
         'training': training,
         'loss': loss,
         'accuracy': accuracy,
+        'activations': activations,
         'train_op': train_op,
     }

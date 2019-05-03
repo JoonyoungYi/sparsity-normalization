@@ -42,9 +42,6 @@ def _init_x_and_y(args, column_multiplier):
     # augment features
     x = np.concatenate([x] * column_multiplier, axis=1)
 
-    # sparsity injection
-    x = inject_sparsity(x, args)
-
     # split
     perm = np.random.permutation(x.shape[0])
     x = x[perm]
@@ -58,6 +55,11 @@ def _init_x_and_y(args, column_multiplier):
     valid_y = y[int(x.shape[0] * 0.6):int(x.shape[0] * 0.8)]
     test_y = y[int(x.shape[0] * 0.8):]
 
+    # sparsity injection
+    train_x, train_g = inject_sparsity(train_x, args)
+    valid_x, valid_g = inject_sparsity(valid_x, args)
+    test_x, test_g = inject_sparsity(test_x, args)
+
     # mean = np.mean(train_y)
     # print('>> Baseline (mean predictor) RMSE:',
     #       np.sqrt(np.mean(np.square(mean - test_y))))
@@ -67,12 +69,12 @@ def _init_x_and_y(args, column_multiplier):
     # print('>> Test mean:', test_mean)
     # input('')
 
-    return train_x, train_y, valid_x, valid_y, test_x, test_y
+    return train_x, train_y, valid_x, valid_y, test_x, test_y, test_g
 
 
 def _train(args, seed, column_multiplier):
     set_seed(seed)
-    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(
+    train_x, train_y, valid_x, valid_y, test_x, test_y, g = _init_x_and_y(
         args, column_multiplier)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
@@ -88,7 +90,7 @@ def _train(args, seed, column_multiplier):
     max_test_rmse = float('inf')
     max_test_iter_idx = 0
 
-    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x)
+    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x, g)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_rmse = session.run(
@@ -236,6 +238,8 @@ def main():
         help='Whether normalize each features by min 0, max 1.')
 
     args = parser.parse_args()
+
+    assert args.inject_sparsity
 
     if args.incremental_column_multipliers:
         column_multipliers = list(range(1, 10)) + list(
