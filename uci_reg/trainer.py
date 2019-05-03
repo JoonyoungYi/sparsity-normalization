@@ -72,9 +72,13 @@ def _init_x_and_y(args, column_multiplier):
     valid_y = y[int(x.shape[0] * 0.6):int(x.shape[0] * 0.8)]
     test_y = y[int(x.shape[0] * 0.8):]
 
-    mean = np.mean(train_y)
-    print('>> Baseline (mean predictor) RMSE:',
-          np.sqrt(np.mean(np.square(mean - test_y))))
+    # mean = np.mean(train_y)
+    # print('>> Baseline (mean predictor) RMSE:',
+    #       np.sqrt(np.mean(np.square(mean - test_y))))
+    # train_mean = np.mean(train_y)
+    # print('>> Train mean:', train_mean)
+    # test_mean = np.mean(test_y)
+    # print('>> Test mean:', test_mean)
     # input('')
 
     return train_x, train_y, valid_x, valid_y, test_x, test_y
