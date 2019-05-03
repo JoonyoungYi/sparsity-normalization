@@ -5,7 +5,10 @@ from tensorflow import keras
 import numpy as np
 
 from .model import init_models
+from common.utils import str2bool
 
+# https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR100-dataset_fig4_317679430
+# https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR10-dataset_fig5_317679430
 # def _make_sparse(_x, normalize=False):
 #     x = _x.copy()
 #     for i in range(x.shape[0]):
@@ -33,6 +36,8 @@ def _init_x_and_y(args):
         dataset = keras.datasets.mnist
     elif args.dataset == 'fashion':
         dataset = keras.datasets.fashion_mnist
+    # elif args.dataset == 'cifar10':
+    #     dataset = keras.datasets.cifar10
     else:
         raise NotImplementedError()
 
@@ -41,6 +46,27 @@ def _init_x_and_y(args):
     # normalize
     train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255
+
+    # # print(train_x)
+    # value = np.sum(train_x, axis=1)
+    # print(value)
+    # for i in range(10):
+    #     _value = value[train_y == i]
+    #     print(np.mean(_value), np.std(_value))
+    #     # print()
+    # # print(np.sum(train_x))
+    #
+    # assert False
+
+    # normalize_input
+    if args.normalize_input:
+        c = np.sum(train_x > 1e-8, axis=1).reshape([-1, 1])
+        train_x = train_x / c
+
+        c = np.sum(test_x > 1e-8, axis=1).reshape([-1, 1])
+        test_x = test_x / c
+        # print(c)
+        # assert False
 
     # split
     random.seed(args.data_seed)
@@ -130,14 +156,15 @@ def main():
         type=str,
         # default='default',
         default='fashion',
-        choices=['default', 'fashion'],
-        help='MNIST or Fashion MNIST')
+        # default='cifar10',
+        choices=['default', 'fashion', 'cifar10'],
+        help='MNIST or Fashion MNIST or CIFAR-10')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=100,
+        default=300,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -147,7 +174,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=200,
+        default=100,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -168,10 +195,16 @@ def main():
 
     parser.add_argument(
         '--normalize_hidden',
-        type=bool,
+        type=str2bool,
         # default=True,
         default=False,
         help='Whether normalize hidden layers')
+    parser.add_argument(
+        '--normalize_input',
+        type=str2bool,
+        default=True,
+        # default=False,
+        help='Whether normalize input layers')
 
     args = parser.parse_args()
     train(args)

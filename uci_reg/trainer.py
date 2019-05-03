@@ -40,23 +40,24 @@ def _init_x_and_y(args, column_multiplier):
     x = np.concatenate([x] * column_multiplier, axis=1)
 
     # sparsity injection
-    for i in range(x.shape[0]):
-        row = x[i]
+    if args.inject_sparsity:
+        for i in range(x.shape[0]):
+            row = x[i]
 
-        m = None
-        while m is None or m[0].shape[0] >= x.shape[1]:
-            if random.random() < 0.5:
-                m = np.where(np.random.random(x.shape[1]) < 0.2)
-            else:
-                m = np.where(np.random.random(x.shape[1]) < 0.8)
+            m = None
+            while m is None or m[0].shape[0] >= x.shape[1]:
+                if random.random() < 0.5:
+                    m = np.where(np.random.random(x.shape[1]) < 0.2)
+                else:
+                    m = np.where(np.random.random(x.shape[1]) < 0.8)
 
-        row[m] = 0
-        if args.normalize_input:
-            # print(row)
-            row /= (x.shape[1] - m[0].shape[0])
-            # print(row)
-            # input('')
-        x[i] = row
+            row[m] = 0
+            if args.normalize_input:
+                # print(row)
+                row /= (x.shape[1] - m[0].shape[0])
+                # print(row)
+                # input('')
+            x[i] = row
 
     # split
     perm = np.random.permutation(x.shape[0])
@@ -77,6 +78,12 @@ def _init_x_and_y(args, column_multiplier):
     # input('')
 
     return train_x, train_y, valid_x, valid_y, test_x, test_y
+
+
+def _split_sparse_and_dense_group(test_x):
+    sparse_group = np.sum(test_x > 1e-8, axis=1) <= (test_x.shape[1] // 2)
+    dense_group = np.sum(test_x > 1e-8, axis=1) > (test_x.shape[1] // 2)
+    return test_x[sparse_group], test_x[dense_group]
 
 
 def _train(args, seed, column_multiplier):
@@ -100,6 +107,8 @@ def _train(args, seed, column_multiplier):
 
     max_test_rmse = float('inf')
     max_test_iter_idx = 0
+
+    sparse_test_x, dense_test_x = _split_sparse_and_dense_group(test_x)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_rmse = session.run(
@@ -130,12 +139,30 @@ def _train(args, seed, column_multiplier):
               '%.4f' % valid_rmse, '%.4f' % test_rmse)
         print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_rmse,
               '%.4f' % final_test_rmse)
-        # print('%6d' % max_test_iter_idx, '%.4f' % max_test_rmse)
 
         if max_valid_rmse - 1e-5 > valid_rmse:
             max_valid_rmse = valid_rmse
             max_valid_iter_idx = iter_idx
             final_test_rmse = test_rmse
+
+            test_activations = session.run(
+                models['mean_activations'],
+                feed_dict={
+                    models['x']: test_x,
+                    models['training']: False,
+                })
+            test_sparse_activations = session.run(
+                models['mean_activations'],
+                feed_dict={
+                    models['x']: sparse_test_x,
+                    models['training']: False,
+                })
+            test_dense_activations = session.run(
+                models['mean_activations'],
+                feed_dict={
+                    models['x']: dense_test_x,
+                    models['training']: False,
+                })
 
         if max_test_rmse - 1e-5 > test_rmse:
             max_test_rmse = test_rmse
@@ -145,7 +172,8 @@ def _train(args, seed, column_multiplier):
             break
 
     session.close()
-    return final_test_rmse
+    return final_test_rmse, test_activations[-1], test_sparse_activations[
+        -1], test_dense_activations[-1]
 
 
 def main():
@@ -155,9 +183,9 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        # default='boston',
+        default='boston',
         # default='diabetes',
-        default='california',
+        # default='california',
         choices=['boston', 'california', 'diabetes'],
         help='dataset.')
     parser.add_argument(
@@ -200,6 +228,11 @@ def main():
         default=False,
         help='the incremental column_multipliers.')
     parser.add_argument(
+        '--inject_sparsity',
+        type=str2bool,
+        default=True,
+        help='Whether inject sparsity.')
+    parser.add_argument(
         '--column_multiplier', type=int, default=1, help='column multiplier')
     parser.add_argument(
         '--drop_rate', type=float, default=0.0, help='drop rate.')
@@ -238,16 +271,33 @@ def main():
                 print('seeds is not valid.')
                 assert False
 
-            rmses = []
+            rmses, acts, sparse_acts, dense_acts = [], [], [], []
             for seed in seeds:
-                rmse = _train(
+                rmse, act, sparse_act, dense_act = _train(
                     args, seed=seed, column_multiplier=column_multiplier)
+
                 rmses.append(rmse)
+                acts.append(act)
+                dense_acts.append(dense_act)
+                sparse_acts.append(sparse_act)
+
             rmse = sum(rmses) / len(seeds)
+            sparse_act = sum(sparse_acts) / len(seeds)
+            act = sum(acts) / len(seeds)
+            dense_act = sum(dense_acts) / len(seeds)
+
             print('\n>> average final_test_rmse:', rmse)
             f = open('results/uci_reg/{}-{}.txt'.format(
                 args.dataset, args.normalize_input), 'a')
-            f.write('{}\t{}\n'.format(column_multiplier, rmse))
+            results = [
+                column_multiplier,
+                rmse,
+                sparse_act,
+                act,
+                dense_act,
+            ]
+            line = '\t'.join([str(r) for r in results]) + '\n'
+            f.write(line)
             f.close()
 
         else:

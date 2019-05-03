@@ -11,13 +11,15 @@ def _forward(x, weights, biases, training, args):
     elif args.activation_fn == 'sigmoid':
         activation_fn = tf.nn.sigmoid
     else:
-        assert False
+        raise NotImplementedError()
 
     layer = x
+    layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
         if i < len(biases) - 1:
             layer = activation_fn(layer)
+            layers.append(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
 
@@ -31,7 +33,9 @@ def _forward(x, weights, biases, training, args):
             #     if args.drop_rate and args.drop_rate > 1e-8:
             #         divider /= tf.where(training, args.drop_rate, 1.0)
             #     layer /= divider
-    return layer
+        else:
+            layers.append(layer)
+    return layers
 
 
 def _init_weights(args, n_feature):
@@ -55,7 +59,9 @@ def init_models(args, n_feature):
     training = tf.placeholder(tf.bool, name="training")
 
     weights, biases = _init_weights(args, n_feature)
-    y_hat = tf.reshape(_forward(x, weights, biases, training, args), [-1])
+    layers = _forward(x, weights, biases, training, args)
+    mean_activations = [tf.reduce_mean(layer) for layer in layers]
+    y_hat = tf.reshape(layers[-1], [-1])
 
     loss = tf.reduce_sum(tf.square(y - y_hat))
     rmse = tf.sqrt(tf.reduce_mean(tf.square(y - y_hat)))
@@ -69,5 +75,6 @@ def init_models(args, n_feature):
         'training': training,
         'loss': loss,
         'rmse': rmse,
+        'mean_activations': mean_activations,
         'train_op': train_op,
     }
