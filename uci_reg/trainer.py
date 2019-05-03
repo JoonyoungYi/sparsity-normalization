@@ -126,19 +126,19 @@ def _train(args, seed, column_multiplier):
             final_test_rmse = test_rmse
 
             test_activations = session.run(
-                models['mean_activations'],
+                models['activations'],
                 feed_dict={
                     models['x']: test_x,
                     models['training']: False,
                 })
             test_sparse_activations = session.run(
-                models['mean_activations'],
+                models['activations'],
                 feed_dict={
                     models['x']: sparse_test_x,
                     models['training']: False,
                 })
             test_dense_activations = session.run(
-                models['mean_activations'],
+                models['activations'],
                 feed_dict={
                     models['x']: dense_test_x,
                     models['training']: False,

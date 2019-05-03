@@ -31,12 +31,10 @@ def _init_x_and_y(args):
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255
 
     # sparsity injection
-    train_x = inject_sparsity(train_x)
-    test_x = inject_sparsity(test_x)
+    train_x = inject_sparsity(train_x, args)
+    test_x = inject_sparsity(test_x, args)
 
     # split
-    random.seed(args.data_seed)
-    np.random.seed(seed=args.data_seed)
     train_perm = np.random.permutation(train_x.shape[0])
     train_x = train_x[train_perm]
     train_y = train_y[train_perm]

@@ -60,7 +60,7 @@ def init_models(args, n_feature):
 
     weights, biases = _init_weights(args, n_feature)
     layers = _forward(x, weights, biases, training, args)
-    mean_activations = [tf.reduce_mean(layer) for layer in layers]
+    activations = [tf.reduce_mean(layer) for layer in layers]
     y_hat = tf.reshape(layers[-1], [-1])
 
     loss = tf.reduce_sum(tf.square(y - y_hat))
@@ -75,6 +75,6 @@ def init_models(args, n_feature):
         'training': training,
         'loss': loss,
         'rmse': rmse,
-        'mean_activations': mean_activations,
+        'activations': activations,
         'train_op': train_op,
     }
