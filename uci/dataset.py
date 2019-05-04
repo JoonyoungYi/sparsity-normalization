@@ -22,7 +22,7 @@ def _normalize_feature(x):
 
 
 def _inject_sparsity(x, args):
-    g = np.zeros(x.shape[0])
+    g = np.zeros(x.shape[0])  # g means group
     if args.inject_sparsity:
         for i in range(x.shape[0]):
             row = x[i]
@@ -37,19 +37,20 @@ def _inject_sparsity(x, args):
                     g[i] = -1
 
             row[m] = 0
+            # assert np.sum(row) > 1e-8
+
             if args.normalize_input:
                 # print(row)
-                # print(x.shape[1])
-                # print(m[0].shape[0])
-                # print(())
-                # print(row)
-                row = np.true_divide(row, x.shape[1] - m[0].shape[0])
-                # print(row)
-                # input('')
-                # row /= (x.shape[1] - m[0].shape[0])
+                # row = np.true_divide(row, )
+                divider = x.shape[1] - m[0].shape[0]
+                assert divider >=1
+                # print(row.shape)
+                # print(divider)
+                row /= divider
                 # print(row)
                 # input('')
             x[i] = row
+
     return x, g
 
 
@@ -68,47 +69,49 @@ def _load_congress():
         y.append(1 if tokens[0] == 'republican' else 0)
 
         tokens = tokens[1:]
-        # _m = [0 if t == '?' else 1 for t in tokens]
         _x = []
         for t in tokens:
             if t == 'y':
-                _x.extend([1, 0])
+                _x.extend([1.])
             elif t == '?':
-                _x.extend([0, 0])
+                _x.extend([0.])
             elif t == 'n':
-                _x.extend([0, 1])
+                _x.extend([0.])
             else:
                 raise NotImplementedError()
-        #
-        # if sum(_m) == 0:
-        #     # print(tokens)
-        #     # input('')
-        #     continue
 
-        # prob = 0.2 if random.random() < 0.5 else 0.8
-        # for j in range(16):
-        #     if random.random() < prob:
-        #         _m[j] = 0
-        #         _x[j] = 0
-
-        # if sum(_m) == 0:
-        #     # print(tokens)
-        #     # input('')
-        #     continue
-
-        # m.append(_m)
+            # if t == 'y':
+            #     _x.extend([1])
+            # elif t == '?':
+            #     _x.extend([0])
+            # elif t == 'n':
+            #     _x.extend([0])
+            # else:
+            #     raise NotImplementedError()
         x.append(_x)
     f.close()
+
+    data = np.array(x)
+    target = np.array(y)
+
+    # # remove unused rows
+    # while True:
+    #     diff = np.max(data, axis=1) - np.min(data, axis=1)
+    #     no_info = np.where(diff < 1e-8)[0]
+    #     if no_info.shape[0] == 0:
+    #         break
+    #
+    #     index = no_info[0]
+    #     data = np.delete(data, index, 0)
+    #     target = np.delete(target, index, 0)
 
     class Congress:
         pass
 
-    data = Congress()
-    data.data = np.array(x)
-    # print(data.data.shape)
-    # input('')
-    data.target = np.array(y)
-    return data
+    congress = Congress()
+    congress.data = data
+    congress.target = target
+    return congress
 
 
 class Dataset:
@@ -147,6 +150,7 @@ class Dataset:
             x = _normalize_feature(x)
 
         # augment features
+        print(x.shape)
         x = np.concatenate([x] * column_multiplier, axis=1)
 
         # split

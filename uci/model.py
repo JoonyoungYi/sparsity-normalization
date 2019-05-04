@@ -35,6 +35,7 @@ def _forward(x, weights, biases, training, args):
             #     layer /= divider
         else:
             layers.append(layer)
+
     return layers
 
 

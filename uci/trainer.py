@@ -184,14 +184,14 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-2,
         help='learning rate of optimizer')
 
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether normalize input layer by our method.')
     parser.add_argument(
         '--normalize_feature',
