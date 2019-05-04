@@ -184,7 +184,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-2,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(
@@ -204,7 +204,7 @@ def main():
 
     if args.incremental_column_multipliers:
         column_multipliers = list(range(1, 10)) + list(
-            range(10, 100, 10)) + list(range(100, 1000, 100))
+            range(10, 100, 10)) + list(range(100, 1100, 100))
     else:
         column_multipliers = [args.column_multiplier]
 
