@@ -38,8 +38,10 @@ def _forward(x, weights, biases, training, args):
     return layers
 
 
-def _init_weights(args, n_feature):
-    n_units = [n_feature] + [args.n_hidden_unit] * args.n_hidden_layer + [1]
+def _init_weights(args, n_feature, n_class):
+    n_units = [n_feature] + [args.n_hidden_unit] * args.n_hidden_layer + [
+        n_class if n_class else 1
+    ]
 
     weights, biases = [], []
     for n_in, n_out in zip(n_units[:-1], n_units[1:]):
@@ -69,7 +71,7 @@ def init_models(args, n_feature, n_class=None):
     y = tf.placeholder(tf.float32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
-    weights, biases = _init_weights(args, n_feature)
+    weights, biases = _init_weights(args, n_feature, n_class)
     layers = _forward(x, weights, biases, training, args)
     activations = [tf.reduce_mean(layer) for layer in layers]
     y_hat = layers[-1]

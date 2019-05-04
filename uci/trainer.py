@@ -55,9 +55,6 @@ def _init_x_and_y(args, column_multiplier):
     x = dataset.data
     y = dataset.target
 
-    print(y)
-    input('')
-
     if args.normalize_feature:
         x = __normalize_feature(x)
 
@@ -95,9 +92,18 @@ def _init_x_and_y(args, column_multiplier):
 
 
 def _train(args, seed, column_multiplier):
+    # print(args)
+    # input('')
+
     set_seed(seed)
     train_x, train_y, valid_x, valid_y, test_x, test_y, g, n_class = _init_x_and_y(
         args, column_multiplier)
+
+    # print(train_x.shape)
+    # print(valid_x.shape)
+    # print(test_x.shape)
+    # print(test_x)
+    # input('')
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -238,6 +244,7 @@ def main():
         '--inject_sparsity',
         type=str2bool,
         default=True,
+        # default=False,
         help='Whether inject sparsity.')
     parser.add_argument(
         '--column_multiplier', type=int, default=1, help='column multiplier')
@@ -259,11 +266,10 @@ def main():
         '--normalize_feature',
         type=str2bool,
         default=True,
+        # default=False,
         help='Whether normalize each features by min 0, max 1.')
 
     args = parser.parse_args()
-
-    assert args.inject_sparsity  # TODO: handle not inject_sparsity situation.
 
     if args.incremental_column_multipliers:
         column_multipliers = list(range(1, 10)) + list(
@@ -295,7 +301,7 @@ def main():
             dense_act = sum(dense_acts) / len(seeds)
 
             print('\n>> average final_test_error:', error)
-            f = open('results/uci_reg/{}-{}.txt'.format(
+            f = open('results/uci/{}-{}.txt'.format(
                 args.dataset, args.normalize_input), 'a')
             results = [
                 column_multiplier,
