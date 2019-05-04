@@ -10,7 +10,6 @@ from common.utils import str2bool
 from common.utils import set_seed
 
 
-
 def _train(args, seed, column_multiplier):
     # print(args)
     # input('')
@@ -33,7 +32,7 @@ def _train(args, seed, column_multiplier):
     # print(test_x)
     # input('')
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args, n_feature=train_x.shape[1], n_class=n_class)
@@ -99,6 +98,8 @@ def _train(args, seed, column_multiplier):
                     models['x']: dense_test_x,
                     models['training']: False,
                 })
+
+        # input('')
 
         if max_test_error - 1e-5 > test_error:
             max_test_error = test_error

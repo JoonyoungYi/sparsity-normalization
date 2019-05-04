@@ -39,7 +39,14 @@ def _inject_sparsity(x, args):
             row[m] = 0
             if args.normalize_input:
                 # print(row)
-                row /= (x.shape[1] - m[0].shape[0])
+                # print(x.shape[1])
+                # print(m[0].shape[0])
+                # print(())
+                # print(row)
+                row = np.true_divide(row, x.shape[1] - m[0].shape[0])
+                # print(row)
+                # input('')
+                # row /= (x.shape[1] - m[0].shape[0])
                 # print(row)
                 # input('')
             x[i] = row
@@ -53,7 +60,7 @@ def _split_sparse_and_dense_group(test_x, g):
 def _load_congress():
     f = open('uci/data/congress.csv', 'r')
     x = []
-    m = []
+    # m = []
     y = []
     for line in f:
         tokens = line.strip().split(',')
@@ -61,26 +68,35 @@ def _load_congress():
         y.append(1 if tokens[0] == 'republican' else 0)
 
         tokens = tokens[1:]
-        _m = [0 if t == '?' else 1 for t in tokens]
-        _x = [1 if t == 'y' else 0 for t in tokens]
+        # _m = [0 if t == '?' else 1 for t in tokens]
+        _x = []
+        for t in tokens:
+            if t == 'y':
+                _x.extend([1, 0])
+            elif t == '?':
+                _x.extend([0, 0])
+            elif t == 'n':
+                _x.extend([0, 1])
+            else:
+                raise NotImplementedError()
+        #
+        # if sum(_m) == 0:
+        #     # print(tokens)
+        #     # input('')
+        #     continue
 
-        if sum(_m) == 0:
-            # print(tokens)
-            # input('')
-            continue
+        # prob = 0.2 if random.random() < 0.5 else 0.8
+        # for j in range(16):
+        #     if random.random() < prob:
+        #         _m[j] = 0
+        #         _x[j] = 0
 
-        prob = 0.2 if random.random() < 0.5 else 0.8
-        for j in range(16):
-            if random.random() < prob:
-                _m[j] = 0
-                _x[j] = 0
+        # if sum(_m) == 0:
+        #     # print(tokens)
+        #     # input('')
+        #     continue
 
-        if sum(_m) == 0:
-            # print(tokens)
-            # input('')
-            continue
-
-        m.append(_m)
+        # m.append(_m)
         x.append(_x)
     f.close()
 
@@ -89,6 +105,8 @@ def _load_congress():
 
     data = Congress()
     data.data = np.array(x)
+    # print(data.data.shape)
+    # input('')
     data.target = np.array(y)
     return data
 
