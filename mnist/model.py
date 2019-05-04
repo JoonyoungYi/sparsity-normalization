@@ -16,9 +16,9 @@ def _forward(x, weights, biases, training, args):
     layer = x
     layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        layer = tf.matmul(layer, weight) + bias
-        # if args.use_bias and (i > 0 or args.use_first_bias):
-            # layer += bias
+        layer = tf.matmul(layer, weight)
+        if i > 0 or args.use_first_bias:
+            layer += bias
 
         if i < len(biases) - 1:
             layer = activation_fn(layer)
