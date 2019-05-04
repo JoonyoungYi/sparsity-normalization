@@ -3,92 +3,12 @@ import random
 
 import tensorflow as tf
 import numpy as np
-from sklearn.datasets import fetch_california_housing
-from sklearn.datasets import load_diabetes
-from sklearn.datasets import load_boston
-from sklearn.datasets import load_iris
-from sklearn.datasets import load_wine
-from sklearn.datasets import load_breast_cancer
 
 from .model import init_models
+from .dataset import Dataset
 from common.utils import str2bool
 from common.utils import set_seed
-from common.utils import inject_sparsity
-from common.utils import split_sparse_and_dense_group
 
-
-def __normalize_feature(x):
-    # feature-wise normalization min-max=0-1
-    feature_min = np.min(x, axis=0)
-    feature_max = np.max(x, axis=0)
-    for j in range(x.shape[1]):
-        x[:, j] = (x[:, j] - feature_min[j]) / (
-            feature_max[j] - feature_min[j])
-    return x
-
-
-def _init_x_and_y(args, column_multiplier):
-    # https://scikit-learn.org/stable/datasets/index.html
-    # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
-    # https://datascienceschool.net/view-notebook/577a01e24d4f456bb5060da6e47054e1/
-    if args.dataset == 'boston':
-        dataset = load_boston()
-        n_class = None
-    elif args.dataset == 'diabetes':
-        dataset = load_diabetes()
-        n_class = None
-    elif args.dataset == 'california':
-        dataset = fetch_california_housing()
-        n_class = None
-    elif args.dataset == 'iris':
-        dataset = load_iris()
-        n_class = 3
-    elif args.dataset == 'wine':
-        dataset = load_wine()
-        n_class = 3
-    elif args.dataset == 'cancer':
-        dataset = load_breast_cancer()
-        n_class = 2
-    else:
-        raise NotImplementedError()
-
-    x = dataset.data
-    y = dataset.target
-
-    if args.normalize_feature:
-        x = __normalize_feature(x)
-
-    # augment features
-    x = np.concatenate([x] * column_multiplier, axis=1)
-
-    # split
-    perm = np.random.permutation(x.shape[0])
-    x = x[perm]
-    y = y[perm]
-
-    train_x = x[:int(x.shape[0] * 0.6)]
-    valid_x = x[int(x.shape[0] * 0.6):int(x.shape[0] * 0.8)]
-    test_x = x[int(x.shape[0] * 0.8):]
-
-    train_y = y[:int(x.shape[0] * 0.6)]
-    valid_y = y[int(x.shape[0] * 0.6):int(x.shape[0] * 0.8)]
-    test_y = y[int(x.shape[0] * 0.8):]
-
-    # sparsity injection
-    train_x, train_g = inject_sparsity(train_x, args)
-    valid_x, valid_g = inject_sparsity(valid_x, args)
-    test_x, test_g = inject_sparsity(test_x, args)
-
-    # mean = np.mean(train_y)
-    # print('>> Baseline (mean predictor) error:',
-    #       np.sqrt(np.mean(np.square(mean - test_y))))
-    # train_mean = np.mean(train_y)
-    # print('>> Train mean:', train_mean)
-    # test_mean = np.mean(test_y)
-    # print('>> Test mean:', test_mean)
-    # input('')
-
-    return train_x, train_y, valid_x, valid_y, test_x, test_y, test_g, n_class
 
 
 def _train(args, seed, column_multiplier):
@@ -96,8 +16,16 @@ def _train(args, seed, column_multiplier):
     # input('')
 
     set_seed(seed)
-    train_x, train_y, valid_x, valid_y, test_x, test_y, g, n_class = _init_x_and_y(
-        args, column_multiplier)
+    dataset = Dataset(args, column_multiplier)
+    train_x = dataset.train_x
+    train_y = dataset.train_y
+    valid_x = dataset.valid_x
+    valid_y = dataset.valid_y
+    test_x = dataset.test_x
+    test_y = dataset.test_y
+    n_class = dataset.n_class
+    sparse_test_x = dataset.sparse_test_x
+    dense_test_x = dataset.dense_test_x
 
     # print(train_x.shape)
     # print(valid_x.shape)
@@ -117,8 +45,6 @@ def _train(args, seed, column_multiplier):
 
     max_test_error = float('inf')
     max_test_iter_idx = 0
-
-    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x, g)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_error = session.run(
@@ -198,8 +124,12 @@ def main():
         # default='california',
         # default='iris',
         # default='wine',
-        default='cancer',
-        choices=['boston', 'diabetes', 'california', 'iris', 'wine', 'cancer'],
+        # default='cancer',
+        default='congress',
+        choices=[
+            'boston', 'diabetes', 'california', 'iris', 'wine', 'cancer',
+            'congress'
+        ],
         help='dataset.')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
@@ -301,8 +231,8 @@ def main():
             dense_act = sum(dense_acts) / len(seeds)
 
             print('\n>> average final_test_error:', error)
-            f = open('results/uci/{}-{}.txt'.format(
-                args.dataset, args.normalize_input), 'a')
+            f = open('results/uci/{}-{}.txt'.format(args.dataset,
+                                                    args.normalize_input), 'a')
             results = [
                 column_multiplier,
                 error,
