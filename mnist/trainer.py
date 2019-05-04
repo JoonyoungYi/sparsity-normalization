@@ -6,11 +6,45 @@ import numpy as np
 
 from .model import init_models
 from common.utils import str2bool
-from common.utils import inject_sparsity
+from common.utils import set_seed
+# from common.utils import inject_sparsity
 from common.utils import split_sparse_and_dense_group
 
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR100-dataset_fig4_317679430
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR10-dataset_fig5_317679430
+
+
+def _normalize_input(x):
+    for i in range(x.shape[0]):
+        row = x[i]
+        count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+        row /= count_nonzero
+    return x
+
+
+def inject_sparsity(x, args):
+    g = np.zeros(x.shape[0])
+    if args.inject_sparsity:
+        for i in range(x.shape[0]):
+            row = x[i]
+
+            m = None
+            while m is None or m[0].shape[0] >= x.shape[1]:
+                if random.random() < 0.5:
+                    m = np.where(np.random.random(x.shape[1]) < 0.2)
+                    g[i] = 1
+                else:
+                    m = np.where(np.random.random(x.shape[1]) < 0.8)
+                    g[i] = -1
+
+            row[m] = 0
+            # if args.normalize_input:
+            #     # print(row)
+            #     row /= (x.shape[1] - m[0].shape[0])
+                # print(row)
+                # input('')
+            x[i] = row
+    return x, g
 
 
 def _init_x_and_y(args):
@@ -34,6 +68,13 @@ def _init_x_and_y(args):
     train_x, train_g = inject_sparsity(train_x, args)
     test_x, test_g = inject_sparsity(test_x, args)
 
+    # if args.inject_sparsity:
+    #     train_x[np.random.random(train_x.shape) < 0.8] = 0
+    #     test_x[np.random.random(test_x.shape) < 0.8] = 0
+    if args.normalize_input:
+        train_x = _normalize_input(train_x)
+        test_x = _normalize_input(test_x)
+
     # split
     train_perm = np.random.permutation(train_x.shape[0])
     train_x = train_x[train_perm]
@@ -44,12 +85,12 @@ def _init_x_and_y(args):
     valid_y = train_y[50000:]
     train_y = train_y[:50000]
 
-    return train_x, train_y, valid_x, valid_y, test_x, test_y, test_g
+    return train_x, train_y, valid_x, valid_y, test_x, test_y
 
 
 def train(args, seed):
     set_seed(seed)
-    train_x, train_y, valid_x, valid_y, test_x, test_y, test_g = _init_x_and_y(args)
+    train_x, train_y, valid_x, valid_y, test_x, test_y = _init_x_and_y(args)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -64,8 +105,7 @@ def train(args, seed):
     max_test_acc = 0.0
     max_test_iter_idx = 0
 
-    # 이렇게 하면 안된다. 애초에 너무 0이 많음....
-    sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x, test_g)
+    # sparse_test_x, dense_test_x = split_sparse_and_dense_group(test_x, test_g)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -109,22 +149,29 @@ def train(args, seed):
                     models['x']: test_x,
                     models['training']: False,
                 })
-            test_sparse_activations = session.run(
-                models['activations'],
+            test_variances = session.run(
+                models['variances'],
                 feed_dict={
-                    models['x']: sparse_test_x,
+                    models['x']: test_x,
                     models['training']: False,
                 })
-            test_dense_activations = session.run(
-                models['activations'],
-                feed_dict={
-                    models['x']: dense_test_x,
-                    models['training']: False,
-                })
+            # test_sparse_activations = session.run(
+            #     models['activations'],
+            #     feed_dict={
+            #         models['x']: sparse_test_x,
+            #         models['training']: False,
+            #     })
+            # test_dense_activations = session.run(
+            #     models['activations'],
+            #     feed_dict={
+            #         models['x']: dense_test_x,
+            #         models['training']: False,
+            #     })
 
-            print(test_sparse_activations)
-            print(test_activations)
-            print(test_dense_activations)
+        # print(test_sparse_activations)
+        print(test_activations)
+        print(test_variances)
+        # print(test_dense_activations)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
@@ -141,8 +188,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='mnist',
-        # default='fashion',
+        # default='mnist',
+        default='fashion',
         # default='cifar10',
         choices=['mnist', 'fashion', 'cifar10'],
         help='MNIST or Fashion MNIST or CIFAR-10')
@@ -151,7 +198,7 @@ def main():
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=300,
+        default=10000,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -168,7 +215,8 @@ def main():
         type=str,
         # default='tanh',
         default='relu',
-        choices=['relu', 'tanh'],
+        # default='sigmoid',
+        choices=['relu', 'tanh', 'sigmoid'],
         help='the activation function')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
@@ -183,6 +231,7 @@ def main():
         '--inject_sparsity',
         type=str2bool,
         default=True,
+        # default=False,
         help='Whether inject sparsity.')
 
     parser.add_argument(
@@ -197,8 +246,23 @@ def main():
         default=True,
         # default=False,
         help='Whether normalize input layers')
+    parser.add_argument(
+        '--use_first_bias',
+        type=str2bool,
+        default=True,
+        # default=False,
+        help='')
+    parser.add_argument(
+        '--use_bias',
+        type=str2bool,
+        default=True,
+        # default=False,
+        help='')
 
     args = parser.parse_args()
+    if args.use_first_bias:
+        assert args.use_bias
+
     train(args, args.seed)
 
 

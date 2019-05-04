@@ -17,6 +17,9 @@ def _forward(x, weights, biases, training, args):
     layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
+        # if args.use_bias and (i > 0 or args.use_first_bias):
+            # layer += bias
+
         if i < len(biases) - 1:
             layer = activation_fn(layer)
             layers.append(layer)
@@ -42,8 +45,11 @@ def _init_weights(args):
     n_units = [784] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
 
     weights, biases = [], []
-    for n_in, n_out in zip(n_units[:-1], n_units[1:]):
-        limit = math.sqrt(6 / n_in)
+    for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
+        if i == 0 and args.normalize_input:
+            limit = math.sqrt(6 / 1)
+        else:
+            limit = math.sqrt(6 / n_in)
 
         weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
         bias = tf.Variable(tf.zeros([n_out]))
@@ -69,6 +75,7 @@ def init_models(args):
     layers = _forward(x, weights, biases, training, args)
     y_hat = layers[-1]
     activations = [tf.reduce_mean(layer) for layer in layers]
+    variances = [tf.nn.moments(layer, [0, 1])[1] for layer in layers]
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -85,5 +92,6 @@ def init_models(args):
         'loss': loss,
         'accuracy': accuracy,
         'activations': activations,
+        'variances': variances,
         'train_op': train_op,
     }

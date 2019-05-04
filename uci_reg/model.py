@@ -53,7 +53,18 @@ def _init_weights(args, n_feature):
     return weights, biases
 
 
-def init_models(args, n_feature):
+def _get_accuracy(y, y_hat):
+    return tf.count_nonzero(
+        tf.cast(tf.equal(tf.argmax(y, 1), tf.argmax(y_hat, 1)),
+                tf.int64)) / tf.cast(tf.shape(y)[0], tf.int64)
+
+
+def _get_rmse(y, y_hat):
+    return tf.sqrt(tf.reduce_mean(tf.square(y - y_hat)))
+
+
+def init_models(args, n_feature, n_class=None):
+    # 'n_class == None' means it is regression problem.
     x = tf.placeholder(tf.float32, [None, n_feature], name="x")
     y = tf.placeholder(tf.float32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")
@@ -61,20 +72,28 @@ def init_models(args, n_feature):
     weights, biases = _init_weights(args, n_feature)
     layers = _forward(x, weights, biases, training, args)
     activations = [tf.reduce_mean(layer) for layer in layers]
-    y_hat = tf.reshape(layers[-1], [-1])
+    y_hat = layers[-1]
 
-    loss = tf.reduce_sum(tf.square(y - y_hat))
-    rmse = tf.sqrt(tf.reduce_mean(tf.square(y - y_hat)))
+    if n_class is not None:
+        assert n_class > 0
+        _y_hot = tf.one_hot(tf.cast(y, tf.int64), n_class)
+        _costs = tf.nn.softmax_cross_entropy_with_logits_v2(
+            labels=_y_hot, logits=y_hat)
+        loss = tf.reduce_sum(_costs)
+        error = 1.0 - _get_accuracy(_y_hot, y_hat)
+    else:
+        loss = tf.reduce_sum(tf.square(y - tf.reshape(y_hat, [-1])))
+        error = _get_rmse(y, y_hat)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
-    train_op = optimizer.minimize(loss)
+    train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
         'x': x,
         'y': y,
         'training': training,
         'loss': loss,
-        'rmse': rmse,
+        'error': error,
         'activations': activations,
         'train_op': train_op,
     }
