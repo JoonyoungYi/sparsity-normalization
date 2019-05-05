@@ -2,12 +2,17 @@
 
 * Handling Variable Sparsity for Deep Networks에 관한 연구 실험.
 
+## Environment
+
+* ```python 3.5.2```
+* ```tensorflow 1.12.0```
+
 ## How to initialize
 
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 * 데이터 저장을 위한 폴더 만들기.
