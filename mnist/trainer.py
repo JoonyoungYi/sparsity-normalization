@@ -1,104 +1,27 @@
 import random
 
 import tensorflow as tf
-from tensorflow import keras
 import numpy as np
 
 from .model import init_models
+from .dataset import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 
 
-def _normalize_input(x):
-    for i in range(x.shape[0]):
-        row = x[i]
-        count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-        row /= count_nonzero
-    return x
-
-
-def inject_sparsity(x, args):
-    g = np.zeros(x.shape[0])
-    if args.inject_sparsity:
-        for i in range(x.shape[0]):
-            row = x[i]
-
-            m = None
-            while m is None or m[0].shape[0] >= x.shape[1]:
-                if random.random() < 0.5:
-                    m = np.where(np.random.random(x.shape[1]) < 0.2)
-                    g[i] = 1
-                else:
-                    m = np.where(np.random.random(x.shape[1]) < 0.8)
-                    g[i] = -1
-
-            row[m] = 0
-            if args.normalize_input:
-                divider = x.shape[1] - m[0].shape[0]
-                assert divider >= 1
-                row /= divider
-            x[i] = row
-    return x, g
-
-
-def _init_x_and_y(args):
-    # load data
-    if args.dataset == 'mnist':
-        dataset = keras.datasets.mnist
-    elif args.dataset == 'fashion':
-        dataset = keras.datasets.fashion_mnist
-    # elif args.dataset == 'cifar10':
-    #     dataset = keras.datasets.cifar10
-    else:
-        raise NotImplementedError()
-
-    (train_x, train_y), (test_x, test_y) = dataset.load_data()
-
-    # normalize
-    train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-    test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-
-    # sparsity injection
-    if args.inject_sparsity:
-        train_x, train_g = inject_sparsity(train_x, args)
-        test_x, test_g = inject_sparsity(test_x, args)
-    else:
-        if args.normalize_input:
-            train_x = _normalize_input(train_x)
-            test_x = _normalize_input(test_x)
-        train_g = None
-        test_g = None
-
-    # split
-    train_perm = np.random.permutation(train_x.shape[0])
-    train_x = train_x[train_perm]
-    train_y = train_y[train_perm]
-
-    valid_x = train_x[50000:]
-    train_x = train_x[:50000]
-    valid_y = train_y[50000:]
-    train_y = train_y[:50000]
-
-    if train_g and test_g:
-        dense_test_x = test_x[test_g > 0.5]
-        dense_test_y = test_y[test_g > 0.5]
-
-        sparse_test_x = test_x[test_g < -0.5]
-        sparse_test_y = test_y[test_g < -0.5]
-    else:
-        dense_test_x = test_x
-        dense_test_y = test_y
-
-        sparse_test_x = test_x
-        sparse_test_y = test_y
-
-    return train_x, train_y, valid_x, valid_y, test_x, test_y, sparse_test_x, sparse_test_y, dense_test_x, dense_test_y
-
-
 def train(args, seed):
     set_seed(seed)
-    train_x, train_y, valid_x, valid_y, test_x, test_y, sparse_test_x, sparse_test_y, dense_test_x, dense_test_y = _init_x_and_y(
-        args)
+    dataset = Dataset(args)
+    train_x = dataset.train_x
+    train_y = dataset.train_y
+    valid_x = dataset.valid_x
+    valid_y = dataset.valid_y
+    test_x = dataset.test_x
+    test_x = dataset.test_x
+    sparse_test_x = dataset.sparse_test_x
+    sparse_test_y = dataset.sparse_test_y
+    dense_test_x = dataset.dense_test_x
+    dense_test_y = dataset.dense_test_y
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -219,8 +142,9 @@ def main():
         default='mnist',
         # default='fashion',
         # default='cifar10',
-        choices=['mnist', 'fashion', 'cifar10'],
-        help='MNIST or Fashion MNIST or CIFAR-10')
+        # default='cifar100',
+        choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
+        help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
