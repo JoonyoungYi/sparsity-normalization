@@ -26,10 +26,11 @@ def _forward(x, weights, biases, training, args):
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
 
-            if args.normalize_hidden:
+            if args.normalize_hidden and i == 0:
                 divider = tf.maximum(
                     tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
                     1)
+                divider = tf.stop_gradient(divider)
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),
                     tf.ones([1, layer.shape[1]]))
@@ -47,6 +48,8 @@ def _init_weights(args):
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         if i == 0 and args.normalize_input:
+            limit = math.sqrt(6 / 1)
+        elif args.normalize_hidden and i == 1:
             limit = math.sqrt(6 / 1)
         else:
             limit = math.sqrt(6 / n_in)
@@ -83,7 +86,7 @@ def init_models(args):
     accuracy = _get_accuracy(y_hot, y_hat)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
-    train_op = optimizer.minimize(loss)
+    train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
         'x': x,

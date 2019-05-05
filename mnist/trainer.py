@@ -11,12 +11,13 @@ from common.utils import set_seed
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR100-dataset_fig4_317679430
 # https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR10-dataset_fig5_317679430
 
-# def _normalize_input(x):
-#     for i in range(x.shape[0]):
-#         row = x[i]
-#         count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-#         row /= count_nonzero
-#     return x
+
+def _normalize_input(x):
+    for i in range(x.shape[0]):
+        row = x[i]
+        count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+        row /= count_nonzero
+    return x
 
 
 def inject_sparsity(x, args):
@@ -61,12 +62,15 @@ def _init_x_and_y(args):
     test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
 
     # sparsity injection
-    train_x, train_g = inject_sparsity(train_x, args)
-    test_x, test_g = inject_sparsity(test_x, args)
-
-    # if args.normalize_input:
-    #     train_x = _normalize_input(train_x)
-    #     test_x = _normalize_input(test_x)
+    if args.inject_sparsity:
+        train_x, train_g = inject_sparsity(train_x, args)
+        test_x, test_g = inject_sparsity(test_x, args)
+    else:
+        if args.normalize_input:
+            train_x = _normalize_input(train_x)
+            test_x = _normalize_input(test_x)
+        train_g = None
+        test_g = None
 
     # split
     train_perm = np.random.permutation(train_x.shape[0])
@@ -78,11 +82,18 @@ def _init_x_and_y(args):
     valid_y = train_y[50000:]
     train_y = train_y[:50000]
 
-    dense_test_x = test_x[test_g > 0.5]
-    dense_test_y = test_y[test_g > 0.5]
+    if train_g and test_g:
+        dense_test_x = test_x[test_g > 0.5]
+        dense_test_y = test_y[test_g > 0.5]
 
-    sparse_test_x = test_x[test_g < -0.5]
-    sparse_test_y = test_y[test_g < -0.5]
+        sparse_test_x = test_x[test_g < -0.5]
+        sparse_test_y = test_y[test_g < -0.5]
+    else:
+        dense_test_x = test_x
+        dense_test_y = test_y
+
+        sparse_test_x = test_x
+        sparse_test_y = test_y
 
     return train_x, train_y, valid_x, valid_y, test_x, test_y, sparse_test_x, sparse_test_y, dense_test_x, dense_test_y
 
@@ -185,6 +196,8 @@ def train(args, seed):
 
     f = open('results/mnist/{}.txt'.format(args.dataset), 'a')
     results = []
+    results.append(args.inject_sparsity)
+    results.append(args.normalize_input)
     results.append(args.normalize_hidden)
     results.append(args.use_first_bias)
     results.append(args.n_hidden_unit)
@@ -248,8 +261,8 @@ def main():
     parser.add_argument(
         '--inject_sparsity',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether inject sparsity.')
 
     parser.add_argument(
