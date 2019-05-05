@@ -17,13 +17,14 @@ def train(args, seed):
     valid_x = dataset.valid_x
     valid_y = dataset.valid_y
     test_x = dataset.test_x
-    test_x = dataset.test_x
+    test_y = dataset.test_y
     sparse_test_x = dataset.sparse_test_x
     sparse_test_y = dataset.sparse_test_y
     dense_test_x = dataset.dense_test_x
     dense_test_y = dataset.dense_test_y
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args)
@@ -147,6 +148,11 @@ def main():
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
+    parser.add_argument(
+        '--gpu_memory_fraction',
+        type=float,
+        default=0.3,
+        help='per_process_gpu_memory_fraction')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,

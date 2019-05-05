@@ -1,3 +1,6 @@
+import random
+
+import numpy as np
 from tensorflow import keras
 
 
@@ -34,7 +37,7 @@ def inject_sparsity(x, args):
 
 
 class Dataset:
-    def __init__(args):
+    def __init__(self, args):
         # load data
         if args.dataset == 'mnist':
             dataset = keras.datasets.mnist
