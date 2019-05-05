@@ -8,10 +8,6 @@ from .model import init_models
 from common.utils import str2bool
 from common.utils import set_seed
 
-# https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR100-dataset_fig4_317679430
-# https://www.researchgate.net/figure/MLP-Test-Accuracy-on-CIFAR10-dataset_fig5_317679430
-
-
 def _normalize_input(x):
     for i in range(x.shape[0]):
         row = x[i]
