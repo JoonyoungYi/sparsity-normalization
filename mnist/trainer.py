@@ -115,22 +115,22 @@ def train(args, seed):
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
             break
 
-    f = open('results/mnist/{}.txt'.format(args.dataset), 'a')
-    results = []
-    results.append(args.inject_sparsity)
-    results.append(args.normalize_input)
-    results.append(args.normalize_hidden)
-    results.append(args.use_first_bias)
-    results.append(args.n_hidden_unit)
-    results.append(test_sparse_acc)
-    results.append(final_test_acc)
-    results.append(test_dense_acc)
-    results.append(test_sparse_activations[-1])
-    results.append(test_activations[-1])
-    results.append(test_dense_activations[-1])
-    line = '\t'.join([str(r) for r in results]) + '\n'
-    f.write(line)
-    f.close()
+    with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
+        results = []
+        results.append(args.inject_sparsity)
+        results.append(args.normalize_input)
+        results.append(args.normalize_hidden)
+        results.append(args.use_first_bias)
+        results.append(args.n_hidden_unit)
+        results.append(test_sparse_acc)
+        results.append(final_test_acc)
+        results.append(test_dense_acc)
+        results.append(test_sparse_activations[-1])
+        results.append(test_activations[-1])
+        results.append(test_dense_activations[-1])
+        line = '\t'.join([str(r) for r in results]) + '\n'
+        f.write(line)
+        f.close()
 
 
 def main():

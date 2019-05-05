@@ -52,6 +52,10 @@ class Dataset:
 
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
+        # print(train_x.shape)
+        # print(test_x.shape)
+        # input('!!')
+
         # normalize
         train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
         test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
