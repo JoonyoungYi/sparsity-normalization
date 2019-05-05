@@ -6,7 +6,7 @@ import numpy as np
 
 from .model import init_models
 from .dataset import Dataset
-from common.utils import str2bool
+from common.utils import str2bool, integer_list
 from common.utils import set_seed
 
 
@@ -161,8 +161,8 @@ def main():
         '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
         '--seeds',
-        type=str,
-        default=None,
+        type=integer_list,
+        default=[],
         help=
         'the seeds for dataset. if seeds is not None, ignore seed. ex. 1,2,3,4,5'
     )
@@ -210,12 +210,6 @@ def main():
 
     for column_multiplier in column_multipliers:
         if args.seeds:
-            try:
-                seeds = [int(t) for t in args.seeds.split(',')]
-            except:
-                print('seeds is not valid.')
-                assert False
-
             errors, acts, sparse_acts, dense_acts = [], [], [], []
             for seed in seeds:
                 error, act, sparse_act, dense_act = _train(

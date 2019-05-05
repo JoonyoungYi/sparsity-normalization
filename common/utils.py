@@ -19,3 +19,14 @@ def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed=seed)
     tf.random.set_random_seed(seed)
+
+
+def integer_list(values):
+    if values:
+        try:
+            return [int(v) for v in values.split(',')]
+        except:
+            raise argparse.ArgumentTypeError(
+                'This value should be comma separated integer values.')
+
+    return []

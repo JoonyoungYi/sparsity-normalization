@@ -10,6 +10,12 @@ sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0
 pip install -r requirements.txt
 ```
 
+* 데이터 저장을 위한 폴더 만들기.
+```
+results/uci
+results/mnist
+```
+
 ### How to run
 
 * AutoRec 실험. 자세한 하이퍼파라미터는 autorec/trainer.py 파일 참조.

@@ -5,8 +5,9 @@ from tensorflow import keras
 import numpy as np
 
 from .model import init_models
-from common.utils import str2bool
+from common.utils import str2bool, integer_list
 from common.utils import set_seed
+
 
 def _normalize_input(x):
     for i in range(x.shape[0]):
@@ -262,25 +263,30 @@ def main():
         help='Whether inject sparsity.')
 
     parser.add_argument(
-        '--normalize_hidden',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether normalize hidden layers')
-    parser.add_argument(
         '--normalize_input',
         type=str2bool,
         # default=True,
         default=False,
         help='Whether normalize input layers')
     parser.add_argument(
-        '--use_first_bias',
-        type=str2bool,
-        default=True,
-        # default=False,
-        help='')
+        '--normalize_layer_indexes',
+        type=integer_list,
+        default=[],
+        help=
+        'normalize를 할 hidden layer index들의 리스트. 쉼표로 구분. 1,2,3 인 경우 1,2,3번 hidden layer를 normalize. 1 인 경우 1번째 hidden layer를 normalize.'
+    )
+    parser.add_argument(
+        '--ignore_bias_layer_indexes',
+        type=integer_list,
+        default=[],
+        help='bias를 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
 
     args = parser.parse_args()
+    for layer_index in args.normalize_layer_indexes:
+        assert layer_index <= args.n_hidden_layer
+    for layer_index in args.ignore_bias_layer_indexes:
+        assert layer_index <= args.n_hidden_layer
+
     train(args, args.seed)
 
 
