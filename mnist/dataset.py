@@ -52,13 +52,12 @@ class Dataset:
 
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
-        # print(train_x.shape)
-        # print(test_x.shape)
-        # input('!!')
-
-        # normalize
-        train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-        test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+        # flatten and normalize
+        if args.dataset == 'mnist' or args.dataset == 'fashion':
+            train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+            test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+        else:
+            raise NotImplementedError()
 
         # sparsity injection
         if args.inject_sparsity:
@@ -76,10 +75,13 @@ class Dataset:
         train_x = train_x[train_perm]
         train_y = train_y[train_perm]
 
-        valid_x = train_x[50000:]
-        train_x = train_x[:50000]
-        valid_y = train_y[50000:]
-        train_y = train_y[:50000]
+        if args.dataset == 'mnist' or args.dataset == 'fashion':
+            valid_x = train_x[50000:]
+            train_x = train_x[:50000]
+            valid_y = train_y[50000:]
+            train_y = train_y[:50000]
+        else:
+            raise NotImplementedError()
 
         if train_g and test_g:
             dense_test_x = test_x[test_g > 0.5]
