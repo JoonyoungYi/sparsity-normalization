@@ -78,6 +78,8 @@ def init_models(args):
     y_hat = layers[-1]
     activations = [tf.reduce_mean(layer) for layer in layers]
     variances = [tf.nn.moments(layer, [0, 1])[1] for layer in layers]
+    
+    raw_activations = layers
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -95,5 +97,6 @@ def init_models(args):
         'accuracy': accuracy,
         'activations': activations,
         'variances': variances,
+        'raw_activations': raw_activations,
         'train_op': train_op,
     }

@@ -23,6 +23,10 @@ def train(args, seed):
     dense_test_x = dataset.dense_test_x
     dense_test_y = dataset.dense_test_y
 
+    # merge train, valid, test to plot activation histogram
+    total_x = np.concatenate((train_x, valid_x, test_x))
+    total_y = np.concatenate((train_y, valid_y, test_y))
+
     gpu_options = tf.GPUOptions(
         per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -36,6 +40,16 @@ def train(args, seed):
 
     max_test_acc = 0.0
     max_test_iter_idx = 0
+
+    raw_activations = session.run(
+        [models['raw_activations']],
+        feed_dict={
+            models['x']: total_x,
+            models['y']: total_y,
+            models['training']: True,
+        })
+    raw_activations = np.array(raw_activations[0][:2])
+    np.save('results/mnist/{}_raw_activations_before_training'.format(args.dataset), raw_activations)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -113,6 +127,15 @@ def train(args, seed):
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
+            raw_activations = session.run(
+                [models['raw_activations']],
+                feed_dict={
+                    models['x']: total_x,
+                    models['y']: total_y,
+                    models['training']: True,
+                })
+            raw_activations = np.array(raw_activations[0][:2])
+            np.save('results/mnist/{}_raw_activations_after_training'.format(args.dataset), raw_activations)
             break
 
     with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
@@ -131,7 +154,6 @@ def train(args, seed):
         line = '\t'.join([str(r) for r in results]) + '\n'
         f.write(line)
         f.close()
-
 
 def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_early_stop=1000, n_hidden_layer=2, n_hidden_unit=5, activation_fn='relu', seed=1, drop_rate=0.0, learning_rate=1e-2, inject_sparsity=False, normalize_input=False, normalize_layer_indexes=[], ignore_bias_layer_indexes=[]):
     import argparse
@@ -166,7 +188,7 @@ def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_earl
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=5,
+        default=512,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -243,5 +265,5 @@ def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_earl
 
 
 if __name__ == '__main__':
-    for i in range(1, 3):
-        main(n_hidden_unit=i, normalize_input=False, normalize_layer_indexes=[1,2], gpu_memory_fraction=0.0001)
+    for i in range(1, 2):
+        main(n_hidden_unit=i, normalize_input=False, normalize_layer_indexes=[], gpu_memory_fraction=0.3)
