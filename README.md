@@ -19,6 +19,9 @@ pip3 install -r requirements.txt
 ```
 results/uci
 results/mnist
+results/fashion
+results/cifar10
+results/cifar100
 ```
 
 ### How to run
