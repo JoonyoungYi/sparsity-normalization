@@ -119,8 +119,8 @@ def train(args, seed):
         results = []
         results.append(args.inject_sparsity)
         results.append(args.normalize_input)
-        results.append(args.normalize_hidden)
-        results.append(args.use_first_bias)
+        results.append(args.normalize_layer_indexes)
+        results.append(args.ignore_bias_layer_indexes)
         results.append(args.n_hidden_unit)
         results.append(test_sparse_acc)
         results.append(final_test_acc)
@@ -133,7 +133,7 @@ def train(args, seed):
         f.close()
 
 
-def main():
+def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_early_stop=1000, n_hidden_layer=2, n_hidden_unit=5, activation_fn='relu', seed=1, drop_rate=0.0, learning_rate=1e-2, inject_sparsity=False, normalize_input=False, normalize_layer_indexes=[], ignore_bias_layer_indexes=[]):
     import argparse
 
     parser = argparse.ArgumentParser(description='MNIST')
@@ -210,8 +210,30 @@ def main():
         type=integer_list,
         default=[],
         help='bias를 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
+    parser.add_argument(
+        '--pass_arg_inside_code',
+        type=str2bool,
+        default=False,
+        help='Whether pass argument inside the code')
 
     args = parser.parse_args()
+
+    if args.pass_arg_inside_code:
+        args.dataset = dataset
+        args.max_epoch = max_epoch
+        args.gpu_memory_fraction = gpu_memory_fraction
+        args.epoch_early_stop = epoch_early_stop
+        args.n_hidden_layer = n_hidden_layer
+        args.n_hidden_unit = n_hidden_unit
+        args.activation_fn = activation_fn
+        args.seed = seed
+        args.drop_rate = drop_rate
+        args.learning_rate = learning_rate
+        args.inject_sparsity = inject_sparsity
+        args.normalize_input = normalize_input
+        args.normalize_layer_indexes = normalize_layer_indexes
+        args.ignore_bias_layer_indexes = ignore_bias_layer_indexes
+
     for layer_index in args.normalize_layer_indexes:
         assert layer_index <= args.n_hidden_layer
     for layer_index in args.ignore_bias_layer_indexes:
@@ -221,4 +243,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for i in range(1, 3):
+        main(n_hidden_unit=i, normalize_input=False, normalize_layer_indexes=[1,2], gpu_memory_fraction=0.0001)
