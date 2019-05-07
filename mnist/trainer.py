@@ -8,7 +8,6 @@ from .dataset import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 
-
 def train(args, seed):
     set_seed(seed)
     dataset = Dataset(args)
@@ -23,6 +22,10 @@ def train(args, seed):
     dense_test_x = dataset.dense_test_x
     dense_test_y = dataset.dense_test_y
 
+    # merge train, valid, test to plot activation histogram
+    total_x = np.concatenate((train_x, valid_x, test_x))
+    total_y = np.concatenate((train_y, valid_y, test_y))
+
     gpu_options = tf.GPUOptions(
         per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -36,6 +39,17 @@ def train(args, seed):
 
     max_test_acc = 0.0
     max_test_iter_idx = 0
+
+    if args.plot_raw_activations:
+        raw_activations = session.run(
+            [models['raw_activations']],
+            feed_dict={
+                models['x']: total_x,
+                models['y']: total_y,
+                models['training']: True,
+            })
+        raw_activations = np.array(raw_activations[0][:2])
+        np.save('results/mnist/{}_raw_activations_before_training'.format(args.dataset), raw_activations)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -113,14 +127,24 @@ def train(args, seed):
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
+            if args.plot_raw_activations:
+                raw_activations = session.run(
+                    [models['raw_activations']],
+                    feed_dict={
+                        models['x']: total_x,
+                        models['y']: total_y,
+                        models['training']: True,
+                    })
+                raw_activations = np.array(raw_activations[0][:2])
+                np.save('results/mnist/{}_raw_activations_after_training'.format(args.dataset), raw_activations)
             break
 
     with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
         results = []
         results.append(args.inject_sparsity)
         results.append(args.normalize_input)
-        results.append(args.normalize_hidden)
-        results.append(args.use_first_bias)
+        results.append(args.normalize_layer_indexes)
+        results.append(args.ignore_bias_layer_indexes)
         results.append(args.n_hidden_unit)
         results.append(test_sparse_acc)
         results.append(final_test_acc)
@@ -132,8 +156,7 @@ def train(args, seed):
         f.write(line)
         f.close()
 
-
-def main():
+def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_early_stop=1000, n_hidden_layer=2, n_hidden_unit=5, activation_fn='relu', seed=1, drop_rate=0.0, learning_rate=1e-2, inject_sparsity=False, normalize_input=False, normalize_layer_indexes=[], ignore_bias_layer_indexes=[]):
     import argparse
 
     parser = argparse.ArgumentParser(description='MNIST')
@@ -166,7 +189,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=5,
+        default=512,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -210,8 +233,35 @@ def main():
         type=integer_list,
         default=[],
         help='bias를 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
+    parser.add_argument(
+        '--pass_arg_inside_code',
+        type=str2bool,
+        default=False,
+        help='Whether pass argument inside the code')
+    parser.add_argument(
+        '--plot_raw_activations',
+        type=str2bool,
+        default=False,
+        help='Whether plot raw activations')
 
     args = parser.parse_args()
+
+    if args.pass_arg_inside_code:
+        args.dataset = dataset
+        args.max_epoch = max_epoch
+        args.gpu_memory_fraction = gpu_memory_fraction
+        args.epoch_early_stop = epoch_early_stop
+        args.n_hidden_layer = n_hidden_layer
+        args.n_hidden_unit = n_hidden_unit
+        args.activation_fn = activation_fn
+        args.seed = seed
+        args.drop_rate = drop_rate
+        args.learning_rate = learning_rate
+        args.inject_sparsity = inject_sparsity
+        args.normalize_input = normalize_input
+        args.normalize_layer_indexes = normalize_layer_indexes
+        args.ignore_bias_layer_indexes = ignore_bias_layer_indexes
+
     for layer_index in args.normalize_layer_indexes:
         assert layer_index <= args.n_hidden_layer
         assert layer_index > 0
@@ -223,4 +273,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for i in range(1, 2):
+        main(n_hidden_unit=i, normalize_input=False, normalize_layer_indexes=[], gpu_memory_fraction=0.3)
