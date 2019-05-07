@@ -43,7 +43,14 @@ def _forward(x, weights, biases, training, args):
 
 
 def _init_weights(args):
-    n_units = [784] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
+    if args.dataset == "mnist" or args.dataset == "fashion": 
+        n_units = [784] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
+    elif args.dataset == "cifar10":
+        n_units = [32*32] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
+    elif args.dataset == "cifar100":
+        n_units = [32*32] + [args.n_hidden_unit] * args.n_hidden_layer + [100]
+    else:
+        raise NotImplementedError()
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
@@ -67,11 +74,23 @@ def _get_accuracy(y_hot, y_hat):
 
 
 def init_models(args):
-    x = tf.placeholder(tf.float32, [None, 784], name="x")
+    if args.dataset == "mnist" or args.dataset == "fashion": 
+        x = tf.placeholder(tf.float32, [None, 784], name="x")
+    elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+        x = tf.placeholder(tf.float32, [None, 32*32], name="x")
+    else:
+        raise NotImplementedError()
+
     y = tf.placeholder(tf.int32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
-    y_hot = tf.one_hot(y, 10)
+    if args.dataset == "mnist" or args.dataset == "fashion" or args.dataset == "cifar10": 
+        y_hot = tf.one_hot(y, 10)
+    elif args.dataset == 'cifar100':
+        y_hot = tf.one_hot(y, 100)
+    else:
+        raise NotImplementedError()
+
     weights, biases = _init_weights(args)
 
     layers = _forward(x, weights, biases, training, args)
