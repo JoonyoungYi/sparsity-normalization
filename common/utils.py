@@ -14,13 +14,6 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def set_seed(seed):
-    # set seed
-    random.seed(seed)
-    np.random.seed(seed=seed)
-    tf.random.set_random_seed(seed)
-
-
 def integer_list(values):
     if values:
         try:
@@ -28,5 +21,11 @@ def integer_list(values):
         except:
             raise argparse.ArgumentTypeError(
                 'This value should be comma separated integer values.')
-
     return []
+
+
+def set_seed(seed):
+    # set seed
+    random.seed(seed)
+    np.random.seed(seed=seed)
+    tf.random.set_random_seed(seed)

@@ -11,6 +11,7 @@ from .configs import *
 from .model import init_models
 from .batch import Batch
 from common.utils import str2bool
+from common.utils import set_seed
 
 
 def __get_rmse(session, models, batch, key, args):
@@ -53,7 +54,8 @@ def _validate(session, models, batch, args):
 
 def _train(args):
     dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.data_seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
+    set_seed(args.seed)
 
     if args.dataset == Dataset.KIND_MOVIELENS_100k:
         gpu_memory_fraction = 0.05
@@ -173,7 +175,7 @@ def main():
         default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument(
-        '--data_seed', type=int, default=1, help='the seed for dataset')
+        '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
@@ -186,7 +188,10 @@ def main():
         default=0.0,
         help='lambda for weight decay.')
     parser.add_argument(
-        '--lambda_w2', type=float, default=0.0, help='lambda for weight decay.')
+        '--lambda_w2',
+        type=float,
+        default=0.0,
+        help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -215,12 +220,16 @@ def main():
         type=int,
         # default=None,
         default=1000,
-        help='None for full batch. integer for batch number.')
+        help='0 for full batch. integer for batch number.')
 
     args = parser.parse_args()
 
-    # if args.normalize_first_layer:
-    #     assert args.lambda_w1 <= 1e-8
+    if args.n_batch == 0:
+        args.n_batch = None
+    elif args.n_batch < 0:
+        print('args.n_batch should not be negative.')
+        assert False
+
     if args.sparse_tensor:
         # RProp optimizer can be used only for dense tensor.
         assert args.optimizer != 'rprop'
