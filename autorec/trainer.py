@@ -12,6 +12,7 @@ from .model import init_models
 from .batch import Batch
 from common.utils import str2bool
 from common.utils import set_seed
+from common.utils import save_results_to_file
 
 
 def __get_rmse(session, models, batch, key, args):
@@ -135,6 +136,19 @@ def _train(args):
 
     session.close()
 
+    results = []
+    results.append(args.use_user_vector)
+    results.append(args.normalize_input)
+    results.append(args.sparse_tensor)
+    results.append(args.n_batch)
+    results.append(args.optimizer)
+    results.append(args.lambda_w1)
+    results.append(args.lambda_w2)
+    results.append(args.seed)
+    results.append(final_test_rmse)
+    results.append(min_test_rmse)
+    save_results_to_file('autorec', args.dataset, results)
+
 
 def main():
     import argparse
@@ -158,11 +172,10 @@ def main():
         default=1,
         help='The number of hidden unit')
     parser.add_argument(
-        '--normalize_first_layer',
+        '--normalize_input',
         type=str2bool,
-        default=True,
-        # default=False,
-        help='Whether normalize 1st layer.')
+        default=False,
+        help='Whether normalize input.')
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,

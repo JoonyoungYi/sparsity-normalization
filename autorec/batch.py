@@ -63,7 +63,7 @@ class Batch:
             random.shuffle(row_indices)
             self.row_indices = row_indices
 
-            if args.normalize_first_layer:
+            if args.normalize_input:
                 train_c = np.clip(
                     _sparse__get_count(train_x, n_row), a_min=1, a_max=None)
                 train_x = _sparse__normalize(train_x, train_c)
@@ -111,7 +111,7 @@ class Batch:
                 test_x = test_x.T
                 test_y = test_y.T
 
-            if args.normalize_first_layer:
+            if args.normalize_input:
                 train_c = np.clip(
                     np.count_nonzero(train_x, axis=1), a_min=1, a_max=None)
                 train_x /= np.matmul(
