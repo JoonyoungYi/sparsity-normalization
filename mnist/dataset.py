@@ -57,8 +57,17 @@ class Dataset:
             train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
             test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
         elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
-            train_x = np.average(train_x, 3).reshape([-1, 32*32]).astype('float32') / 255.0
-            test_x = np.average(test_x, 3).reshape([-1, 32*32]).astype('float32') / 255.0
+            if args.grey_scale:
+                train_x = np.average(train_x, 3).reshape(
+                    [-1, 32 * 32]).astype('float32') / 255.0
+                test_x = np.average(test_x, 3).reshape(
+                    [-1, 32 * 32]).astype('float32') / 255.0
+            else:
+                train_x = train_x.reshape([-1, 32 * 32 * 3
+                                           ]).astype('float32') / 255.0
+                test_x = test_x.reshape([-1, 32 * 32 * 3
+                                         ]).astype('float32') / 255.0
+
             train_y = train_y.reshape([-1])
             test_y = test_y.reshape([-1])
         else:
@@ -116,3 +125,28 @@ class Dataset:
         self.sparse_test_y = sparse_test_y
         self.dense_test_x = dense_test_x
         self.dense_test_y = dense_test_y
+
+        # merge train, valid, test to plot activation histogram
+        if args.plot_raw_activations:  # for safety.
+            total_x = np.concatenate((train_x, valid_x, test_x))
+            total_y = np.concatenate((train_y, valid_y, test_y))
+        else:
+            total_x = None
+            total_y = None
+
+        if args.dataset == "mnist" or args.dataset == "fashion":
+            n_in, n_out = 784, 10
+        elif args.dataset == 'cifar10':
+            if args.grey_scale:
+                n_in, n_out = 32 * 32, 10
+            else:
+                n_in, n_out = 32 * 32 * 3, 10
+        elif args.dataset == 'cifar100':
+            if args.grey_scale:
+                n_in, n_out = 32 * 32, 100
+            else:
+                n_in, n_out = 32 * 32 * 3, 100
+        else:
+            raise NotImplementedError()
+        self.n_in = n_in
+        self.n_out = n_out

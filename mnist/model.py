@@ -44,7 +44,7 @@ def _forward(x, weights, biases, training, args):
 
 def _init_weights(args, n_in, n_out):
     n_units = [n_in] + [args.n_hidden_unit] * args.n_hidden_layer + [n_out]
-    
+
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         if i == 0 and args.normalize_input or i in args.normalize_layer_indexes:
@@ -65,16 +65,7 @@ def _get_accuracy(y_hot, y_hat):
                 tf.int64)) / tf.cast(tf.shape(y_hot)[0], tf.int64)
 
 
-def init_models(args):
-    if args.dataset == "mnist" or args.dataset == "fashion":
-        n_in, n_out = 784, 10
-    elif args.dataset == 'cifar10':
-        n_in, n_out = 32 * 32 * 3, 10
-    elif args.dataset == 'cifar100':
-        n_in, n_out = 32 * 32 * 3, 100
-    else:
-        raise NotImplementedError()
-
+def init_models(args, n_in, n_out):
     x = tf.placeholder(tf.float32, [None, n_in], name="x")
     y = tf.placeholder(tf.int32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")

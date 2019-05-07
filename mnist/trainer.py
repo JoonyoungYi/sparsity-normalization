@@ -22,17 +22,14 @@ def train(args, seed):
     sparse_test_y = dataset.sparse_test_y
     dense_test_x = dataset.dense_test_x
     dense_test_y = dataset.dense_test_y
-
-    # merge train, valid, test to plot activation histogram
-    if args.plot_raw_activations: # for safety.
-        total_x = np.concatenate((train_x, valid_x, test_x))
-        total_y = np.concatenate((train_y, valid_y, test_y))
+    total_x = dataset.total_x
+    total_y = dataset.total_y
 
     gpu_options = tf.GPUOptions(
         per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
-    models = init_models(args)
+    models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
     max_valid_acc = 0.0
@@ -147,6 +144,7 @@ def train(args, seed):
     with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
         results = []
         results.append(args.inject_sparsity)
+        results.append(args.grey_scale)
         results.append(args.normalize_input)
         results.append(args.normalize_layer_indexes)
         results.append(args.ignore_bias_layer_indexes)
@@ -244,6 +242,11 @@ def main():
         type=str2bool,
         default=False,
         help='Whether plot raw activations')
+    parser.add_argument(
+        '--grey_scale',
+        type=str2bool,
+        default=False,
+        help='Whether use grey scaling in cifar dataset.')
 
     args = parser.parse_args()
 
@@ -253,6 +256,10 @@ def main():
     for layer_index in args.ignore_bias_layer_indexes:
         assert layer_index <= args.n_hidden_layer
         assert layer_index > 0
+    if not (args.dataset == 'cifar10' or
+            args.dataset == 'cifar100') and args.grey_scale:
+        print('grey_scale only can be applied to cifar dataset!')
+        assert not args.grey_scale or args.dataset == 'cifar10' or args.dataset == 'cifar100'
 
     train(args, args.seed)
 
