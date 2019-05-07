@@ -8,7 +8,6 @@ from .dataset import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 
-
 def train(args, seed):
     set_seed(seed)
     dataset = Dataset(args)
@@ -41,15 +40,16 @@ def train(args, seed):
     max_test_acc = 0.0
     max_test_iter_idx = 0
 
-    raw_activations = session.run(
-        [models['raw_activations']],
-        feed_dict={
-            models['x']: total_x,
-            models['y']: total_y,
-            models['training']: True,
-        })
-    raw_activations = np.array(raw_activations[0][:2])
-    np.save('results/mnist/{}_raw_activations_before_training'.format(args.dataset), raw_activations)
+    if args.plot_raw_activations:
+        raw_activations = session.run(
+            [models['raw_activations']],
+            feed_dict={
+                models['x']: total_x,
+                models['y']: total_y,
+                models['training']: True,
+            })
+        raw_activations = np.array(raw_activations[0][:2])
+        np.save('results/mnist/{}_raw_activations_before_training'.format(args.dataset), raw_activations)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -127,15 +127,16 @@ def train(args, seed):
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
-            raw_activations = session.run(
-                [models['raw_activations']],
-                feed_dict={
-                    models['x']: total_x,
-                    models['y']: total_y,
-                    models['training']: True,
-                })
-            raw_activations = np.array(raw_activations[0][:2])
-            np.save('results/mnist/{}_raw_activations_after_training'.format(args.dataset), raw_activations)
+            if args.plot_raw_activations:
+                raw_activations = session.run(
+                    [models['raw_activations']],
+                    feed_dict={
+                        models['x']: total_x,
+                        models['y']: total_y,
+                        models['training']: True,
+                    })
+                raw_activations = np.array(raw_activations[0][:2])
+                np.save('results/mnist/{}_raw_activations_after_training'.format(args.dataset), raw_activations)
             break
 
     with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
@@ -237,6 +238,11 @@ def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_earl
         type=str2bool,
         default=False,
         help='Whether pass argument inside the code')
+    parser.add_argument(
+        '--plot_raw_activations',
+        type=str2bool,
+        default=False,
+        help='Whether plot raw activations')
 
     args = parser.parse_args()
 
