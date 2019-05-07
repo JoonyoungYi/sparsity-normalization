@@ -264,8 +264,10 @@ def main(dataset='mnist', max_epoch=1000000, gpu_memory_fraction=0.3, epoch_earl
 
     for layer_index in args.normalize_layer_indexes:
         assert layer_index <= args.n_hidden_layer
+        assert layer_index > 0
     for layer_index in args.ignore_bias_layer_indexes:
         assert layer_index <= args.n_hidden_layer
+        assert layer_index > 0
 
     train(args, args.seed)
 

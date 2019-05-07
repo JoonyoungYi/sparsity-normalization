@@ -14,6 +14,7 @@
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
 pip3 install -r requirements.txt
 ```
+* ```configs/local.py.example``` 보고, ```configs/local.py``` 셋팅하기. -> 안하면 동작하다 멈출 수도 있음.
 
 * 데이터 저장을 위한 폴더 만들기.
 ```
