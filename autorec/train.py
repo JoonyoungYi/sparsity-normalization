@@ -61,6 +61,7 @@ def main():
 
     for command in commands:
         print('\n$', command)
+        os.system(command)
 
 
 if __name__ == '__main__':
