@@ -42,16 +42,9 @@ def _forward(x, weights, biases, training, args):
     return layers
 
 
-def _init_weights(args):
-    if args.dataset == "mnist" or args.dataset == "fashion": 
-        n_units = [784] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
-    elif args.dataset == "cifar10":
-        n_units = [32*32] + [args.n_hidden_unit] * args.n_hidden_layer + [10]
-    elif args.dataset == "cifar100":
-        n_units = [32*32] + [args.n_hidden_unit] * args.n_hidden_layer + [100]
-    else:
-        raise NotImplementedError()
-
+def _init_weights(args, n_in, n_out):
+    n_units = [n_in] + [args.n_hidden_unit] * args.n_hidden_layer + [n_out]
+    
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         if i == 0 and args.normalize_input or i in args.normalize_layer_indexes:
@@ -73,30 +66,27 @@ def _get_accuracy(y_hot, y_hat):
 
 
 def init_models(args):
-    if args.dataset == "mnist" or args.dataset == "fashion": 
-        x = tf.placeholder(tf.float32, [None, 784], name="x")
-    elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
-        x = tf.placeholder(tf.float32, [None, 32*32], name="x")
+    if args.dataset == "mnist" or args.dataset == "fashion":
+        n_in, n_out = 784, 10
+    elif args.dataset == 'cifar10':
+        n_in, n_out = 32 * 32 * 3, 10
+    elif args.dataset == 'cifar100':
+        n_in, n_out = 32 * 32 * 3, 100
     else:
         raise NotImplementedError()
 
+    x = tf.placeholder(tf.float32, [None, n_in], name="x")
     y = tf.placeholder(tf.int32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
-    if args.dataset == "mnist" or args.dataset == "fashion" or args.dataset == "cifar10": 
-        y_hot = tf.one_hot(y, 10)
-    elif args.dataset == 'cifar100':
-        y_hot = tf.one_hot(y, 100)
-    else:
-        raise NotImplementedError()
-
-    weights, biases = _init_weights(args)
+    y_hot = tf.one_hot(y, n_out)
+    weights, biases = _init_weights(args, n_in, n_out)
 
     layers = _forward(x, weights, biases, training, args)
     y_hat = layers[-1]
     activations = [tf.reduce_mean(layer) for layer in layers]
     variances = [tf.nn.moments(layer, [0, 1])[1] for layer in layers]
-    
+
     raw_activations = layers
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
