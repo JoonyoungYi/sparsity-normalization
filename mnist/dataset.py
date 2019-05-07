@@ -128,11 +128,11 @@ class Dataset:
 
         # merge train, valid, test to plot activation histogram
         if args.plot_raw_activations:  # for safety.
-            total_x = np.concatenate((train_x, valid_x, test_x))
-            total_y = np.concatenate((train_y, valid_y, test_y))
+            self.total_x = np.concatenate((train_x, valid_x, test_x))
+            self.total_y = np.concatenate((train_y, valid_y, test_y))
         else:
-            total_x = None
-            total_y = None
+            self.total_x = None
+            self.total_y = None
 
         if args.dataset == "mnist" or args.dataset == "fashion":
             n_in, n_out = 784, 10
