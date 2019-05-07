@@ -26,7 +26,7 @@ def _forward(x, weights, biases, training, args):
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
 
-            if i in args.normalize_layer_indexes:
+            if (i + 1) in args.normalize_layer_indexes:
                 divider = tf.maximum(
                     tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
                     1)
@@ -47,8 +47,7 @@ def _init_weights(args):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if i == 0 and args.normalize_input or (
-                i + 1) in args.normalize_layer_indexes:
+        if i == 0 and args.normalize_input or i in args.normalize_layer_indexes:
             limit = math.sqrt(6 / 1)
         else:
             limit = math.sqrt(6 / n_in)
