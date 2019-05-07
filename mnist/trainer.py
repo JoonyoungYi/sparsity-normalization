@@ -7,6 +7,7 @@ from .model import init_models
 from .dataset import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
+from common.utils import save_results_to_file
 
 
 def train(args, seed):
@@ -141,23 +142,20 @@ def train(args, seed):
                         args.dataset), raw_activations)
             break
 
-    with open('results/mnist/{}.txt'.format(args.dataset), 'a') as f:
-        results = []
-        results.append(args.inject_sparsity)
-        results.append(args.grey_scale)
-        results.append(args.normalize_input)
-        results.append(args.normalize_layer_indexes)
-        results.append(args.ignore_bias_layer_indexes)
-        results.append(args.n_hidden_unit)
-        results.append(test_sparse_acc)
-        results.append(final_test_acc)
-        results.append(test_dense_acc)
-        results.append(test_sparse_activations[-1])
-        results.append(test_activations[-1])
-        results.append(test_dense_activations[-1])
-        line = '\t'.join([str(r) for r in results]) + '\n'
-        f.write(line)
-        f.close()
+    results = []
+    results.append(args.inject_sparsity)
+    results.append(args.grey_scale)
+    results.append(args.normalize_input)
+    results.append(args.normalize_layer_indexes)
+    results.append(args.ignore_bias_layer_indexes)
+    results.append(args.n_hidden_unit)
+    results.append(test_sparse_acc)
+    results.append(final_test_acc)
+    results.append(test_dense_acc)
+    results.append(test_sparse_activations[-1])
+    results.append(test_activations[-1])
+    results.append(test_dense_activations[-1])
+    save_results_to_file('mnist', args.dataset, results)
 
 
 def main():
