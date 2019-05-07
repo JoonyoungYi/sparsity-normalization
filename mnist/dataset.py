@@ -56,6 +56,11 @@ class Dataset:
         if args.dataset == 'mnist' or args.dataset == 'fashion':
             train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
             test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+        elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+            train_x = np.average(train_x, 3).reshape([-1, 32*32]).astype('float32') / 255.0
+            test_x = np.average(test_x, 3).reshape([-1, 32*32]).astype('float32') / 255.0
+            train_y = train_y.reshape([-1])
+            test_y = test_y.reshape([-1])
         else:
             raise NotImplementedError()
 
@@ -80,6 +85,11 @@ class Dataset:
             train_x = train_x[:50000]
             valid_y = train_y[50000:]
             train_y = train_y[:50000]
+        elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+            valid_x = train_x[40000:]
+            train_x = train_x[:40000]
+            valid_y = train_y[40000:]
+            train_y = train_y[:40000]
         else:
             raise NotImplementedError()
 
