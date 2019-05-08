@@ -143,6 +143,8 @@ def train(args, seed):
             break
 
     results = []
+    results.append(args.seed)
+    results.append(args.n_hidden_layer)
     results.append(args.inject_sparsity)
     results.append(args.grey_scale)
     results.append(args.normalize_input)

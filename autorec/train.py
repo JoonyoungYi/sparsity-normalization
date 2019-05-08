@@ -24,6 +24,8 @@ def main():
                 lambdas = [float(t) for t in value.split(',')]
             elif key == 'seeds':
                 seeds = [int(t) for t in value.split(',')]
+            else:
+                raise NotImplementedError()
         elif arg.startswith('--'):
             for t in ['normalize_input', 'seed', 'lambda_w1', 'lambda_w2']:
                 if arg.startswith('--' + t):
