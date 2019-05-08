@@ -151,7 +151,7 @@ class Dataset:
         np.save(filepath, data)
 
         print(current_u, current_i)
-        input('should complete get_n_user_and_n_item function.')
+        # input('should complete get_n_user_and_n_item function.')
         return True
 
     def __split_npy(self):
