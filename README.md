@@ -12,6 +12,7 @@
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
+cd .. && cd home/server24/HVS-tensorflow 
 pip3 install -r requirements.txt
 ```
 * ```configs/local.py.example``` 보고, ```configs/local.py``` 셋팅하기. -> 안하면 동작하다 멈출 수도 있음.
