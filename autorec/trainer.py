@@ -219,9 +219,9 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_100k,
         # default=Dataset.KIND_MOVIELENS_1M,
-        default=Dataset.KIND_MOVIELENS_10M,
+        # default=Dataset.KIND_MOVIELENS_10M,
         help='Optimizer')
     parser.add_argument(
         '--sparse_tensor',

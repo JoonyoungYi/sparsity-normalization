@@ -9,11 +9,11 @@ def main():
 
         ex.
         - default: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=False ---n_hidden_unit_start=176 ---n_hidden_unit_end=200
-        - normal-0: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True ---n_hidden_unit_start=101 ---n_hidden_unit_end=125
-        - normal-0,1: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True --normalize_layer_indexes=1 ---n_hidden_unit_start=76 ---n_hidden_unit_end=100
-        - normal-0,1,2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True --normalize_layer_indexes=1,2 ---n_hidden_unit_start=76 ---n_hidden_unit_end=100
-        - normal-1: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=False --normalize_layer_indexes=1 ---n_hidden_unit_start=93 ---n_hidden_unit_end=100
-        - normal-2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=False --normalize_layer_indexes=2 ---n_hidden_unit_start=101 ---n_hidden_unit_end=125
+        - normal-0: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True ---n_hidden_unit_start=176 ---n_hidden_unit_end=200
+        - normal-0,1: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True --normalize_layer_indexes=1 ---n_hidden_unit_start=101 ---n_hidden_unit_end=125
+        - normal-0,1,2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=True --normalize_layer_indexes=1,2 ---n_hidden_unit_start=1 ---n_hidden_unit_end=1
+        - normal-1: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.06 --normalize_input=False --normalize_layer_indexes=1 ---n_hidden_unit_start=1 ---n_hidden_unit_end=1
+        - normal-2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.07 --normalize_input=False --normalize_layer_indexes=2 ---n_hidden_unit_start=1 ---n_hidden_unit_end=1
     """
     args = []
     n_hidden_unit_start = None
