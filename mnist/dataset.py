@@ -1,3 +1,4 @@
+import os
 import random
 
 import numpy as np
@@ -41,16 +42,29 @@ class Dataset:
         # load data
         if args.dataset == 'mnist':
             dataset = keras.datasets.mnist
+            filename = 'mnist.npz'
         elif args.dataset == 'fashion':
             dataset = keras.datasets.fashion_mnist
+            filename = 'fashion_mnist.npz'
         elif args.dataset == 'cifar10':
             dataset = keras.datasets.cifar10
+            filename = 'cifar10.npz'
         elif args.dataset == 'cifar100':
             dataset = keras.datasets.cifar100
+            filename = 'cifar100.npz'
         else:
             raise NotImplementedError()
 
-        (train_x, train_y), (test_x, test_y) = dataset.load_data()
+        assert dataset
+        assert filename
+
+        dir_path = os.path.dirname(
+            os.path.realpath(__file__)) + '/../../.keras/'
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
+
+        (train_x, train_y), (test_x, test_y) = dataset.load_data(
+            path='../../..' + dir_path + filename)
 
         # flatten and normalize
         if args.dataset == 'mnist' or args.dataset == 'fashion':
