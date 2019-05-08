@@ -7,7 +7,10 @@ def main():
     """
         main module
 
-        ex. python3 -m mnist.train ---n_hidden_unit_start=1 ---n_hidden_unit_end=100
+        ex.
+        - default: python3 -m mnist.train --dataset=cifar10 --gpu_memory_fraction=0.06 --normalize_input=False ---n_hidden_unit_start=76 ---n_hidden_unit_end=100
+        - normal-0: python3 -m mnist.train --dataset=cifar10 --gpu_memory_fraction=0.06 --normalize_input=True ---n_hidden_unit_start=126 ---n_hidden_unit_end=150
+        - normal-0,1: python3 -m mnist.train --dataset=cifar10 --gpu_memory_fraction=0.06 --normalize_input=True --normalize_layer_indexes=1 ---n_hidden_unit_start=22 ---n_hidden_unit_end=50
     """
     args = []
     n_hidden_unit_start = None
@@ -32,7 +35,7 @@ def main():
 
     assert n_hidden_unit_start
     assert n_hidden_unit_end
-    assert n_hidden_unit_start < n_hidden_unit_end
+    assert n_hidden_unit_start <= n_hidden_unit_end
 
     commands = []
     for n_hidden_unit in range(n_hidden_unit_start, n_hidden_unit_end + 1):
