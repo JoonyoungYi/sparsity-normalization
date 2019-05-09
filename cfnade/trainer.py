@@ -15,19 +15,18 @@ from common.utils import set_seed
 
 
 def __get_rmse(session, models, x, y, n_batch):
-    sse, sum_n = 0.0, 0
+    sse, n = 0.0, 0
     for i in range(0, x.shape[0], n_batch):
-        rmse = session.run(
-            models['rmse'],
+        _sse, _n = session.run(
+            (models['sse'], models['n']),
             feed_dict={
                 models['x']: x[i:i + n_batch],
                 models['y']: y[i:i + n_batch],
                 models['training']: False,
             }, )
-        n = np.sum(y[i:i + n_batch] > 0.1)
-        sum_n += n
-        sse += rmse * rmse * n
-    return math.sqrt(sse / sum_n)
+        n += _n
+        sse += _sse
+    return math.sqrt(sse / n)
 
 
 def _validate(
@@ -40,7 +39,8 @@ def _validate(
         test_x,
         test_y, ):
 
-    n_batch = args.n_batch
+    # n_batch = args.n_batch
+    n_batch = test_x.shape[0]
     assert train_x.shape[0] == valid_x.shape[0]
     assert train_x.shape[0] == test_x.shape[0]
     assert train_x.shape[0] >= n_batch
@@ -108,19 +108,6 @@ def _train(args):
     for iter_idx in range(1, args.max_iter):
         batch_x, batch_y = batch_manager.get_batch()
 
-        # _x_hot = session.run(
-        #     (models['_x_hot']),
-        #     feed_dict={
-        #         models['x']: batch_x,
-        #         models['y']: batch_x,
-        #         models['training']: True,
-        #     }, )
-        # print(_x_hot)
-        # for a in list(_x_hot[0]):
-        #     if sum(a) > 0:
-        #         print('!', a, sum(a))
-        # input('>>')
-
         _, train_loss = session.run(
             (models['train_op'], models['loss']),
             feed_dict={
@@ -129,14 +116,6 @@ def _train(args):
                 models['training']: True,
             }, )
         train_losses.append(train_loss)
-
-        # _, a_i, a_o = session.run(
-        #     (models['a_train_op'], models['a_i'], models['a_o']),
-        #     feed_dict={
-        #         models['x']: batch_x,
-        #         models['y']: batch_x,
-        #         models['training']: True,
-        #     }, )
 
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(

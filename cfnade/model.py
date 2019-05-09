@@ -5,6 +5,13 @@ import tensorflow as tf
 
 from .configs import *
 
+PMS = [
+    [1., 0., 0., 0., 0.],  # for rating 1
+    [1., 1., 0., 0., 0.],  # for rating 2
+    [1., 1., 1., 0., 0.],  # for rating 3
+    [1., 1., 1., 1., 0.],  # for rating 4
+    [1., 1., 1., 1., 1.],  # for rating 5
+]
 
 def _init_weights(n_col, args):
     weights, biases = [], []
@@ -49,6 +56,10 @@ def _forward(x_hot, weights, biases, args, training):
             layer = tf.nn.tanh(layer)
 
     layer = tf.reshape(layer, tf.shape(x_hot))
+    if args.parameter_sharing:
+        # QUESTION: I think this part is author's mistake.
+        # reverse=True should be added in cumsum function.
+        layer = tf.cumsum(layer, axis=2)
     return layer
 
 
@@ -57,11 +68,6 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
     zero = tf.constant(0.1, dtype=tf.float32)
     _where = tf.greater(_y, zero)
     m = tf.cast(_where, tf.float32)
-
-    if args.parameter_sharing:
-        # QUESTION: I think this part is author's mistake.
-        # reverse=True should be added in cumsum function.
-        y_hat = tf.cumsum(y_hat, axis=2)
 
     if args.use_ordinal_cost:
         y_prob = tf.nn.softmax(y_hat)
@@ -106,7 +112,8 @@ def _get_rmse(y, y_hat, v, epsilon=0):
 
     return tf.sqrt(
         (tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m)) + epsilon) /
-        (tf.reduce_sum(m) + epsilon))
+        (tf.reduce_sum(m) + epsilon)), tf.reduce_sum(
+            tf.multiply(tf.square(y - y_hat), m)), tf.reduce_sum(m)
 
 
 def _get_y_hat_from_y_hat_hot(y_hat_hot):
@@ -133,7 +140,7 @@ def init_models(n_col, n_class, args):
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     y_hat = _get_y_hat_from_y_hat_hot(y_hat_hot)
-    rmse = _get_rmse(y, y_hat, v)
+    rmse, sse, n = _get_rmse(y, y_hat, v)
 
     return {
         'x': x,
@@ -141,5 +148,7 @@ def init_models(n_col, n_class, args):
         'training': training,
         'loss': loss,
         'train_op': train_op,
-        'rmse': rmse
+        'rmse': rmse,
+        'sse': sse,
+        'n': n,
     }
