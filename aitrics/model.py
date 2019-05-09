@@ -3,8 +3,8 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, CuDNNLSTM
 
 '''Requirements of init_model
-args.use_modified는 True/False
-args.model은 mlp/lstm
+args.use_modified
+args.model
 args.epochs
 '''
 
