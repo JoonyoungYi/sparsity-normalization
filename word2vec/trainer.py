@@ -4,7 +4,6 @@
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
 import collections
-import math
 import os
 import random
 import zipfile
