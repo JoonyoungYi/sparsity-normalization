@@ -36,7 +36,7 @@ def init_models(args):
             num_classes=args.vocabulary_size))
 
     # Construct the SGD optimizer using a learning rate of 1.0.
-    optimizer = tf.train.GradientDescentOptimizer(1.0)
+    optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss)
 
     return {
