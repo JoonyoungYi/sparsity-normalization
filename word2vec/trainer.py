@@ -111,27 +111,27 @@ def _train(args):
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     session.run(tf.global_variables_initializer())
 
-    average_loss = 0
-    for step in range(args.max_iter):
+    sum_loss = 0
+    for iter_idx in range(args.max_iter):
         batch_inputs, batch_labels = generate_batch(args.batch_size,
                                                     args.context_window)
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
-        _, loss_val = session.run(
+        _, loss = session.run(
             [models['train_op'], models['loss']],
             feed_dict={
                 models['train_inputs']: batch_inputs,
                 models['train_labels']: batch_labels
             })
-        average_loss += loss_val
+        sum_loss += loss
 
-        if step % 2000 == 0:
-            if step > 0:
-                average_loss /= 2000
-            # The average loss is an estimate of the loss over the last 2000 batches.
-            print("Average loss at step ", step, ": ", average_loss)
-            average_loss = 0
-
+        if iter_idx % args.valid_iter == 0:
+            if iter_idx > 0:
+                # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
+                print("Average loss at step ", iter_idx, ": ",
+                      sum_loss / args.valid_iter)
+            sum_loss = 0
+            
     session.close()
 
 
@@ -165,12 +165,17 @@ def main():
         help='num_sampled. Number of negative examples to sample.')
     parser.add_argument(
         '--max_iter', type=int, default=100000, help='Max iter')
+    parser.add_argument(
+        '--learning_rate',
+        type=float,
+        default=1.0,
+        help='learning rate for optimizer.')
+    parser.add_argument(
+        '--valid_iter',
+        type=int,
+        default=1000,
+        help='iter unit for validation')
 
-    # parser.add_argument(
-    #     '--epoch_validation',
-    #     type=int,
-    #     default=1,
-    #     help='epoch unit for validation')
     # parser.add_argument(
     #     '--n_hidden_unit',
     #     type=int,
@@ -192,11 +197,6 @@ def main():
     #     # default=True,
     #     default=False,
     #     help='Whether use user vector.')
-    # parser.add_argument(
-    #     '--learning_rate',
-    #     type=float,
-    #     default=1e-4,
-    #     help='learning rate for optimizer.')
     # parser.add_argument(
     #     '--epoch_early_stop',
     #     type=int,
