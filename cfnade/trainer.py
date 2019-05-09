@@ -211,7 +211,7 @@ def main():
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=True,
+        default=False,
         help='whether normalize input')
     parser.add_argument(
         '--learning_rate',
@@ -247,7 +247,7 @@ def main():
     parser.add_argument(
         '--iter_early_stop',
         type=int,
-        default=100,
+        default=1000,
         help='the number of iteration for early stop.')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')
