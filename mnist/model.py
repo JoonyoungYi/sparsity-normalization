@@ -17,23 +17,42 @@ def _forward(x, weights, biases, training, args):
     layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
+        
         if i not in args.ignore_bias_layer_indexes:
             layer += bias
 
         if i < len(biases) - 1:
+
+            if (i + 1) in args.normalize_layer_indexes:
+                if args.approximate_L0:
+                    # implementation of the denominator of NormalizedReLU(X)
+                    max_layer = tf.maximum(
+                        tf.keras.backend.max(tf.abs(layer), axis=1),
+                        1)
+                    max_layer = tf.expand_dims(max_layer, axis=1)
+                    divider = layer / max_layer
+                    divider = (divider + 1)/2
+                    divider = tf.maximum(
+                        tf.keras.backend.sum(divider, axis=1),
+                        1)
+
             layer = activation_fn(layer)
             layers.append(layer)
+
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
 
             if (i + 1) in args.normalize_layer_indexes:
-                divider = tf.maximum(
-                    tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
-                    1)
-                divider = tf.stop_gradient(divider)  # make this as constant.
+                if not args.approximate_L0:
+                    divider = tf.maximum(
+                        tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
+                        1)
+                    divider = tf.stop_gradient(divider)  # make this as constant.
+
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),
                     tf.ones([1, layer.shape[1]]))
+
                 if args.drop_rate and args.drop_rate > 1e-8:
                     divider /= tf.where(training, args.drop_rate, 1.0)
                 layer /= divider
