@@ -11,6 +11,8 @@ from .batch import BatchManager
 from .configs import *
 from .model import init_models
 from common.utils import str2bool
+from common.utils import set_seed
+
 
 def _validate(
         session,
@@ -22,7 +24,7 @@ def _validate(
         test_y, ):
 
     train_rmse = session.run(
-        models['y_rmse'],
+        models['rmse'],
         feed_dict={
             models['x']: train_x,
             models['y']: train_x,
@@ -30,7 +32,7 @@ def _validate(
         }, )
 
     valid_rmse = session.run(
-        models['y_rmse'],
+        models['rmse'],
         feed_dict={
             models['x']: valid_x,
             models['y']: valid_y,
@@ -38,7 +40,7 @@ def _validate(
         }, )
 
     test_rmse = session.run(
-        (models['y_rmse']),
+        (models['rmse']),
         feed_dict={
             models['x']: test_x,
             models['y']: test_y,
@@ -48,25 +50,18 @@ def _validate(
 
 
 def _train(args):
-    # dataset = Dataset(
-    #     Dataset.KIND_MOVIELENS_100k,
-    #     Dataset.SPLIT_NEW_20_50,
-    #     seed=args.data_seed)
+    set_seed(args.seed)
 
     dataset = Dataset(
-        # Dataset.KIND_MOVIELENS_1M,
-        Dataset.KIND_MOVIELENS_100k,
+        Dataset.KIND_MOVIELENS_1M,
+        # Dataset.KIND_MOVIELENS_100k,
         Dataset.SPLIT_DEFAULT_10_PERCENT,
-        seed=args.data_seed)
+        seed=args.seed)
+    dataset.init_full_matrices()
 
     n_user, n_item = dataset.get_n_user_and_n_item()
     n_class = dataset.n_class
 
-    # train_x = dataset.train_x
-    # valid_x = dataset.valid_x
-    # valid_y = dataset.valid_y
-    # test_x = dataset.test_x
-    # test_y = dataset.test_y
     train_x = dataset.train_matrix
     valid_x = dataset.train_matrix
     valid_y = dataset.valid_matrix
@@ -81,7 +76,6 @@ def _train(args):
         valid_y = valid_y.T
         test_x = test_x.T
         test_y = test_y.T
-
         n_col = n_user
 
     data_for_validation = {
@@ -92,9 +86,9 @@ def _train(args):
         'test_y': test_y,
     }
 
-    batch_manager = BatchManager(train_x)
+    batch_manager = BatchManager(train_x, args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.245)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, dataset.n_class, args)
@@ -201,43 +195,48 @@ def main():
     parser.add_argument(
         '--parameter_sharing',
         type=str2bool,
-        default=False,
+        default=True,
         help='parameter sharing')
     parser.add_argument(
-        '--normalize_1st_layer',
+        '--n_batch', type=int, default=512, help='the batch size')
+    parser.add_argument(
+        '--normalize_input',
         type=str2bool,
         default=False,
-        help='normalize 1st layer')
+        help='normalize input')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=0.0005,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--use_ordinal_cost',
         type=str2bool,
-        default=False,
+        default=True,
         help='Whether use ordinal cost')
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,
-        default=True,
-        help='Whether use ordinal cost')
+        default=False,
+        help='Whether use user vector')
 
-    _lambda = 200.0
     parser.add_argument(
-        '--lambda_1', type=float, default=0.0, help='lambda for weight decay.')
+        '--lambda_1',
+        type=float,
+        default=0.015,
+        help='lambda for weight decay.')
     parser.add_argument(
-        '--lambda_2', type=float, default=_lambda, help='lambda for weight decay.')
-    parser.add_argument(
-        '--dropout_rate', type=float, default=0., help='dropout_rate')
+        '--lambda_2',
+        type=float,
+        default=0.015,
+        help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
-        default=1000,
+        default=100,
         help='the number of iteration for early stop.')
     parser.add_argument(
-        '--data_seed', type=int, default=2, help='the seed for dataset')
+        '--seed', type=int, default=1, help='the seed for dataset')
 
     args = parser.parse_args()
     _train(args)
