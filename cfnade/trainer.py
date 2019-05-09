@@ -182,6 +182,14 @@ def main():
 
     parser = argparse.ArgumentParser(description='CFNADE-tensorflow')
     parser.add_argument(
+        '--dataset',
+        default=Dataset.KIND_MOVIELENS_1M,
+        choices=[
+            Dataset.KIND_MOVIELENS_100k, Dataset.KIND_MOVIELENS_1M,
+            Dataset.KIND_MOVIELENS_10M
+        ],
+        help='Specify dataset.')
+    parser.add_argument(
         '--iter_validation',
         type=int,
         default=1,
@@ -203,8 +211,8 @@ def main():
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=False,
-        help='normalize input')
+        default=True,
+        help='whether normalize input')
     parser.add_argument(
         '--learning_rate',
         type=float,
