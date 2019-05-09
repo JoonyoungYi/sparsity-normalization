@@ -3,7 +3,7 @@ import os
 import zipfile
 
 import numpy as np
-from configs.local import DATA_PATH
+DATA_PATH = '.movielens/'
 
 
 def _get_data_from_user_dict(user_dict,
@@ -38,8 +38,8 @@ class Dataset:
 
     def __download(self):
         if not os.path.exists(DATA_PATH):
-            print("DATA_PATH가 존재하지 않습니다.")
-            return False
+            os.mkdir(DATA_PATH)
+            # return False
 
         if not os.path.isdir(DATA_PATH):
             print("DATA_PATH가 폴더가 아닙니다.")
@@ -151,7 +151,7 @@ class Dataset:
         np.save(filepath, data)
 
         print(current_u, current_i)
-        input('should complete get_n_user_and_n_item function.')
+        # input('should complete get_n_user_and_n_item function.')
         return True
 
     def __split_npy(self):

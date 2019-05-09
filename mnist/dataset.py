@@ -1,7 +1,11 @@
+import os
 import random
 
 import numpy as np
-from tensorflow import keras
+from .datasets import mnist as datasets_mnist
+from .datasets import fashion as datasets_fashion
+from .datasets import cifar10 as datasets_cifar10
+from .datasets import cifar100 as datasets_cifar100
 
 
 def _normalize_input(x):
@@ -40,15 +44,16 @@ class Dataset:
     def __init__(self, args):
         # load data
         if args.dataset == 'mnist':
-            dataset = keras.datasets.mnist
+            dataset = datasets_mnist
         elif args.dataset == 'fashion':
-            dataset = keras.datasets.fashion_mnist
+            dataset = datasets_fashion
         elif args.dataset == 'cifar10':
-            dataset = keras.datasets.cifar10
+            dataset = datasets_cifar10
         elif args.dataset == 'cifar100':
-            dataset = keras.datasets.cifar100
+            dataset = datasets_cifar100
         else:
             raise NotImplementedError()
+        assert dataset
 
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
