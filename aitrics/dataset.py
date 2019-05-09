@@ -4,10 +4,9 @@ from sklearn.utils import class_weight
 
 '''Requirements of init_data
 args.data_path
-args.data_path에 data가 있어야함
-args.choose_dataset은 1~5
-args.use_modified는 True/False
-args.model은 mlp/lstm
+args.choose_dataset
+args.use_modified
+args.model
 args.normalize_input
 '''
 
