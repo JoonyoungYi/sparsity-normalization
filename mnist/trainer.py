@@ -233,6 +233,12 @@ def main():
         'normalize를 할 hidden layer index들의 리스트. 쉼표로 구분. 1,2,3 인 경우 1,2,3번 hidden layer를 normalize. 1 인 경우 1번째 hidden layer를 normalize.'
     )
     parser.add_argument(
+        '--approximate_L0',
+        type=str2bool,
+        # default=True,
+        default=False,
+        help='Whether approximate L0 norm')
+    parser.add_argument(
         '--ignore_bias_layer_indexes',
         type=integer_list,
         default=[],
