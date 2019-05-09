@@ -66,4 +66,5 @@ def load_data(args):
     # Step 2: Build the dictionary and replace rare words with UNK token.
     data = _build_dataset(words, args.vocabulary_size)
     del words  # Hint to reduce memory.
-    return data
+
+    return data[:int(len(data) * 0.9)], data[int(len(data) * 0.9):]
