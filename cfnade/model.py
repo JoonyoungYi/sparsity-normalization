@@ -59,6 +59,8 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
     m = tf.cast(_where, tf.float32)
 
     if args.parameter_sharing:
+        # QUESTION: I think this part is author's mistake.
+        # reverse=True should be added in cumsum function.
         y_hat = tf.cumsum(y_hat, axis=2)
 
     if args.use_ordinal_cost:
