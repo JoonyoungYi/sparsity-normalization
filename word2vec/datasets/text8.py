@@ -11,7 +11,8 @@ import tensorflow as tf
 def _maybe_download(filename, expected_bytes):
     """Download a file if not present, and make sure it's the right size."""
     if not os.path.exists(filename):
-        filename, _ = urllib.request.urlretrieve(url + filename, filename)
+        filename, _ = urllib.request.urlretrieve(
+            'http://mattmahoney.net/dc/' + filename, filename)
     statinfo = os.stat(filename)
     if statinfo.st_size == expected_bytes:
         print('Found and verified', filename)
@@ -33,36 +34,36 @@ def _read_data(filename):
 def _build_dataset(words, vocabulary_size):
     count = [['UNK', -1]]
     count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
+
     dictionary = dict()
+    word_idx = 1
     for word, _ in count:
-        dictionary[word] = len(dictionary)
+        dictionary[word] = word_idx
+        word_idx += 1
+
     data = list()
     unk_count = 0
     for word in words:
         if word in dictionary:
             index = dictionary[word]
+            assert index > 0
         else:
             index = 0  # dictionary['UNK']
             unk_count += 1
         data.append(index)
     count[0][1] = unk_count
-    reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
-    return data, count, dictionary, reverse_dictionary
+
+    # reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
+    return data  #, count, dictionary, reverse_dictionary
 
 
 def load_data(args):
     # Step 1: Download the data.
-    url = 'http://mattmahoney.net/dc/'
     filename = _maybe_download('text8.zip', 31344016)
-
     words = _read_data(filename)
     print('Data size', len(words))
 
     # Step 2: Build the dictionary and replace rare words with UNK token.
-    data, count, dictionary, reverse_dictionary = _build_dataset(
-        words, args.vocabulary_size)
+    data = _build_dataset(words, args.vocabulary_size)
     del words  # Hint to reduce memory.
-    print('Most common words (+UNK)', count[:5])
-    print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
-
     return data
