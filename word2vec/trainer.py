@@ -143,7 +143,10 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
-        '--n_batch', type=int, default=128, help='integer for batch number.')
+        '--batch_size',
+        type=int,
+        default=128,
+        help='integer for batch number.')
     parser.add_argument(
         '--context_window',
         type=int,
@@ -236,7 +239,7 @@ def main():
     #     help='whether use sparse tensor.')
 
     args = parser.parse_args()
-    assert args.n_batch and args.n_batch > 0
+    assert args.batch_size and args.batch_size > 0
     args.context_size = args.context_window * 2
     _train(args)
 
