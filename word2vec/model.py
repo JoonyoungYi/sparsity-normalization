@@ -11,17 +11,20 @@ def init_models(args):
     # Look up embeddings for inputs.
     embeddings = tf.Variable(
         tf.random_uniform([args.vocabulary_size, args.embedding_size], -1.0,
-                          1.0))
+                          1.0)) # first hidden layer의 weight
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
     # take mean of embeddings of context words for context embedding
-    embed_context = tf.reduce_mean(embed, 1)
+    if args.normalize_input:
+        embed_context = tf.reduce_mean(embed, 1)
+    else:
+        embed_context = tf.reduce_sum(embed, 1)
 
     # Construct the variables for the NCE loss
     nce_weights = tf.Variable(
         tf.truncated_normal(
             [args.vocabulary_size, args.embedding_size],
-            stddev=1.0 / math.sqrt(args.embedding_size)))
-    nce_biases = tf.Variable(tf.zeros([args.vocabulary_size]))
+            stddev=1.0 / math.sqrt(args.embedding_size))) # output layer의 weight
+    nce_biases = tf.Variable(tf.zeros([args.vocabulary_size])) # output layer의 bias.
 
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
@@ -36,7 +39,13 @@ def init_models(args):
             num_classes=args.vocabulary_size))
 
     # Construct the SGD optimizer using a learning rate of 1.0.
-    optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
+    if args.optimizer == 'sgd':
+        optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
+    elif args.optimizer == 'adam':
+        optimizer = tf.train.AdamOptimizer(args.learning_rate)
+    else:
+        raise NotImplementedError()
+
     train_op = optimizer.minimize(loss)
 
     return {
