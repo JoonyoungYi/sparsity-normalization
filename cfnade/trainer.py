@@ -88,7 +88,8 @@ def _train(args):
 
     batch_manager = BatchManager(train_x, args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, dataset.n_class, args)
@@ -219,6 +220,11 @@ def main():
         type=str2bool,
         default=False,
         help='Whether use user vector')
+    parser.add_argument(
+        '--gpu_memory_fraction',
+        type=float,
+        default=0.25,
+        help='per_process_gpu_memory_fraction')
 
     parser.add_argument(
         '--lambda_1',
