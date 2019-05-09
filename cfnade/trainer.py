@@ -153,7 +153,7 @@ def _train(args):
                 min_test_rmse = test_rmse
                 min_test_rmse_iter_idx = iter_idx
 
-            msg = '\n[EPOCH %6d]\n' % (iter_idx)
+            msg = '\n[ITER %6d]\n' % (iter_idx)
             msg += '  - train loss: {:12.1f}\n'.format(
                 sum(train_losses) / len(train_losses))
             msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
