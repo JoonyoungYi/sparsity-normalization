@@ -1,3 +1,5 @@
+import math
+
 import tensorflow as tf
 
 
@@ -18,8 +20,8 @@ def init_models(args):
     nce_weights = tf.Variable(
         tf.truncated_normal(
             [args.vocabulary_size, args.embedding_size],
-            stddev=1.0 / math.sqrt(embedding_size)))
-    nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
+            stddev=1.0 / math.sqrt(args.embedding_size)))
+    nce_biases = tf.Variable(tf.zeros([args.vocabulary_size]))
 
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
