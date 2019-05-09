@@ -14,38 +14,40 @@ from common.utils import str2bool
 from common.utils import set_seed
 
 
+def __get_rmse(session, models, x, y, n_batch):
+    sse, sum_n = 0.0, 0
+    for i in range(0, x.shape[0], n_batch):
+        rmse = session.run(
+            models['rmse'],
+            feed_dict={
+                models['x']: x[i:i + n_batch],
+                models['y']: y[i:i + n_batch],
+                models['training']: False,
+            }, )
+        n = np.sum(y[i:i + n_batch] > 0.1)
+        sum_n += n
+        sse += rmse * rmse * n
+    return math.sqrt(sse / sum_n)
+
+
 def _validate(
         session,
         models,
+        args,
         train_x,
         valid_x,
         valid_y,
         test_x,
         test_y, ):
 
-    train_rmse = session.run(
-        models['rmse'],
-        feed_dict={
-            models['x']: train_x,
-            models['y']: train_x,
-            models['training']: False,
-        }, )
+    n_batch = args.n_batch
+    assert train_x.shape[0] == valid_x.shape[0]
+    assert train_x.shape[0] == test_x.shape[0]
+    assert train_x.shape[0] >= n_batch
 
-    valid_rmse = session.run(
-        models['rmse'],
-        feed_dict={
-            models['x']: valid_x,
-            models['y']: valid_y,
-            models['training']: False,
-        }, )
-
-    test_rmse = session.run(
-        (models['rmse']),
-        feed_dict={
-            models['x']: test_x,
-            models['y']: test_y,
-            models['training']: False,
-        }, )
+    train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
+    valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch)
+    test_rmse = __get_rmse(session, models, test_x, test_y, n_batch)
     return train_rmse, valid_rmse, test_rmse
 
 
@@ -138,7 +140,7 @@ def _train(args):
 
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
-                session, models, **data_for_validation)
+                session, models, args, **data_for_validation)
             if math.isnan(train_rmse):
                 print('Train RMSE is NaN.')
                 assert False

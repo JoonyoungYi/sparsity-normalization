@@ -12,7 +12,7 @@
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
-cd .. && cd home/server14/HVS-tensorflow
+cd .. && cd home/server15/HVS-tensorflow
 pip3 install -r requirements.txt
 ```
 
