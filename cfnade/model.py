@@ -5,13 +5,6 @@ import tensorflow as tf
 
 from .configs import *
 
-PMS = [
-    [1., 0., 0., 0., 0.],  # for rating 1
-    [1., 1., 0., 0., 0.],  # for rating 2
-    [1., 1., 1., 0., 0.],  # for rating 3
-    [1., 1., 1., 1., 0.],  # for rating 4
-    [1., 1., 1., 1., 1.],  # for rating 5
-]
 
 def _init_weights(n_col, args):
     weights, biases = [], []
@@ -50,7 +43,14 @@ def _forward(x_hot, weights, biases, args, training):
     input_layer = layer
 
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        layer = tf.matmul(layer, weight) + bias
+        layer = tf.matmul(layer, weight)
+        if i == 0:
+            if args.normalize_input:
+                if args.parameter_sharing:
+                    raise NotImplementedError()
+                else:
+                    raise NotImplementedError()
+        layer = layer + bias
 
         if i < len(biases) - 1:
             layer = tf.nn.tanh(layer)
@@ -60,6 +60,8 @@ def _forward(x_hot, weights, biases, args, training):
         # QUESTION: I think this part is author's mistake.
         # reverse=True should be added in cumsum function.
         layer = tf.cumsum(layer, axis=2)
+        # layer = tf.cumsum(layer, axis=2, reverse=True)
+
     return layer
 
 
@@ -68,6 +70,9 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
     zero = tf.constant(0.1, dtype=tf.float32)
     _where = tf.greater(_y, zero)
     m = tf.cast(_where, tf.float32)
+
+    d = tf.reduce_sum(tf.reduce_sum(x_hot, axis=2), axis=1)
+    D = tf.reduce_sum(tf.reduce_sum(x_hot + y_hot, axis=2), axis=1)
 
     if args.use_ordinal_cost:
         y_prob = tf.nn.softmax(y_hat)
@@ -84,17 +89,14 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
             (tf.log(y_prob) - tf.log(y_prob_k1)) * mask_k1, axis=2)
         ordinal_costs = ordinal_costs_1k + ordinal_costs_k1
 
-        d = tf.reduce_sum(tf.reduce_sum(x_hot, axis=2), axis=1)
-        D = tf.reduce_sum(tf.reduce_sum(x_hot + y_hot, axis=2), axis=1)
-
         costs = tf.reduce_sum(ordinal_costs, axis=1) * D / (D - d + 1e-6)
         rec_loss = tf.reduce_mean(costs)
     else:
         costs = tf.nn.softmax_cross_entropy_with_logits_v2(
             labels=y_hot, logits=y_hat)
         costs = m * costs
-        costs = tf.reduce_sum(costs, axis=1) * v
-        rec_loss = tf.reduce_sum(costs)
+        costs = tf.reduce_sum(costs, axis=1) * D / (D - d + 1e-6)
+        rec_loss = tf.reduce_mean(costs)
 
     return rec_loss + tf.add_n([
         l * tf.reduce_sum(tf.square(w))
@@ -110,15 +112,15 @@ def _get_rmse(y, y_hat, v, epsilon=0):
     where = tf.greater(y, zero)
     m = tf.cast(where, tf.float32)
 
-    return tf.sqrt(
-        (tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m)) + epsilon) /
-        (tf.reduce_sum(m) + epsilon)), tf.reduce_sum(
-            tf.multiply(tf.square(y - y_hat), m)), tf.reduce_sum(m)
+    sse = tf.reduce_sum(tf.multiply(tf.square(y - y_hat), m))
+    n = tf.reduce_sum(m)
+    rmse = tf.sqrt((sse + epsilon) / (n + epsilon))
+    return rmse, sse, n
 
 
 def _get_y_hat_from_y_hat_hot(y_hat_hot):
-    y_hat = tf.reduce_sum(
-        tf.multiply(tf.nn.softmax(y_hat_hot), [1., 2., 3., 4., 5.]), axis=2)
+    y_hat = tf.tensordot(
+        tf.nn.softmax(y_hat_hot), [1., 2., 3., 4., 5.], [[2], [0]])
     return y_hat
 
 
