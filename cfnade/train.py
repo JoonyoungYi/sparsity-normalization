@@ -14,21 +14,28 @@
 # 결론: 엄청 안좋아지지는 않고 조금 안좋아짐. 아마도 parameter sharing과 ordinal cost의 결과일 것! 그래서 확인해보기로 함.
 
 # ordinal cost의 영향에 대해서 확인 (진행중)
-# [TODO] python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.001  --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
-# [TODO] python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0005 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
-# [TODO] python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0002 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
+# [server15-0] python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.001  --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
+# [server15-1] python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0005 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
+# [server15-2] python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0002 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False
 
-# parameter sharing의 영향에 대해서 확인 (진행중)
+# parameter sharing의 영향에 대해서 확인
 # python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.001  --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False -> 0.8777
 # python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False -> 0.8742
 # python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False -> 0.8728
+# 결론: 파라미터 쉐어링도 엄청 드라마틱한 영향을 미치지는 않는 것 같다.
 
-# parameter sharing, ordinal cost둘 다 없을 때 어떻게 되는지 확인하기. 영향에 대해서 확인 (진행중)
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False -> 0.8942
+# parameter sharing, ordinal cost둘 다 없을 때 영향에 대해서 확인 (진행중)
+# [server15-3] python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.001 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False
+# [server15-4] python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False -> 0.8942
 
-# 아래 실험들은 다시 짜서 다시 돌려야 함! normalize_input 들어간 실험들은 잘못했단 것을 깨달음!
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.25 --learning_rate=0.001  --lambda_1=0.0  --lambda_2=0.0  --normalize_input=True -> 1.0401
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.25 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0  --normalize_input=True -> 1.0399
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.25 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0  --normalize_input=True -> 1.0365
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --normalize_input=True -> 1.0395
-# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --normalize_input=True --use_ordinal_cost=False -> 1.1169
+# 위 각 실험들에 대해서 input normalization 들어갔을 때 어떻게 되는지 확인하기! weight decay안쓰는 경우에 대해서만 우선적으로 확인하자. 총 9개 실험!
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.001  --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0005 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0002 --lambda_1=0.0 --lambda_2=0.0 --use_ordinal_cost=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.001  --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.24 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.001 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0005 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False --normalize_input=True
+# python3 -m cfnade.trainer --gpu_memory_fraction=0.23 --learning_rate=0.0002 --lambda_1=0.0  --lambda_2=0.0 --parameter_sharing=False --use_ordinal_cost=False --normalize_input=True
