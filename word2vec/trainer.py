@@ -3,6 +3,8 @@
 # - https://github.com/tensorflow/tensorflow/blob/r0.10/tensorflow/examples/tutorials/word2vec/word2vec_basic.py
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
+import math
+
 import numpy as np
 import tensorflow as tf
 
@@ -17,7 +19,7 @@ def _train(args):
     dataset = Dataset(args)
     models = init_models(args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     session.run(tf.global_variables_initializer())
 
@@ -34,12 +36,19 @@ def _train(args):
             })
         sum_loss += loss
 
-        if iter_idx % args.valid_iter == 0:
-            if iter_idx > 0:
-                # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
-                print("Average loss at step ", iter_idx, ": ",
-                      sum_loss / args.valid_iter)
+        if iter_idx % args.valid_iter == 0 and iter_idx > 0:
+            # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
+            print("Average loss at step ", iter_idx, ": ",
+                  sum_loss / args.valid_iter)
             sum_loss = 0
+
+            cross_entropy_loss = session.run(
+                models['cross_entropy_loss'],
+                feed_dict={
+                    models['train_inputs']: dataset.test_inputs[:1000],
+                    models['train_labels']: dataset.test_labels[:1000]
+                })
+            print(math.exp(cross_entropy_loss / 1000))
 
     session.close()
 
@@ -48,6 +57,12 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Word2Vec')
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        default='text8',
+        choices=['text8', 'ptb'],
+        help='')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(

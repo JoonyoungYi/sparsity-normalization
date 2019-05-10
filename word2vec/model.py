@@ -4,14 +4,13 @@ import tensorflow as tf
 
 
 def init_models(args):
-    train_inputs = tf.placeholder(
-        tf.int32, shape=[args.batch_size, args.context_size])
-    train_labels = tf.placeholder(tf.int32, shape=[args.batch_size, 1])
+    train_inputs = tf.placeholder(tf.int32, shape=[None, args.context_size])
+    train_labels = tf.placeholder(tf.int32, shape=[None, 1])
 
     # Look up embeddings for inputs.
     embeddings = tf.Variable(
         tf.random_uniform([args.vocabulary_size, args.embedding_size], -1.0,
-                          1.0)) # first hidden layer의 weight
+                          1.0))  # first hidden layer의 weight
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
     # take mean of embeddings of context words for context embedding
     if args.normalize_input:
@@ -23,8 +22,10 @@ def init_models(args):
     nce_weights = tf.Variable(
         tf.truncated_normal(
             [args.vocabulary_size, args.embedding_size],
-            stddev=1.0 / math.sqrt(args.embedding_size))) # output layer의 weight
-    nce_biases = tf.Variable(tf.zeros([args.vocabulary_size])) # output layer의 bias.
+            stddev=1.0 /
+            math.sqrt(args.embedding_size)))  # output layer의 weight
+    nce_biases = tf.Variable(tf.zeros(
+        [args.vocabulary_size]))  # output layer의 bias.
 
     # Compute the average NCE loss for the batch.
     # tf.nce_loss automatically draws a new sample of the negative labels each
@@ -48,9 +49,18 @@ def init_models(args):
 
     train_op = optimizer.minimize(loss)
 
+    # Compute perplexity
+    logits = tf.linalg.matmul(
+        embed_context, nce_weights,
+        transpose_b=True) + tf.transpose(nce_biases)
+    costs = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        labels=tf.squeeze(train_labels), logits=logits)
+    cross_entropy_loss = tf.reduce_sum(costs)
+
     return {
         'train_op': train_op,
         'loss': loss,
         'train_inputs': train_inputs,
-        'train_labels': train_labels
+        'train_labels': train_labels,
+        'cross_entropy_loss': cross_entropy_loss,
     }
