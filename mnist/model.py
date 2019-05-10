@@ -24,17 +24,11 @@ def _forward(x, weights, biases, training, args):
         if i < len(biases) - 1:
 
             if (i + 1) in args.normalize_layer_indexes:
-                if args.approximate_L0:
-                    # implementation of the denominator of NormalizedReLU(X)
-                    max_layer = tf.maximum(
-                        tf.keras.backend.max(tf.abs(layer), axis=1),
-                        1)
-                    max_layer = tf.expand_dims(max_layer, axis=1)
-                    divider = layer / max_layer
-                    divider = (divider + 1)/2
-                    divider = tf.maximum(
-                        tf.keras.backend.sum(divider, axis=1),
-                        1)
+                if args.L0_option == 'prob':
+                    prob_L0 = tf.exp(layer)
+                    max_prob_L0 = tf.keras.backend.max(prob_L0, axis=1, keepdims=True)
+                    prob_L0 /= max_prob_L0
+                    divider = tf.keras.backend.sum(prob_L0, axis=1)
 
             layer = activation_fn(layer)
             layers.append(layer)
@@ -43,11 +37,19 @@ def _forward(x, weights, biases, training, args):
                 layer, rate=args.drop_rate, training=training)
 
             if (i + 1) in args.normalize_layer_indexes:
-                if not args.approximate_L0:
+                if args.L0_option == 'vanilla':
                     divider = tf.maximum(
                         tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
                         1)
                     divider = tf.stop_gradient(divider)  # make this as constant.
+                elif args.L0_option == 'tanh':
+                    tanh_L0 = tf.abs(layer)
+                    tanh_L0 = tf.tanh(tanh_L0)
+                    tanh_L0 = tf.keras.backend.sum(tanh_L0, axis=1)
+                    divider = tf.maximum(tanh_L0, 1)
+
+                elif args.L0_option == 'epsilon':
+                    raise NotImplementedError()
 
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),

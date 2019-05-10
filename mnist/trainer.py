@@ -149,6 +149,7 @@ def train(args, seed):
     results.append(args.grey_scale)
     results.append(args.normalize_input)
     results.append(args.normalize_layer_indexes)
+    results.append(args.L0_option)
     results.append(args.ignore_bias_layer_indexes)
     results.append(args.n_hidden_unit)
     results.append(test_sparse_acc)
@@ -233,11 +234,10 @@ def main():
         'normalize를 할 hidden layer index들의 리스트. 쉼표로 구분. 1,2,3 인 경우 1,2,3번 hidden layer를 normalize. 1 인 경우 1번째 hidden layer를 normalize.'
     )
     parser.add_argument(
-        '--approximate_L0',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether approximate L0 norm')
+        '--L0_option',
+        type=str,
+        default='vanilla',
+        choices=['vanilla', 'prob', 'tanh', 'epsilon'])
     parser.add_argument(
         '--ignore_bias_layer_indexes',
         type=integer_list,
