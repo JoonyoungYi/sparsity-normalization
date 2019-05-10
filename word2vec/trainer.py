@@ -7,11 +7,29 @@ import math
 
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from .model import init_models
 from .dataset import Dataset
 from common.utils import set_seed
 from common.utils import str2bool
+
+
+def __validate(session, models, dataset):
+    n_valid_batch = 1000
+    cross_entropy_loss = 0.0
+    for i in tqdm(range(0, dataset.test_inputs.shape[0], n_valid_batch)):
+        cross_entropy_loss += session.run(
+            models['cross_entropy_loss'],
+            feed_dict={
+                models['train_inputs']:
+                dataset.test_inputs[i:i + n_valid_batch],
+                models['train_labels']:
+                dataset.test_labels[i:i + n_valid_batch]
+            })
+    test_perplexity = math.exp(
+        cross_entropy_loss / dataset.test_inputs.shape[0])
+    return test_perplexity
 
 
 def _train(args):
@@ -38,17 +56,11 @@ def _train(args):
 
         if iter_idx % args.valid_iter == 0 and iter_idx > 0:
             # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
-            print("Average loss at step ", iter_idx, ": ",
-                  sum_loss / args.valid_iter)
+            print(">> ", iter_idx)
+            train_loss = sum_loss / args.valid_iter
             sum_loss = 0
-
-            cross_entropy_loss = session.run(
-                models['cross_entropy_loss'],
-                feed_dict={
-                    models['train_inputs']: dataset.test_inputs[:1000],
-                    models['train_labels']: dataset.test_labels[:1000]
-                })
-            print(math.exp(cross_entropy_loss / 1000))
+            test_perplexity = __validate(session, models, dataset)
+            print("   ", train_loss, test_perplexity)
 
     session.close()
 
