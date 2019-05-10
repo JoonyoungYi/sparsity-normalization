@@ -10,7 +10,6 @@ def _init_weights(n_col, args):
     weights, biases = [], []
 
     n_units = [n_col, args.n_hidden_unit, n_col]
-
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
         # if i == 1 and hidden_unit_numbers[0] == column_number:
         #     # kaiming init 이다. (first layer는 xavier init과 동일.)
@@ -31,7 +30,7 @@ def _init_weights(n_col, args):
     return weights, biases
 
 
-def _forward(x_hot, weights, biases, args, training):
+def _forward(x_hot, weights, biases, args, training, x=None):
     assert len(weights) == len(biases)
 
     if args.parameter_sharing:
@@ -47,9 +46,18 @@ def _forward(x_hot, weights, biases, args, training):
         if i == 0:
             if args.normalize_input:
                 if args.parameter_sharing:
-                    raise NotImplementedError()
+                    assert x is not None
+                    # parameter sharing을 하는 경우에는 5개 별점으로 보고 별점의 합으로 나눠줘야 한다.
+                    divider = tf.cast(
+                        tf.reduce_sum(x, axis=1, keepdims=True), tf.float32)
+                    divider = tf.maximum(divider, 1.0)
                 else:
-                    raise NotImplementedError()
+                    # parameter sharing을 하지 않는 경우에는 그냥 observed entries 수로 나눠주면 됨.
+                    divider = tf.reduce_sum(x_hot, axis=2)
+                    divider = tf.reduce_sum(divider, axis=1, keepdims=True)
+                    divider = tf.reshape(tf.maximum(divider, 1.0), [-1, 1])
+                layer /= divider
+
         layer = layer + bias
 
         if i < len(biases) - 1:
@@ -90,13 +98,16 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
         ordinal_costs = ordinal_costs_1k + ordinal_costs_k1
 
         costs = tf.reduce_sum(ordinal_costs, axis=1) * D / (D - d + 1e-6)
-        rec_loss = tf.reduce_mean(costs)
+        ordinal_cost = tf.reduce_mean(costs)
+        rec_loss = ordinal_cost
     else:
         costs = tf.nn.softmax_cross_entropy_with_logits_v2(
             labels=y_hot, logits=y_hat)
         costs = m * costs
         costs = tf.reduce_sum(costs, axis=1) * D / (D - d + 1e-6)
-        rec_loss = tf.reduce_mean(costs)
+        standard_cost = tf.reduce_mean(
+            costs)  # paper said this is regular cost.
+        rec_loss = standard_cost
 
     return rec_loss + tf.add_n([
         l * tf.reduce_sum(tf.square(w))
@@ -135,7 +146,7 @@ def init_models(n_col, n_class, args):
 
     # init weights
     weights, biases = _init_weights(n_col * n_class, args)
-    y_hat_hot = _forward(x_hot, weights, biases, args, training)
+    y_hat_hot = _forward(x_hot, weights, biases, args, training, x=x)
     loss = _get_loss(x_hot, y_hot, y_hat_hot, v, weights, args)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
