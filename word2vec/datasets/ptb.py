@@ -1,24 +1,14 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 import os
-import sys
 
 import tensorflow as tf
 
-from . import get_file_path
-
-Py3 = sys.version_info[0] == 3
+from common.dataset_utils import get_file_path
 
 
 def _read_words(filename):
     with tf.gfile.GFile(filename, "r") as f:
-        if Py3:
-            return f.read().replace("\n", "<eos>").split()
-        else:
-            return f.read().decode("utf-8").replace("\n", "<eos>").split()
+        return f.read().replace("\n", "<eos>").split()
 
 
 def _build_vocab(filename):
@@ -70,8 +60,6 @@ def load_data(args):
         'ptb',
         url='http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz',
         hash='30177ea32e27c525793142b6bf2c8e2d')
-
-    assert False
 
     data_path = 1
     train_data, valid_data, test_data, vocabulary = ptb_raw_data(data_path)

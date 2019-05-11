@@ -6,7 +6,7 @@ import zipfile
 from six.moves import urllib
 import tensorflow as tf
 
-from . import get_file_path
+from common.dataset_utils import get_file_path
 
 
 def _read_data(filename):
