@@ -1,3 +1,4 @@
+# REF: https://github.com/tensorflow/models/tree/master/tutorials/rnn/ptb
 import collections
 import os
 
@@ -28,37 +29,49 @@ def _file_to_word_ids(filename, word_to_id):
     return [word_to_id[word] for word in data if word in word_to_id]
 
 
-def ptb_raw_data(data_path=None):
-    """Load PTB raw data from data directory "data_path".
-    Reads PTB text files, converts strings to integer ids,
-    and performs mini-batching of the inputs.
-    The PTB dataset comes from Tomas Mikolov's webpage:
-    http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz
-    Args:
-      data_path: string path to the directory where simple-examples.tgz has
-        been extracted.
-    Returns:
-      tuple (train_data, valid_data, test_data, vocabulary)
-      where each of the data objects can be passed to PTBIterator.
-    """
-
+def _ptb_raw_data(data_path=None):
     train_path = os.path.join(data_path, "ptb.train.txt")
     valid_path = os.path.join(data_path, "ptb.valid.txt")
     test_path = os.path.join(data_path, "ptb.test.txt")
 
     word_to_id = _build_vocab(train_path)
+
     train_data = _file_to_word_ids(train_path, word_to_id)
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
-    vocabulary = len(word_to_id)
-    return train_data, valid_data, test_data, vocabulary
+
+    eos_id = word_to_id['<eos>']
+    return train_data, valid_data, test_data, eos_id
+
+
+def _init_files():
+    file_path = get_file_path(
+        'ptb.train.txt',
+        'ptb',
+        url=
+        'https://raw.githubusercontent.com/JoonyoungYi/datasets/master/ptb/ptb.train.txt',
+        hash='f26c4b92c5fdc7b3f8c7cdcb991d8420')
+    assert file_path
+
+    file_path = get_file_path(
+        'ptb.valid.txt',
+        'ptb',
+        url=
+        'https://raw.githubusercontent.com/JoonyoungYi/datasets/master/ptb/ptb.valid.txt',
+        hash='aa0affc06ff7c36e977d7cd49e3839bf')
+    assert file_path
+
+    file_path = get_file_path(
+        'ptb.test.txt',
+        'ptb',
+        url=
+        'https://raw.githubusercontent.com/JoonyoungYi/datasets/master/ptb/ptb.test.txt',
+        hash='8b80168b89c18661a38ef683c0dc3721')
+    assert file_path
+
+    return os.path.dirname(file_path)
 
 
 def load_data(args):
-    dir_path = get_file_path(
-        'simple-examples.tgz',
-        'ptb',
-        url='http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz',
-        hash='30177ea32e27c525793142b6bf2c8e2d',
-        extract=True)
-    train_data, valid_data, test_data, vocabulary = ptb_raw_data(dir_path)
+    dir_path = _init_files()
+    return _ptb_raw_data(dir_path)
