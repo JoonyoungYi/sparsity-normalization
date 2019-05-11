@@ -237,7 +237,7 @@ def main():
         '--L0_option',
         type=str,
         default='vanilla',
-        choices=['vanilla', 'prob1', 'prob2', 'tanh', 'epsilon'])
+        choices=['vanilla', 'prob1', 'prob2', 'tanh', 'sigmoid'])
     parser.add_argument(
         '--ignore_bias_layer_indexes',
         type=integer_list,

@@ -30,11 +30,18 @@ def _forward(x, weights, biases, training, args):
                     prob_L0 /= max_prob_L0
                     divider = tf.keras.backend.sum(prob_L0, axis=1)
                 elif args.L0_option == 'prob1':
-                    max_layer = tf.maximum(tf.keras.backend.max(tf.abs(layer), axis=1),1)
+                    max_layer = tf.maximum(
+                        tf.keras.backend.max(tf.abs(layer), axis=1),
+                        1)
                     max_layer = tf.expand_dims(max_layer, axis=1)
                     divider = layer / max_layer
                     divider = (divider + 1)/2
-                    divider = tf.maximum(tf.keras.backend.sum(divider, axis=1),1)
+                    divider = tf.maximum(
+                        tf.keras.backend.sum(divider, axis=1),
+                        1)
+                elif args.L0_option == 'sigmoid':
+                    sigmoid_L0 = tf.sigmoid(layer)
+                    divider = tf.keras.backend.sum(sigmoid_L0, axis=1)
 
             layer = activation_fn(layer)
             layers.append(layer)
@@ -53,9 +60,6 @@ def _forward(x, weights, biases, training, args):
                     tanh_L0 = tf.tanh(tanh_L0)
                     tanh_L0 = tf.keras.backend.sum(tanh_L0, axis=1)
                     divider = tf.maximum(tanh_L0, 1)
-
-                elif args.L0_option == 'epsilon':
-                    raise NotImplementedError()
 
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),
