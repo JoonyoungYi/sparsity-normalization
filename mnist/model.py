@@ -29,7 +29,7 @@ def _forward(x, weights, biases, training, args):
                     max_prob_L0 = tf.keras.backend.max(prob_L0, axis=1, keepdims=True)
                     prob_L0 /= max_prob_L0
                     divider = tf.keras.backend.sum(prob_L0, axis=1)
-		elif args.L0_option == 'prob1':
+                elif args.L0_option == 'prob1':
                     max_layer = tf.maximum(tf.keras.backend.max(tf.abs(layer), axis=1),1)
                     max_layer = tf.expand_dims(max_layer, axis=1)
                     divider = layer / max_layer
