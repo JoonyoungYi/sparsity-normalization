@@ -55,11 +55,10 @@ def ptb_raw_data(data_path=None):
 
 
 def load_data(args):
-    file_path = get_file_path(
-        'simple-examples.zip',
+    dir_path = get_file_path(
+        'simple-examples.tgz',
         'ptb',
         url='http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz',
-        hash='30177ea32e27c525793142b6bf2c8e2d')
-
-    data_path = 1
-    train_data, valid_data, test_data, vocabulary = ptb_raw_data(data_path)
+        hash='30177ea32e27c525793142b6bf2c8e2d',
+        extract=True)
+    train_data, valid_data, test_data, vocabulary = ptb_raw_data(dir_path)
