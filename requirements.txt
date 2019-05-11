@@ -1,1 +1,2 @@
 requests
+tqdm==4.31.1
