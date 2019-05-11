@@ -128,4 +128,5 @@ results/
 *.sh
 .keras/
 .movielens/
+.datasets/
 text8.zip

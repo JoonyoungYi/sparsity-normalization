@@ -3,12 +3,19 @@ import random
 
 import numpy as np
 
-from .datasets.text8 import load_data
+from .datasets import text8
+from .datasets import ptb
 
 
 class Dataset:
     def __init__(self, args):
-        train_data, test_data = load_data(args)
+        if args.dataset == 'text8':
+            train_data, test_data = text8.load_data(args)
+            raise NotImplementedError()  # TODO: handle_valid_date
+        elif args.dataset == 'ptb':
+            train_data, valid_data, test_data = ptb.load_data(args)
+        else:
+            raise NotImplementedError()
 
         self.batch_size = args.batch_size
         self.context_window = args.context_window

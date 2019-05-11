@@ -1,5 +1,4 @@
 # http://mattmahoney.net/dc/textdata.html
-# TODO: read file desccription.
 import os
 import collections
 import zipfile
@@ -7,20 +6,7 @@ import zipfile
 from six.moves import urllib
 import tensorflow as tf
 
-
-def _maybe_download(filename, expected_bytes):
-    """Download a file if not present, and make sure it's the right size."""
-    if not os.path.exists(filename):
-        filename, _ = urllib.request.urlretrieve(
-            'http://mattmahoney.net/dc/' + filename, filename)
-    statinfo = os.stat(filename)
-    if statinfo.st_size == expected_bytes:
-        print('Found and verified', filename)
-    else:
-        print(statinfo.st_size)
-        raise Exception('Failed to verify ' + filename +
-                        '. Can you get to it with a browser?')
-    return filename
+from . import get_file_path
 
 
 def _read_data(filename):
@@ -52,16 +38,17 @@ def _build_dataset(words, vocabulary_size):
             unk_count += 1
         data.append(index)
     count[0][1] = unk_count
-
-    # reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
-    return data  #, count, dictionary, reverse_dictionary
+    return data
 
 
 def load_data(args):
-    # Step 1: Download the data.
-    filename = _maybe_download('text8.zip', 31344016)
-    words = _read_data(filename)
-    print('Data size', len(words))
+    file_path = get_file_path(
+        'text8.zip',
+        'text8',
+        url='http://mattmahoney.net/dc/text8.zip',
+        hash='f26f94c5209bc6159618bad4a559ff81')
+    words = _read_data(file_path)
+    print('>> Data size -> ', len(words))
 
     # Step 2: Build the dictionary and replace rare words with UNK token.
     data = _build_dataset(words, args.vocabulary_size)

@@ -1,6 +1,8 @@
 import os
 import hashlib
 
+from tqdm import tqdm
+
 
 def _get_hash(path, blocksize=65536):
     afile = open(path, 'rb')
@@ -21,19 +23,21 @@ def _download(file_path, url):
         return False
 
     with open(file_path, 'wb') as f:
-        for i, chunk in enumerate(r.iter_content(1024)):
+        for i, chunk in tqdm(enumerate(r.iter_content(1024))):
             f.write(chunk)
-            if i % 1024 == 0:
-                print('Download {:4d}MB...'.format(i // 1024))
         f.close()
         return True
 
 
-def get_file_path(filename, url='', hash=None):
+def get_file_path(filename, bucketname, url='', hash=None):
     assert filename
     assert url
 
-    dir_path = os.path.dirname(os.path.realpath(__file__)) + '/../../.keras/'
+    bucket_path = '.datasets/'
+    if not os.path.exists(bucket_path):
+        os.mkdir(bucket_path)
+
+    dir_path = bucket_path + bucketname + '/'
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
 
@@ -43,7 +47,7 @@ def get_file_path(filename, url='', hash=None):
         if not success:
             return None
 
-    print(_get_hash(file_path))
+    print('>> dataset hash ->', _get_hash(file_path))
     if hash:
         assert hash == _get_hash(file_path)
 
