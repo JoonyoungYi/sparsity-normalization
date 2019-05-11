@@ -1,11 +1,12 @@
 import numpy as np
 
-from . import get_file_path
+from common.dataset_utils import get_file_path
 
 
 def load_data():
     path = get_file_path(
         'mnist.npz',
+        'mnist',
         url='https://s3.amazonaws.com/img-datasets/mnist.npz',
         hash='8a61469f7ea1b51cbae51d4f78837e45')
 

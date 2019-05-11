@@ -19,7 +19,7 @@ def __validate(session, models, dataset):
     n_valid_batch = 1000
     cross_entropy_loss = 0.0
     for i in tqdm(range(0, dataset.test_inputs.shape[0], n_valid_batch)):
-        cross_entropy_loss += session.run(
+        _loss = session.run(
             models['cross_entropy_loss'],
             feed_dict={
                 models['train_inputs']:
@@ -27,6 +27,11 @@ def __validate(session, models, dataset):
                 models['train_labels']:
                 dataset.test_labels[i:i + n_valid_batch]
             })
+        # print(_loss)
+        if math.isnan(_loss):
+            assert False
+        cross_entropy_loss += _loss
+
     test_perplexity = math.exp(
         cross_entropy_loss / dataset.test_inputs.shape[0])
     return test_perplexity
@@ -43,6 +48,7 @@ def _train(args):
 
     sum_loss = 0
     for iter_idx in range(args.max_iter):
+        print('')
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
@@ -56,11 +62,10 @@ def _train(args):
 
         if iter_idx % args.valid_iter == 0 and iter_idx > 0:
             # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
-            print(">> ", iter_idx)
             train_loss = sum_loss / args.valid_iter
             sum_loss = 0
             test_perplexity = __validate(session, models, dataset)
-            print("   ", train_loss, test_perplexity)
+            print(">>", iter_idx, train_loss, test_perplexity)
 
     session.close()
 
@@ -73,7 +78,10 @@ def main():
         '--dataset',
         type=str,
         default='text8',
-        choices=['text8', 'ptb'],
+        choices=[
+            'text8',  # text8 dataset
+            'ptb',  # pentree bank dataset
+        ],
         help='')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')

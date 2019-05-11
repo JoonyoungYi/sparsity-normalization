@@ -2,7 +2,7 @@ import gzip
 
 import numpy as np
 
-from . import get_file_path
+from common.dataset_utils import get_file_path
 
 
 def load_data():
@@ -15,6 +15,7 @@ def load_data():
     ]:
         path = get_file_path(
             'fashion-' + file_name,
+            'fashion-mnist',
             url='http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/' +
             file_name,
             hash=hash)
