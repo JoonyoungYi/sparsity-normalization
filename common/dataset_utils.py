@@ -1,5 +1,6 @@
 import os
 import hashlib
+import tarfile
 
 from tqdm import tqdm
 
@@ -29,7 +30,7 @@ def _download(file_path, url):
         return True
 
 
-def get_file_path(filename, bucketname, url='', hash=None):
+def get_file_path(filename, bucketname, url='', hash=None, extract=False):
     assert filename
     assert url
 
@@ -51,4 +52,10 @@ def get_file_path(filename, bucketname, url='', hash=None):
     if hash:
         assert hash == _get_hash(file_path)
 
-    return file_path
+    if extract:
+        tar = tarfile.open(file_path, "r:gz")
+        x = tar.extractall(dir_path)
+        tar.close()
+        return dir_path
+    else:
+        return file_path

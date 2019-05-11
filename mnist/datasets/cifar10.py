@@ -1,5 +1,4 @@
 import os
-import tarfile
 
 import numpy as np
 from tensorflow.python.keras.datasets.cifar import load_batch
@@ -8,22 +7,19 @@ from common.dataset_utils import get_file_path
 
 
 def load_data():
-    path = get_file_path(
+    dir_path = get_file_path(
         'cifar-10-python.tar.gz',
         'cifar-10',
         url='https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-        hash='c58f30108f718f92721af3b95e74349a')
-
-    tar = tarfile.open(path, "r:gz")
-    tar.extractall(os.path.dirname(path))
-    tar.close()
+        hash='c58f30108f718f92721af3b95e74349a',
+        extract=True)
 
     num_train_samples = 50000
 
     x_train = np.empty((num_train_samples, 3, 32, 32), dtype='uint8')
     y_train = np.empty((num_train_samples, ), dtype='uint8')
 
-    path = os.path.dirname(path) + '/cifar-10-batches-py'
+    path = dir_path + '/cifar-10-batches-py'
     for i in range(1, 6):
         fpath = os.path.join(path, 'data_batch_' + str(i))
         (x_train[(i - 1) * 10000:i * 10000, :, :, :],
