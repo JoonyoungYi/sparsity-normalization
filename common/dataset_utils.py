@@ -3,8 +3,6 @@ import hashlib
 import tarfile
 import zipfile
 
-from tqdm import tqdm
-
 
 def _get_hash(path, blocksize=65536):
     afile = open(path, 'rb')
@@ -24,6 +22,10 @@ def _download(file_path, url):
         print("url이 유효하지 않습니다.")
         return False
 
+    try:
+        from tqdm import tqdm
+    except:
+        tqdm = lambda x: x
     with open(file_path, 'wb') as f:
         for i, chunk in tqdm(enumerate(r.iter_content(1024))):
             f.write(chunk)
@@ -71,6 +73,7 @@ def get_file_path(filename, bucketname, url='', hash=None, extract=False):
         assert hash == _get_hash(file_path)
 
     if extract:
+        print(file_path)
         _extract_all(file_path, dir_path)
         return dir_path
     else:

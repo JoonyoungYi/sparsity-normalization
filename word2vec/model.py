@@ -12,11 +12,15 @@ def init_models(args):
         tf.random_uniform([args.vocabulary_size, args.embedding_size], -1.0,
                           1.0))  # first hidden layer의 weight
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
-    # take mean of embeddings of context words for context embedding
+    embed = tf.where(embed > -0.1, embed, tf.zeros_like(embed))
+
+    embed_context = tf.reduce_sum(embed, 1)
     if args.normalize_input:
-        embed_context = tf.reduce_mean(embed, 1)
-    else:
-        embed_context = tf.reduce_sum(embed, 1)
+        m = tf.reduce_sum(
+            tf.cast(tf.greater(train_inputs, -1), tf.float32),
+            axis=1,
+            keepdims=True)
+        embed_context /= m
 
     # Construct the variables for the NCE loss
     nce_weights = tf.Variable(

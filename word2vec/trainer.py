@@ -7,7 +7,6 @@ import math
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
 from .model import init_models
 from .dataset import Dataset
@@ -15,26 +14,30 @@ from common.utils import set_seed
 from common.utils import str2bool
 
 
-def __validate(session, models, dataset):
+def ___get_perplexity(session, models, test_inputs, test_labels, tqdm):
     n_valid_batch = 1000
     cross_entropy_loss = 0.0
-    for i in tqdm(range(0, dataset.test_inputs.shape[0], n_valid_batch)):
+    for i in tqdm(range(0, test_inputs.shape[0], n_valid_batch)):
         _loss = session.run(
             models['cross_entropy_loss'],
             feed_dict={
-                models['train_inputs']:
-                dataset.test_inputs[i:i + n_valid_batch],
-                models['train_labels']:
-                dataset.test_labels[i:i + n_valid_batch]
+                models['train_inputs']: test_inputs[i:i + n_valid_batch],
+                models['train_labels']: test_labels[i:i + n_valid_batch]
             })
         # print(_loss)
         if math.isnan(_loss):
-            assert False
+            raise Exception('_loss is NaN! T.T')
         cross_entropy_loss += _loss
 
-    test_perplexity = math.exp(
-        cross_entropy_loss / dataset.test_inputs.shape[0])
-    return test_perplexity
+    return math.exp(cross_entropy_loss / test_inputs.shape[0])
+
+
+def __validate(session, models, dataset, tqdm):
+    valid_perplexity = ___get_perplexity(session, models, dataset.valid_inputs,
+                                         dataset.valid_labels, tqdm)
+    test_perplexity = ___get_perplexity(session, models, dataset.test_inputs,
+                                        dataset.test_labels, tqdm)
+    return valid_perplexity, test_perplexity
 
 
 def _train(args):
@@ -46,9 +49,21 @@ def _train(args):
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     session.run(tf.global_variables_initializer())
 
+    if args.use_tqdm:
+        try:
+            from tqdm import tqdm
+        except:
+            raise Exception('tqdm package required.')
+    else:
+        tqdm = lambda x: x
+
     sum_loss = 0
+    min_valid_perplexity = float('inf')
+    min_valid_iter = -1
+    final_test_perplexity = float('inf')
+    min_test_perplexity = float('inf')
+    min_test_iter = -1
     for iter_idx in range(args.max_iter):
-        print('')
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
@@ -61,11 +76,30 @@ def _train(args):
         sum_loss += loss
 
         if iter_idx % args.valid_iter == 0 and iter_idx > 0:
+            print('')
             # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
-            train_loss = sum_loss / args.valid_iter
+            train_loss = float(sum_loss / args.valid_iter)
             sum_loss = 0
-            test_perplexity = __validate(session, models, dataset)
-            print(">>", iter_idx, train_loss, test_perplexity)
+            valid_perplexity, test_perplexity = __validate(
+                session, models, dataset, tqdm)
+
+            if valid_perplexity < min_valid_perplexity:
+                min_valid_perplexity = valid_perplexity
+                min_valid_iter = iter_idx
+                final_test_perplexity = test_perplexity
+
+            if test_perplexity < min_test_perplexity:
+                min_test_perplexity = test_perplexity
+                min_test_iter = iter_idx
+
+            print(">>", iter_idx, '%4f' % train_loss)
+            print(" -", '%4f' % valid_perplexity, '%4f' % min_valid_perplexity,
+                  min_valid_iter)
+            print(" -", '%4f' % test_perplexity, '%4f' % final_test_perplexity,
+                  '%4f' % min_test_perplexity, min_test_iter)
+
+        if iter_idx > min_valid_iter + args.iter_early_stop:
+            break
 
     session.close()
 
@@ -96,7 +130,11 @@ def main():
         default=1,
         help='context_window. How many words to consider left and right.')
     parser.add_argument(
-        '--vocabulary_size', type=int, default=50000, help='vocabulary_size.')
+        '--vocabulary_size',
+        type=int,
+        # default=50000,
+        default=10000,
+        help='vocabulary_size.')
     parser.add_argument(
         '--embedding_size',
         type=int,
@@ -108,7 +146,7 @@ def main():
         default=64,
         help='num_sampled. Number of negative examples to sample.')
     parser.add_argument(
-        '--max_iter', type=int, default=100000, help='Max iter')
+        '--max_iter', type=int, default=1000000, help='Max iter')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -125,11 +163,18 @@ def main():
         default=True,
         help='Whether normalize input.')
     parser.add_argument(
+        '--use_tqdm', type=str2bool, default=False, help='Whether use tqdm')
+    parser.add_argument(
         '--optimizer',
         type=str,
         choices=['sgd', 'adam'],
         default='sgd',
         help='Optimizer')
+    parser.add_argument(
+        '--iter_early_stop',
+        type=int,
+        default=100000,
+        help='the number of iteration for early stop.')
 
     # parser.add_argument(
     #     '--n_hidden_unit',
@@ -147,11 +192,6 @@ def main():
     #     # default=True,
     #     default=False,
     #     help='Whether use user vector.')
-    # parser.add_argument(
-    #     '--epoch_early_stop',
-    #     type=int,
-    #     default=1000,
-    #     help='the number of epochation for early stop.')
     #
     # parser.add_argument(
     #     '--lambda_w1',
@@ -184,6 +224,8 @@ def main():
     args = parser.parse_args()
     assert args.batch_size and args.batch_size > 0
     args.context_size = args.context_window * 2
+    if args.dataset == 'ptb':
+        assert args.vocabulary_size == 10000
     _train(args)
 
 
