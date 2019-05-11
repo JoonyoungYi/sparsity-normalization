@@ -1,6 +1,7 @@
 import os
 import hashlib
 import tarfile
+import zipfile
 
 from tqdm import tqdm
 
@@ -30,6 +31,23 @@ def _download(file_path, url):
         return True
 
 
+def _extract_all(file_path, dir_path):
+    if file_path.endswith(".tar.gz") or file_path.endswith('.tgz'):
+        tar = tarfile.open(file_path, "r:gz")
+        tar.extractall(dir_path)
+        tar.close()
+    elif file_path.endswith(".tar"):
+        tar = tarfile.open(file_path, "r:")
+        tar.extractall(dir_path)
+        tar.close()
+    elif file_path.endswith(".zip"):
+        zip = zipfile.ZipFile(file_path)
+        zip.extractall(dir_path)
+        zip.close()
+    else:
+        raise NotImplementedError()
+
+
 def get_file_path(filename, bucketname, url='', hash=None, extract=False):
     assert filename
     assert url
@@ -53,9 +71,7 @@ def get_file_path(filename, bucketname, url='', hash=None, extract=False):
         assert hash == _get_hash(file_path)
 
     if extract:
-        tar = tarfile.open(file_path, "r:gz")
-        x = tar.extractall(dir_path)
-        tar.close()
+        _extract_all(file_path, dir_path)
         return dir_path
     else:
         return file_path
