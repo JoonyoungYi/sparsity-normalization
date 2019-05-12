@@ -24,7 +24,7 @@ parser.add_argument(
 parser.add_argument(
     '--use_modified',
     type=str2bool,
-    default=True)
+    default=False)
 
 parser.add_argument(
     '--seed', type=int, default=1)
@@ -34,6 +34,11 @@ parser.add_argument(
     default='mlp',
     choices=['mlp', 'lstm'])
 parser.add_argument(
+    '--dropout',
+    type=str2bool,
+    default=False,
+    help='Whether to add dropout')
+parser.add_argument(
     '--normalize_input',
     type=str2bool,
     default=False,
@@ -42,15 +47,15 @@ parser.add_argument(
 parser.add_argument(
     '--epochs',
     type=int,
-    default=200)
+    default=1000000)
 parser.add_argument(
     '--batch_size',
     type=int,
-    default=8192)
+    default=500000)
 parser.add_argument(
     '--learning_rate',
     type=float,
-    default=1e-4)
+    default=1e-2)
 
 parser.add_argument(
     '--verbose',
@@ -82,7 +87,7 @@ def auc(y_true, y_pred):
 X_train, y_train, X_test, y_test, class_weights, disease = init_data(args)
 
 # construct model
-model, lr_reducer = init_model(args)
+model, early_stopping_callback = init_model(args)
 
 # model training
 model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
@@ -92,11 +97,14 @@ model.fit(X_train, y_train,
           class_weight=class_weights,
           epochs=args.epochs,
           batch_size=args.batch_size,
-          callbacks=[lr_reducer]) # early stopping callback
+          callbacks=[early_stopping_callback]) # early stopping callback
 
 # model evaluation
 model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
 scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
+
+#print("\nResult of {}".format(disease))
+#print("Best AUC: {}\n".format(scores[2]))
 
 # save results to file
 results = []
