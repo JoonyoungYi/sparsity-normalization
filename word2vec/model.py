@@ -55,8 +55,7 @@ def init_models(args):
 
     # Compute perplexity
     logits = tf.linalg.matmul(
-        embed_context, nce_weights,
-        transpose_b=True) + tf.transpose(nce_biases)
+        embed_context, nce_weights, transpose_b=True) + nce_biases
     costs = tf.nn.sparse_softmax_cross_entropy_with_logits(
         labels=tf.squeeze(train_labels), logits=logits)
     cross_entropy_loss = tf.reduce_sum(costs)

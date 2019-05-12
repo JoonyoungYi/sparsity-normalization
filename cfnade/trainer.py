@@ -55,10 +55,7 @@ def _train(args):
     set_seed(args.seed)
 
     dataset = Dataset(
-        Dataset.KIND_MOVIELENS_1M,
-        # Dataset.KIND_MOVIELENS_100k,
-        Dataset.SPLIT_DEFAULT_10_PERCENT,
-        seed=args.seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
     dataset.init_full_matrices()
 
     n_user, n_item = dataset.get_n_user_and_n_item()
@@ -164,6 +161,7 @@ def main():
     parser = argparse.ArgumentParser(description='CFNADE-tensorflow')
     parser.add_argument(
         '--dataset',
+        type=str,
         default=Dataset.KIND_MOVIELENS_1M,
         choices=[
             Dataset.KIND_MOVIELENS_100k, Dataset.KIND_MOVIELENS_1M,

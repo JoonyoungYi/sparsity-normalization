@@ -126,7 +126,7 @@ def main():
     parser.add_argument(
         '--batch_size',
         type=int,
-        default=128,
+        default=1000,
         help='integer for batch number.')
     parser.add_argument(
         '--context_window',
@@ -142,18 +142,19 @@ def main():
     parser.add_argument(
         '--embedding_size',
         type=int,
-        default=128,
+        default=640,
         help='embedding_size. Dimension of the embedding vector.')
     parser.add_argument(
         '--num_sampled',
         type=int,
-        default=64,
+        default=1000,
         help='num_sampled. Number of negative examples to sample.')
     parser.add_argument(
         '--max_iter', type=int, default=10000000, help='Max iter')
     parser.add_argument(
         '--learning_rate',
         type=float,
+        # default=1e-2,
         default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument(
