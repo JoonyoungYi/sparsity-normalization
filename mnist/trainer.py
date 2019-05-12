@@ -238,6 +238,11 @@ def main():
         default=[],
         help='bias를 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
     parser.add_argument(
+        '--ignore_activation_layer_indexes',
+        type=integer_list,
+        default=[],
+        help='activation을 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
+    parser.add_argument(
         '--plot_raw_activations',
         type=str2bool,
         default=False,
