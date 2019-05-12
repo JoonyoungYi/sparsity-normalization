@@ -17,11 +17,13 @@ def _forward(x, weights, biases, training, args):
     layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
-        if i not in args.ignore_bias_layer_indexes:
+        if (i + 1) not in args.ignore_bias_layer_indexes:
             layer += bias
 
         if i < len(biases) - 1:
-            layer = activation_fn(layer)
+            if (i + 1) not in args.ignore_activation_layer_indexes:
+                layer = activation_fn(layer)
+
             layers.append(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
