@@ -7,7 +7,7 @@ def main():
     """
         main module
 
-        ex. python3 -m cfnade.trainer --dataset=movielens-100k --gpu_memory_fraction=0.05 --learning_rate=0.001 --use_user_vector=True --parameter_sharing=False --use_ordinal_cost=False --normalize_input=True --averaging_possible_choices=True ---exp=normal-2 ---lambdas=0.00001,0.00004,0.00007,0.0001,0.0004,,0.0007,0.001,0.004,0.007,0.01,0.04,0.07,0.1
+        ex. python3 -m cfnade.train --dataset=movielens-100k --gpu_memory_fraction=0.05 --learning_rate=0.001 --use_user_vector=True --parameter_sharing=False --use_ordinal_cost=False --averaging_possible_choices=True ---exp=normal-2 ---lambdas=0.00001,0.00004,0.00007,0.0001,0.0004,0.0007,0.001,0.004,0.007,0.01,0.04,0.07,0.1 ---seeds=1
     """
     args = []
     exp = None
@@ -42,19 +42,19 @@ def main():
     if exp == 'default':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=False --seed={seed} --lambda_w1={l} --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_w1={l} --lambda_w2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     elif exp == 'default-2':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=False --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     elif exp == 'normal-2':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=True --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=True --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     else:
