@@ -3,6 +3,8 @@
 # - https://github.com/tensorflow/tensorflow/blob/r0.10/tensorflow/examples/tutorials/word2vec/word2vec_basic.py
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
+# ex.
+# python -m word2vec.trainer --dataset=ptb --gpu_memory_faction=0.1 --context_window=3
 import math
 
 import numpy as np
@@ -45,7 +47,8 @@ def _train(args):
     dataset = Dataset(args)
     models = init_models(args)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    gpu_options = tf.GPUOptions(
+        per_process_gpu_memory_fraction=args.gpu_memory_faction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     session.run(tf.global_variables_initializer())
 
@@ -146,11 +149,11 @@ def main():
         default=64,
         help='num_sampled. Number of negative examples to sample.')
     parser.add_argument(
-        '--max_iter', type=int, default=1000000, help='Max iter')
+        '--max_iter', type=int, default=10000000, help='Max iter')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1.0,
+        default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--valid_iter',
@@ -168,19 +171,20 @@ def main():
         '--optimizer',
         type=str,
         choices=['sgd', 'adam'],
-        default='sgd',
+        # default='sgd',
+        default='adam',
         help='Optimizer')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
         default=100000,
         help='the number of iteration for early stop.')
+    parser.add_argument(
+        '--gpu_memory_faction',
+        type=float,
+        default=0.5,
+        help='per_process_gpu_memory_fraction')
 
-    # parser.add_argument(
-    #     '--n_hidden_unit',
-    #     type=int,
-    #     default=500,
-    #     help='The number of hidden unit')
     # parser.add_argument(
     #     '--n_hidden_layer',
     #     type=int,
@@ -224,6 +228,7 @@ def main():
     args = parser.parse_args()
     assert args.batch_size and args.batch_size > 0
     args.context_size = args.context_window * 2
+    assert args.dataset == 'ptb'
     if args.dataset == 'ptb':
         assert args.vocabulary_size == 10000
     _train(args)

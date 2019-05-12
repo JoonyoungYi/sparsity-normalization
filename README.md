@@ -13,6 +13,7 @@
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
 cd .. && cd home/server14/HVS-tensorflow
+cd .. && cd home/joonyoung/ml/HVS-tensorflow
 pip3 install -r requirements.txt
 ```
 
