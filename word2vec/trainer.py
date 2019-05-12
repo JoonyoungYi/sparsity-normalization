@@ -17,12 +17,15 @@ from common.utils import set_seed
 from common.utils import str2bool
 
 
-def ___get_perplexity(session, models, test_inputs, test_labels, tqdm):
-    n_valid_batch = 1000
+def ___get_performances(session, models, test_inputs, test_labels, tqdm, args):
+    n_valid_batch = args.batch_size
     cross_entropy_loss = 0.0
+    n_correct = 0
     for i in tqdm(range(0, test_inputs.shape[0], n_valid_batch)):
-        _loss = session.run(
-            models['cross_entropy_loss'],
+        # print(i + n_valid_batch, n_correct)
+        # input('')
+        _loss, _n_correct = session.run(
+            (models['loss'], models['n_correct']),
             feed_dict={
                 models['train_inputs']: test_inputs[i:i + n_valid_batch],
                 models['train_labels']: test_labels[i:i + n_valid_batch]
@@ -31,16 +34,20 @@ def ___get_perplexity(session, models, test_inputs, test_labels, tqdm):
         if math.isnan(_loss):
             raise Exception('_loss is NaN! T.T')
         cross_entropy_loss += _loss
+        n_correct += _n_correct
 
-    return math.exp(cross_entropy_loss / test_inputs.shape[0])
+    perplexity = math.exp(cross_entropy_loss / test_inputs.shape[0])
+    accuracy = n_correct / test_inputs.shape[0]
+    return perplexity, accuracy
 
 
-def __validate(session, models, dataset, tqdm):
-    valid_perplexity = ___get_perplexity(session, models, dataset.valid_inputs,
-                                         dataset.valid_labels, tqdm)
-    test_perplexity = ___get_perplexity(session, models, dataset.test_inputs,
-                                        dataset.test_labels, tqdm)
-    return valid_perplexity, test_perplexity
+def __validate(session, models, dataset, tqdm, args):
+    valid_perplexity, valid_acc = ___get_performances(
+        session, models, dataset.valid_inputs, dataset.valid_labels, tqdm,
+        args)
+    test_perplexity, test_acc = ___get_performances(
+        session, models, dataset.test_inputs, dataset.test_labels, tqdm, args)
+    return valid_perplexity, valid_acc, test_perplexity, test_acc
 
 
 def _train(args):
@@ -49,7 +56,7 @@ def _train(args):
     models = init_models(args)
 
     gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=args.gpu_memory_faction)
+        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     session.run(tf.global_variables_initializer())
 
@@ -62,11 +69,11 @@ def _train(args):
         tqdm = lambda x: x
 
     sum_loss = 0
-    min_valid_perplexity = float('inf')
-    min_valid_iter = -1
-    final_test_perplexity = float('inf')
-    min_test_perplexity = float('inf')
-    min_test_iter = -1
+    max_valid_acc = 0.0
+    max_valid_iter = -1
+    final_test_acc = 0.0
+    max_test_acc = 0.0
+    max_test_iter = -1
     for iter_idx in range(args.max_iter):
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
@@ -84,25 +91,25 @@ def _train(args):
             # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
             train_loss = float(sum_loss / args.valid_iter)
             sum_loss = 0
-            valid_perplexity, test_perplexity = __validate(
-                session, models, dataset, tqdm)
+            valid_perplexity, valid_acc, test_perplexity, test_acc = __validate(
+                session, models, dataset, tqdm, args)
 
-            if valid_perplexity < min_valid_perplexity:
-                min_valid_perplexity = valid_perplexity
-                min_valid_iter = iter_idx
-                final_test_perplexity = test_perplexity
+            if valid_acc > max_valid_acc:
+                max_valid_acc = valid_acc
+                max_valid_iter = iter_idx
+                final_test_acc = test_acc
 
-            if test_perplexity < min_test_perplexity:
-                min_test_perplexity = test_perplexity
-                min_test_iter = iter_idx
+            if test_acc > max_test_acc:
+                max_test_acc = test_acc
+                max_test_iter = iter_idx
 
             print(">>", iter_idx, '%4f' % train_loss)
-            print(" -", '%4f' % valid_perplexity, '%4f' % min_valid_perplexity,
-                  min_valid_iter)
-            print(" -", '%4f' % test_perplexity, '%4f' % final_test_perplexity,
-                  '%4f' % min_test_perplexity, min_test_iter)
+            print(" -", '%4f' % valid_acc, '%4f' % max_valid_acc,
+                  max_valid_iter)
+            print(" -", '%4f' % test_acc, '%4f' % final_test_acc,
+                  '%4f' % max_test_acc, max_test_iter)
 
-        if iter_idx > min_valid_iter + args.iter_early_stop:
+        if iter_idx > max_valid_iter + args.iter_early_stop:
             break
 
     session.close()
@@ -182,7 +189,7 @@ def main():
         default=100000,
         help='the number of iteration for early stop.')
     parser.add_argument(
-        '--gpu_memory_faction',
+        '--gpu_memory_fraction',
         type=float,
         default=0.5,
         help='per_process_gpu_memory_fraction')

@@ -64,7 +64,7 @@ def _get_inputs_and_labels(data, args, eos_id):
         if token == eos_id:
             eos_handling = True
 
-    return np.array(test_inputs), np.array(test_labels).reshape([-1, 1])
+    return np.array(test_inputs), np.array(test_labels)
 
 
 def _init_buffer_with_minus_1(buffer, span):
@@ -141,7 +141,7 @@ class Dataset:
 
         # all context tokens should be used, hence no associated num_skips argument
         batch = np.ndarray(shape=(batch_size, context_size), dtype=np.int32)
-        labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+        labels = np.ndarray(shape=(batch_size), dtype=np.int32)
 
         for i in range(batch_size):
             # context tokens are just all the tokens in buffer except the target
@@ -149,7 +149,7 @@ class Dataset:
                 token for idx, token in enumerate(buffer)
                 if idx != context_window  # remove center.
             ]
-            labels[i, 0] = buffer[context_window]
+            labels[i] = buffer[context_window]
             # print(i, data_index, buffer)
 
             if eos_handling:

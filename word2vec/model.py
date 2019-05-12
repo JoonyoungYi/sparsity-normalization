@@ -5,7 +5,8 @@ import tensorflow as tf
 
 def init_models(args):
     train_inputs = tf.placeholder(tf.int32, shape=[None, args.context_size])
-    train_labels = tf.placeholder(tf.int32, shape=[None, 1])
+    train_labels = tf.placeholder(tf.int32, shape=[None])
+    train_labels_hot = tf.one_hot(train_labels, depth=args.vocabulary_size)
 
     # Look up embeddings for inputs.
     embeddings = tf.Variable(
@@ -31,18 +32,6 @@ def init_models(args):
     nce_biases = tf.Variable(tf.zeros(
         [args.vocabulary_size]))  # output layer의 bias.
 
-    # Compute the average NCE loss for the batch.
-    # tf.nce_loss automatically draws a new sample of the negative labels each
-    # time we evaluate the loss.
-    loss = tf.reduce_mean(
-        tf.nn.nce_loss(
-            weights=nce_weights,
-            biases=nce_biases,
-            inputs=embed_context,
-            labels=train_labels,
-            num_sampled=args.num_sampled,
-            num_classes=args.vocabulary_size))
-
     # Construct the SGD optimizer using a learning rate of 1.0.
     if args.optimizer == 'sgd':
         optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
@@ -51,19 +40,25 @@ def init_models(args):
     else:
         raise NotImplementedError()
 
-    train_op = optimizer.minimize(loss)
-
     # Compute perplexity
     logits = tf.linalg.matmul(
         embed_context, nce_weights, transpose_b=True) + nce_biases
-    costs = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        labels=tf.squeeze(train_labels), logits=logits)
-    cross_entropy_loss = tf.reduce_sum(costs)
+    costs = tf.nn.softmax_cross_entropy_with_logits_v2(
+        labels=train_labels_hot, logits=logits)
+    # costs = tf.nn.sigmoid_cross_entropy_with_logits(
+    #     labels=train_labels_hot, logits=logits)
+    loss = tf.reduce_sum(costs)
+    train_op = optimizer.minimize(loss)
+
+    pred_labels = tf.argmax(logits, axis=1, output_type=tf.int32)
+    corrects = tf.equal(pred_labels, train_labels)
+    corrects = tf.cast(corrects, tf.float32)
+    n_correct = tf.reduce_sum(corrects)
 
     return {
         'train_op': train_op,
         'loss': loss,
         'train_inputs': train_inputs,
         'train_labels': train_labels,
-        'cross_entropy_loss': cross_entropy_loss,
+        'n_correct': n_correct,
     }
