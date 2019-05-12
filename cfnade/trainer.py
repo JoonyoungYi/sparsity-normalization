@@ -12,6 +12,7 @@ from .configs import *
 from .model import init_models
 from common.utils import str2bool
 from common.utils import set_seed
+from common.utils import save_results_to_file
 
 
 def __get_rmse(session, models, x, y, n_batch):
@@ -153,6 +154,19 @@ def _train(args):
                 break
 
     session.close()
+
+    results = []
+    results.append(args.use_user_vector)
+    results.append(args.normalize_input)
+    results.append(args.parameter_sharing)
+    results.append(args.use_ordinal_cost)
+    results.append(args.averaging_possible_choices)
+    results.append(args.lambda_w1)
+    results.append(args.lambda_w2)
+    results.append(args.seed)
+    results.append(final_test_rmse)
+    results.append(min_test_rmse)
+    save_results_to_file('cfnade', args.dataset, results)
 
 
 def main():

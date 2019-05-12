@@ -18,6 +18,8 @@ def main():
         - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=True ---n_hidden_unit_start=205 ---n_hidden_unit_end=1000 ---n_hidden_unit_step=10
         - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=True ---n_hidden_unit_start=310 ---n_hidden_unit_end=1000 ---n_hidden_unit_step=10
         - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=True ---n_hidden_unit_start=50 ---n_hidden_unit_end=10000 ---n_hidden_unit_step=50 --ignore_bias_layer_indexes=1
+        - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=True ---n_hidden_unit_start=10 ---n_hidden_unit_end=10000 ---n_hidden_unit_step=50 --ignore_bias_layer_indexes=1 --ignore_activation_layer_indexes=1
+        - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=True ---n_hidden_unit_end=10000 ---n_hidden_unit_step=50 --ignore_activation_layer_indexes=1 ---n_hidden_unit_start=10
     """
     args = []
     n_hidden_unit_start = None
