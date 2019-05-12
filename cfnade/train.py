@@ -42,19 +42,19 @@ def main():
     if exp == 'default':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_w1={l} --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_1={l} --lambda_2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     elif exp == 'default-2':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=False --seed={seed} --lambda_1=0.0 --lambda_2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     elif exp == 'normal-2':
         for l in lambdas:
             for seed in seeds:
-                command = "python3 -m cfnade.trainer --normalize_input=True --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
+                command = "python3 -m cfnade.trainer --normalize_input=True --seed={seed} --lambda_1=0.0 --lambda_2={l} ".format(
                     seed=seed, l=l) + ' '.join(args)
                 commands.append(command)
     else:
