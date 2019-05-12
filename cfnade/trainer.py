@@ -208,6 +208,11 @@ def main():
         default=False,
         help='Whether use user vector')
     parser.add_argument(
+        '--averaging_possible_choices',
+        type=str2bool,
+        default=True,
+        help='Whether use user averaging_possible_choices')
+    parser.add_argument(
         '--gpu_memory_fraction',
         type=float,
         default=0.25,
