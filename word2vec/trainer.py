@@ -5,6 +5,7 @@
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
 # ex.
 # python -m word2vec.trainer --dataset=ptb --gpu_memory_faction=0.1 --context_window=3
+# python -m word2vec.trainer --dataset=ptb --gpu_memory_faction=0.1 --normalize_input=False --context_window=1
 import math
 
 import numpy as np
@@ -226,6 +227,7 @@ def main():
     #     help='whether use sparse tensor.')
 
     args = parser.parse_args()
+    assert args.context_window > 0
     assert args.batch_size and args.batch_size > 0
     args.context_size = args.context_window * 2
     assert args.dataset == 'ptb'
