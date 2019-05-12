@@ -108,8 +108,9 @@ scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 
 # save results to file
 results = []
-results.append(args.normalize_input)
-results.append(disease)
 results.append(args.seed)
+results.append(disease)
+results.append(args.dropout)
+results.append(args.normalize_input)
 results.append(scores[2])
 save_results_to_file('aitrics', args.model, results)
