@@ -4,8 +4,8 @@
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
 # ex.
-# python -m word2vec.trainer --dataset=ptb --gpu_memory_faction=0.1 --context_window=3
-# python -m word2vec.trainer --dataset=ptb --gpu_memory_faction=0.1 --normalize_input=False --context_window=1
+# python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
+# python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --normalize_input=False --context_window=2
 import math
 
 import numpy as np
