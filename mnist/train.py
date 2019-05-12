@@ -14,7 +14,7 @@ def main():
         - normal-0,1,2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.14 --normalize_input=True --normalize_layer_indexes=1,2 ---n_hidden_unit_start=301 ---n_hidden_unit_end=325
         - normal-1: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.14 --normalize_input=False --normalize_layer_indexes=1 ---n_hidden_unit_start=301 ---n_hidden_unit_end=325
         - normal-2: python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.1 --normalize_input=False --normalize_layer_indexes=2 ---n_hidden_unit_start=201 ---n_hidden_unit_end=225
-        - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=False ---n_hidden_unit_start=301 ---n_hidden_unit_end=325 --n_hidden_unit_step=10
+        - python3 -m mnist.train --dataset=cifar100 --gpu_memory_fraction=0.45 --normalize_input=False ---n_hidden_unit_start=310 ---n_hidden_unit_end=1000 ---n_hidden_unit_step=10
     """
     args = []
     n_hidden_unit_start = None
@@ -53,7 +53,7 @@ def main():
         g = range(n_hidden_unit_end, n_hidden_unit_start - 1,
                   -n_hidden_unit_step)
     else:
-        g = range(n_hidden_unit_start, n_hidden_end, n_hidden_unit_step)
+        g = range(n_hidden_unit_start, n_hidden_unit_end, n_hidden_unit_step)
     for n_hidden_unit in g:
         command = "python3 -m mnist.trainer --n_hidden_unit={n_hidden_unit} ".format(
             n_hidden_unit=n_hidden_unit) + ' '.join(args)
