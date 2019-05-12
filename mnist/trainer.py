@@ -9,8 +9,12 @@ from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
 
+import time
+
 
 def train(args, seed):
+    startTime = time.time()
+
     set_seed(seed)
     dataset = Dataset(args)
     train_x = dataset.train_x
@@ -142,6 +146,9 @@ def train(args, seed):
                         args.dataset), raw_activations)
             break
 
+    endTime = time.time() - startTime
+    endTime = int(endTime/60)
+
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
@@ -158,6 +165,7 @@ def train(args, seed):
     results.append(test_sparse_activations[-1])
     results.append(test_activations[-1])
     results.append(test_dense_activations[-1])
+    results.append(endTime)
     save_results_to_file('mnist', args.dataset, results)
 
 
