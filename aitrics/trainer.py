@@ -39,6 +39,16 @@ parser.add_argument(
     default=False,
     help='Whether to add dropout')
 parser.add_argument(
+    '--batch_norm_mlp',
+    type=str2bool,
+    default=False,
+    help='Whether to add batch_norm in mlp model')
+parser.add_argument(
+    '--layer_norm_lstm',
+    type=str2bool,
+    default=False,
+    help='Whether to add layer_norm in lstm model')
+parser.add_argument(
     '--normalize_input',
     type=str2bool,
     default=False,
@@ -48,6 +58,10 @@ parser.add_argument(
     '--epochs',
     type=int,
     default=1000000)
+parser.add_argument(
+    '--epochs_early_stop',
+    type=int,
+    default=1000)
 parser.add_argument(
     '--batch_size',
     type=int,
@@ -108,9 +122,12 @@ scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 
 # save results to file
 results = []
-results.append(args.seed)
-results.append(disease)
 results.append(args.dropout)
+results.append(args.batch_norm_mlp)
+results.append(args.layer_norm_lstm)
 results.append(args.normalize_input)
+results.append(disease)
+results.append(args.seed)
 results.append(scores[2])
+results.append(args.epochs_early_stop)
 save_results_to_file('aitrics', args.model, results)
