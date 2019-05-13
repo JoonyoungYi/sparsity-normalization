@@ -9,6 +9,9 @@ from common.utils import str2bool
 from common.utils import save_results_to_file
 from .model import init_model
 from .dataset import init_data
+import time
+
+startTime = time.time()
 
 parser = argparse.ArgumentParser(description='AITRICS')
 
@@ -120,6 +123,9 @@ scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 #print("\nResult of {}".format(disease))
 #print("Best AUC: {}\n".format(scores[2]))
 
+endTime = time.time() - startTime
+endTime = int(endTime/60)
+
 # save results to file
 results = []
 results.append(args.dropout)
@@ -130,4 +136,5 @@ results.append(disease)
 results.append(args.seed)
 results.append(scores[2])
 results.append(args.epochs_early_stop)
+results.append(endTime)
 save_results_to_file('aitrics', args.model, results)
