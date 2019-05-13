@@ -5,22 +5,40 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+"""
+This implementation is based on:
+    https://github.com/keras-team/keras/blob/master/keras/layers/recurrent.py (version at Jan 5, 2019)
+    (See the difference from the commit history.)
+
+Usage:
+    import LayerNormLSTM
+    LayerNormLSTM.LSTM([Original arguments of keras.layers.LSTM], layer_norm=True)
+
+References:
+    [1] Layer Normalization(
+    https://arxiv.org/abs/1607.06450)
+    [2] Binbose implementation(
+    https://github.com/Binbose/keras-layer-normalization-rnn/blob/master/LayerNormalizationRNN.py)
+    [3] tensorflow official implementation(
+    https://github.com/tensorflow/tensorflow/blob/r1.13/tensorflow/contrib/rnn/python/ops/rnn_cell.py)
+"""
+
 import numpy as np
 import warnings
 
-from .. import backend as K
-from .. import activations
-from .. import initializers
-from .. import regularizers
-from .. import constraints
-from ..engine.base_layer import Layer
-from ..engine.base_layer import InputSpec
-from ..utils.generic_utils import has_arg
-from ..utils.generic_utils import to_list
+from keras import backend as K
+from keras import activations
+from keras import initializers
+from keras import regularizers
+from keras import constraints
+from keras.engine.base_layer import Layer
+from keras.engine.base_layer import InputSpec
+from keras.utils.generic_utils import has_arg
+from keras.utils.generic_utils import to_list
 
 # Legacy support.
-from ..legacy.layers import Recurrent
-from ..legacy import interfaces
+from keras.legacy.layers import Recurrent
+from keras.legacy import interfaces
 
 
 class StackedRNNCells(Layer):
@@ -1765,6 +1783,12 @@ class GRU(RNN):
 class LSTMCell(Layer):
     """Cell class for the LSTM layer.
 
+    Layer normalization implementation is based on:
+        https://arxiv.org/abs/1607.06450.
+        "Layer Normalization"
+        Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton
+    and is applied before the internal nonlinearities.
+
     # Arguments
         units: Positive integer, dimensionality of the output space.
         activation: Activation function to use
@@ -1809,6 +1833,8 @@ class LSTMCell(Layer):
             (see [constraints](../constraints.md)).
         bias_constraint: Constraint function applied to the bias vector
             (see [constraints](../constraints.md)).
+        layer_norm: Boolean.
+            If True, apply Layer Normalization before the internal nonlinearities.
         dropout: Float between 0 and 1.
             Fraction of the units to drop for
             the linear transformation of the inputs.
@@ -1837,6 +1863,7 @@ class LSTMCell(Layer):
                  kernel_constraint=None,
                  recurrent_constraint=None,
                  bias_constraint=None,
+                 layer_norm=False,
                  dropout=0.,
                  recurrent_dropout=0.,
                  implementation=1,
@@ -1860,6 +1887,7 @@ class LSTMCell(Layer):
         self.recurrent_constraint = constraints.get(recurrent_constraint)
         self.bias_constraint = constraints.get(bias_constraint)
 
+        self.layer_norm = layer_norm
         self.dropout = min(1., max(0., dropout))
         self.recurrent_dropout = min(1., max(0., recurrent_dropout))
         self.implementation = implementation
@@ -1867,6 +1895,10 @@ class LSTMCell(Layer):
         self.output_size = self.units
         self._dropout_mask = None
         self._recurrent_dropout_mask = None
+
+        # We don't need bias because we use beta in layer normalization
+        if self.layer_norm:
+            self.use_bias = False
 
     def build(self, input_shape):
         input_dim = input_shape[-1]
@@ -1908,6 +1940,17 @@ class LSTMCell(Layer):
         else:
             self.bias = None
 
+        if self.layer_norm:
+            self.gamma = self.add_weight(shape=(self.units * 5,),
+                                        name='gamma',
+                                        initializer='ones')
+            self.beta = self.add_weight(shape=(self.units * 5,),
+                                        name='beta',
+                                        initializer='zeros')
+        else:
+            self.gamma = None
+            self.beta = None
+
         self.kernel_i = self.kernel[:, :self.units]
         self.kernel_f = self.kernel[:, self.units: self.units * 2]
         self.kernel_c = self.kernel[:, self.units * 2: self.units * 3]
@@ -1930,6 +1973,32 @@ class LSTMCell(Layer):
             self.bias_f = None
             self.bias_c = None
             self.bias_o = None
+
+        if self.layer_norm:
+            self.gamma_i = self.gamma[:self.units]
+            self.gamma_f = self.gamma[self.units: self.units * 2]
+            self.gamma_c = self.gamma[self.units * 2: self.units * 3]
+            self.gamma_o = self.gamma[self.units * 3: self.units * 4]
+            self.gamma_out = self.gamma[self.units * 4:]
+
+            self.beta_i = self.beta[:self.units]
+            self.beta_f = self.beta[self.units: self.units * 2]
+            self.beta_c = self.beta[self.units * 2: self.units * 3]
+            self.beta_o = self.beta[self.units * 3: self.units * 4]
+            self.beta_out = self.beta[self.units * 4:]
+        else:
+            self.gamma_i = None
+            self.gamma_f = None
+            self.gamma_c = None
+            self.gamma_o = None
+            self.gamma_out = None
+
+            self.beta_i = None
+            self.beta_f = None
+            self.beta_c = None
+            self.beta_o = None
+            self.beta_out = None
+
         self.built = True
 
     def call(self, inputs, states, training=None):
@@ -1970,6 +2039,7 @@ class LSTMCell(Layer):
             x_f = K.dot(inputs_f, self.kernel_f)
             x_c = K.dot(inputs_c, self.kernel_c)
             x_o = K.dot(inputs_o, self.kernel_o)
+            
             if self.use_bias:
                 x_i = K.bias_add(x_i, self.bias_i)
                 x_f = K.bias_add(x_f, self.bias_f)
@@ -1986,14 +2056,23 @@ class LSTMCell(Layer):
                 h_tm1_f = h_tm1
                 h_tm1_c = h_tm1
                 h_tm1_o = h_tm1
-            i = self.recurrent_activation(x_i + K.dot(h_tm1_i,
-                                                      self.recurrent_kernel_i))
-            f = self.recurrent_activation(x_f + K.dot(h_tm1_f,
-                                                      self.recurrent_kernel_f))
-            c = f * c_tm1 + i * self.activation(x_c + K.dot(h_tm1_c,
-                                                            self.recurrent_kernel_c))
-            o = self.recurrent_activation(x_o + K.dot(h_tm1_o,
-                                                      self.recurrent_kernel_o))
+
+            i = x_i + K.dot(h_tm1_i, self.recurrent_kernel_i)
+            f = x_f + K.dot(h_tm1_f, self.recurrent_kernel_f)
+            c = x_c + K.dot(h_tm1_c, self.recurrent_kernel_c)
+            o = x_o + K.dot(h_tm1_o, self.recurrent_kernel_o)
+
+            if self.layer_norm:
+                i = self.normalize_layer(i, self.gamma_i, self.beta_i)
+                f = self.normalize_layer(f, self.gamma_f, self.beta_f)
+                c = self.normalize_layer(c, self.gamma_c, self.beta_c)
+                o = self.normalize_layer(o, self.gamma_o, self.beta_o)
+            
+            i = self.recurrent_activation(i)
+            f = self.recurrent_activation(f)
+            c = f * c_tm1 + i * self.activation(c)
+            o = self.recurrent_activation(o)
+
         else:
             if 0. < self.dropout < 1.:
                 inputs *= dp_mask[0]
@@ -2009,16 +2088,30 @@ class LSTMCell(Layer):
             z2 = z[:, 2 * self.units: 3 * self.units]
             z3 = z[:, 3 * self.units:]
 
+            if self.layer_norm:
+                z0 = self.normalize_layer(z0, self.gamma_i, self.beta_i)
+                z1 = self.normalize_layer(z0, self.gamma_f, self.beta_f)
+                z2 = self.normalize_layer(z0, self.gamma_c, self.beta_c)
+                z3 = self.normalize_layer(z0, self.gamma_o, self.beta_o)
+
             i = self.recurrent_activation(z0)
             f = self.recurrent_activation(z1)
             c = f * c_tm1 + i * self.activation(z2)
             o = self.recurrent_activation(z3)
 
+        c = self.normalize_layer(c, self.gamma_out, self.beta_out)
         h = o * self.activation(c)
         if 0 < self.dropout + self.recurrent_dropout:
             if training is None:
                 h._uses_learning_phase = True
         return h, [h, c]
+
+    def normalize_layer(self, layer, gamma, beta):
+        m = K.mean(layer, axis=-1, keepdims=True)
+        std = K.sqrt(K.var(layer, axis=-1, keepdims=True) + K.epsilon())
+        layer_normed = (layer - m) / (std + K.epsilon())
+        layer_normed = layer_normed * gamma + beta
+        return layer_normed
 
     def get_config(self):
         config = {'units': self.units,
@@ -2041,6 +2134,7 @@ class LSTMCell(Layer):
                   'recurrent_constraint':
                       constraints.serialize(self.recurrent_constraint),
                   'bias_constraint': constraints.serialize(self.bias_constraint),
+                  'layer_norm': self.layer_norm,
                   'dropout': self.dropout,
                   'recurrent_dropout': self.recurrent_dropout,
                   'implementation': self.implementation}
@@ -2098,6 +2192,8 @@ class LSTM(RNN):
             (see [constraints](../constraints.md)).
         bias_constraint: Constraint function applied to the bias vector
             (see [constraints](../constraints.md)).
+        layer_norm: Boolean.
+            If True, apply Layer Normalization before the internal nonlinearities.
         dropout: Float between 0 and 1.
             Fraction of the units to drop for
             the linear transformation of the inputs.
@@ -2137,6 +2233,8 @@ class LSTM(RNN):
           http://www.cs.toronto.edu/~graves/preprint.pdf)
         - [A Theoretically Grounded Application of Dropout in
            Recurrent Neural Networks](https://arxiv.org/abs/1512.05287)
+        - [Layer Normalization](
+          https://arxiv.org/abs/1607.06450)
     """
 
     @interfaces.legacy_recurrent_support
@@ -2155,6 +2253,7 @@ class LSTM(RNN):
                  kernel_constraint=None,
                  recurrent_constraint=None,
                  bias_constraint=None,
+                 layer_norm=False,
                  dropout=0.,
                  recurrent_dropout=0.,
                  implementation=1,
@@ -2191,6 +2290,7 @@ class LSTM(RNN):
                         kernel_constraint=kernel_constraint,
                         recurrent_constraint=recurrent_constraint,
                         bias_constraint=bias_constraint,
+                        layer_norm=layer_norm,
                         dropout=dropout,
                         recurrent_dropout=recurrent_dropout,
                         implementation=implementation)
@@ -2268,6 +2368,10 @@ class LSTM(RNN):
         return self.cell.bias_constraint
 
     @property
+    def layer_norm(self):
+        return self.cell.layer_norm
+
+    @property
     def dropout(self):
         return self.cell.dropout
 
@@ -2302,6 +2406,7 @@ class LSTM(RNN):
                   'recurrent_constraint':
                       constraints.serialize(self.recurrent_constraint),
                   'bias_constraint': constraints.serialize(self.bias_constraint),
+                  'layer_norm': self.layer_norm,
                   'dropout': self.dropout,
                   'recurrent_dropout': self.recurrent_dropout,
                   'implementation': self.implementation}
