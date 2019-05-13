@@ -1,6 +1,7 @@
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization
+from .LayerNormLSTM import LSTM
 
 def init_model(args):
     # whether to use modified dataset
@@ -14,12 +15,20 @@ def init_model(args):
         model = Sequential()
 
         model.add(Dense(50, input_dim=sequence_length*34))
+
+        if args.batch_norm_mlp:
+            model.add(BatchNormalization())
+
         model.add(Activation('relu'))
         
         if args.dropout:
             model.add(Dropout(0.8))
 
         model.add(Dense(30))
+
+        if args.batch_norm_mlp:
+            model.add(BatchNormalization())
+
         model.add(Activation('relu'))
 
         if args.dropout:
@@ -30,7 +39,7 @@ def init_model(args):
         # early stopping callback
         early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_auc',
                                                 min_delta=0.0001,
-                                                patience=100,
+                                                patience=args.epochs_early_stop,
                                                 verbose=1,
                                                 mode='max',
                                                 baseline=None,
@@ -39,21 +48,29 @@ def init_model(args):
     elif args.model == 'lstm':
         model = Sequential()
 
-        model.add(CuDNNLSTM(units=16, input_shape=(sequence_length, 34),
-                       return_sequences=True))
+        if args.layer_norm_lstm:
+            model.add(LSTM(units=16, input_shape=(sequence_length, 34), layer_norm=True,
+                           return_sequences=True))
+        else:
+            model.add(CuDNNLSTM(units=16, input_shape=(sequence_length, 34),
+                           return_sequences=True))
 
         if args.dropout:
             model.add(Dropout(0.8))
 
-        model.add(CuDNNLSTM(units=16,
-                       return_sequences=False))
+        if args.layer_norm_lstm:
+            model.add(LSTM(units=16, layer_norm=True,
+                           return_sequences=False))
+        else:
+            model.add(CuDNNLSTM(units=16,
+                           return_sequences=False))
 
         model.add(Dense(1, activation='sigmoid'))
 
         # early stopping callback
         early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_auc',
                                                 min_delta=0.0001,
-                                                patience=30,
+                                                patience=args.epochs_early_stop,
                                                 verbose=1,
                                                 mode='max',
                                                 baseline=None,
