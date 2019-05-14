@@ -1,7 +1,31 @@
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization
+from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization
 from .LayerNormLSTM import LSTM
+
+class LayerNormalization(Layer):
+    def __init__(self, **kwargs):
+        super(LayerNormalization, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.gamma = self.add_weight(name='gamma',
+                                     shape=input_shape[-1:],
+                                     initializer='ones',
+                                     trainable=True)
+        self.beta = self.add_weight(name='beta',
+                                    shape=input_shape[-1:],
+                                    initializer='zeros',
+                                    trainable=True)
+        super(LayerNormalization, self).build(input_shape)
+
+    def call(self, x):
+        m = K.mean(layer, axis=-1, keepdims=True)
+        std = K.std(layer, axis=-1, keepdims=True)
+        layer_normed = (layer - m) / (std + K.epsilon())
+        return self.gamma * layer_normed + self.beta
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 def init_model(args):
     # whether to use modified dataset
@@ -18,6 +42,8 @@ def init_model(args):
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
+        elif args.layer_norm_mlp:
+            model.add(LayerNormalization())
 
         model.add(Activation('relu'))
         
@@ -28,6 +54,8 @@ def init_model(args):
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
+        elif args.layer_norm_mlp:
+            model.add(LayerNormalization())
 
         model.add(Activation('relu'))
 

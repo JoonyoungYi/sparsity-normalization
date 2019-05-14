@@ -28,6 +28,14 @@ parser.add_argument(
     '--use_modified',
     type=str2bool,
     default=False)
+parser.add_argument(
+    '--screen_print',
+    type=str2bool,
+    default=False)
+parser.add_argument(
+    '--file_print',
+    type=str2bool,
+    default=True)
 
 parser.add_argument(
     '--seed', type=int, default=1)
@@ -46,6 +54,11 @@ parser.add_argument(
     type=str2bool,
     default=False,
     help='Whether to add batch_norm in mlp model')
+parser.add_argument(
+    '--layer_norm_mlp',
+    type=str2bool,
+    default=False,
+    help='Whether to add layer_norm in mlp model')
 parser.add_argument(
     '--layer_norm_lstm',
     type=str2bool,
@@ -72,7 +85,7 @@ parser.add_argument(
 parser.add_argument(
     '--learning_rate',
     type=float,
-    default=1e-2)
+    default=1e-1)
 
 parser.add_argument(
     '--verbose',
@@ -88,9 +101,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 # set gpu memory fraction
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
-sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-keras.backend.tensorflow_backend.set_session(sess)
+if args.gpu_memory_fraction > 0.9:
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+    keras.backend.tensorflow_backend.set_session(sess)
 
 # manual_seed setting for reproduction
 random.seed(args.seed)
@@ -120,21 +134,23 @@ model.fit(X_train, y_train,
 model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
 scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 
-#print("\nResult of {}".format(disease))
-#print("Best AUC: {}\n".format(scores[2]))
+if args.screen_print:
+    print("\nResult of {}".format(disease))
+    print("Best AUC: {}\n".format(scores[2]))
 
 endTime = time.time() - startTime
 endTime = int(endTime/60)
 
-# save results to file
-results = []
-results.append(args.dropout)
-results.append(args.batch_norm_mlp)
-results.append(args.layer_norm_lstm)
-results.append(args.normalize_input)
-results.append(disease)
-results.append(args.seed)
-results.append(scores[2])
-results.append(args.epochs_early_stop)
-results.append(endTime)
-save_results_to_file('aitrics', args.model, results)
+if args.file_print:
+    # save results to file
+    results = []
+    results.append(args.dropout)
+    results.append(args.batch_norm_mlp)
+    results.append(args.layer_norm_lstm)
+    results.append(args.normalize_input)
+    results.append(disease)
+    results.append(args.seed)
+    results.append(scores[2])
+    results.append(args.epochs_early_stop)
+    results.append(endTime)
+    save_results_to_file('aitrics', args.model, results)
