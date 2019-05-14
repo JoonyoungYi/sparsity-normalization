@@ -5,6 +5,8 @@ import os
 import tensorflow as tf
 
 from common.dataset_utils import get_file_path
+# from .word2vec import load_data as load_word2vec_test_data
+from .wordsim353 import load_data as load_test_data
 
 
 def _read_words(filename):
@@ -36,12 +38,15 @@ def _ptb_raw_data(data_path=None):
 
     word_to_id = _build_vocab(train_path)
 
+    test_labels_a, test_labels_b, test_scores = load_test_data(word_to_id)
+
     train_data = _file_to_word_ids(train_path, word_to_id)
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
 
     eos_id = word_to_id['<eos>']
-    return train_data, valid_data, test_data, eos_id
+    unk_id = word_to_id['<unk>']
+    return train_data, valid_data, test_data, eos_id, unk_id, word_to_id, test_labels_a, test_labels_b, test_scores
 
 
 def _init_files():
