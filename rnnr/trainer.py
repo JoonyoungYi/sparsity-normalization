@@ -64,8 +64,8 @@ import time
 import numpy as np
 import tensorflow as tf
 
-import reader
-import util
+from . import reader
+from . import util
 
 from tensorflow.python.client import device_lib
 
@@ -88,6 +88,7 @@ flags.DEFINE_string("rnn_mode", None,
                     "The low level implementation of lstm cell: one of CUDNN, "
                     "BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, "
                     "and lstm_block_cell classes.")
+flags.DEFINE_bool("normalize_input", False, "Whether normalize input.")
 FLAGS = flags.FLAGS
 BASIC = "basic"
 CUDNN = "cudnn"
@@ -112,7 +113,7 @@ class PTBInput(object):
 class PTBModel(object):
     """The PTB model."""
 
-    def __init__(self, is_training, config, input_):
+    def __init__(self, is_training, config, input_, unk_id=None):
         self._is_training = is_training
         self._input = input_
         self._rnn_params = None
@@ -126,6 +127,17 @@ class PTBModel(object):
             embedding = tf.get_variable(
                 "embedding", [vocab_size, size], dtype=data_type())
             inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
+            if unk_id is not None:
+                inputs = tf.where(input_.input_data == unk_id, inputs,
+                                  tf.zeros_like(inputs))
+
+                divider = tf.maximum(
+                    tf.reduce_sum(
+                        tf.where(input_.input_data == unk_id,
+                                 tf.zeros_like(input_.input_data),
+                                 tf.ones_like(input_.input_data)),
+                        axis=1), 1)
+                inputs /= tf.reshape(tf.cast(divider, tf.float32), [-1, 1, 1])
 
         if is_training and config.keep_prob < 1:
             inputs = tf.nn.dropout(inputs, config.keep_prob)
@@ -462,7 +474,13 @@ def main(_):
                          (len(gpus), FLAGS.num_gpus))
 
     raw_data = reader.ptb_raw_data(FLAGS.data_path)
-    train_data, valid_data, test_data, _ = raw_data
+    train_data, valid_data, test_data, word_to_id = raw_data
+
+    if FLAGS.normalize_input:
+        unk_id = word_to_id.get('<unk>')
+        assert unk_id is not None
+    else:
+        unk_id = None
 
     config = get_config()
     eval_config = get_config()
@@ -479,7 +497,10 @@ def main(_):
             with tf.variable_scope(
                     "Model", reuse=None, initializer=initializer):
                 m = PTBModel(
-                    is_training=True, config=config, input_=train_input)
+                    is_training=True,
+                    config=config,
+                    input_=train_input,
+                    unk_id=unk_id)
             tf.summary.scalar("Training Loss", m.cost)
             tf.summary.scalar("Learning Rate", m.lr)
 
@@ -489,7 +510,10 @@ def main(_):
             with tf.variable_scope(
                     "Model", reuse=True, initializer=initializer):
                 mvalid = PTBModel(
-                    is_training=False, config=config, input_=valid_input)
+                    is_training=False,
+                    config=config,
+                    input_=valid_input,
+                    unk_id=unk_id)
             tf.summary.scalar("Validation Loss", mvalid.cost)
 
         with tf.name_scope("Test"):
@@ -498,7 +522,10 @@ def main(_):
             with tf.variable_scope(
                     "Model", reuse=True, initializer=initializer):
                 mtest = PTBModel(
-                    is_training=False, config=eval_config, input_=test_input)
+                    is_training=False,
+                    config=eval_config,
+                    input_=test_input,
+                    unk_id=unk_id)
 
         models = {"Train": m, "Valid": mvalid, "Test": mtest}
         for name, model in models.items():
