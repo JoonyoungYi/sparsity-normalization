@@ -7,22 +7,7 @@ from .datasets import text8
 from .datasets import ptb
 
 
-def _get_inputs_and_labels(data, args, eos_id):
-    # # TODO: handle <eos>
-    # span = args.context_size + 1
-    # test_size = len(test_data) // span
-    # test_inputs = np.ndarray(
-    #     shape=(test_size, args.context_size), dtype=np.int32)
-    # test_labels = np.ndarray(shape=(test_size, 1), dtype=np.int32)
-    # for i in range(test_size):
-    #     test_input = test_data[i * span:i * span + args.
-    #                            context_window] + test_data[i * span + args.
-    #                                                        context_window + 1:
-    #                                                        (i + 1) * span]
-    #     test_inputs[i, :] = test_input
-    #     test_labels[i, 0] = test_data[i * span + args.context_window]
-
-    #
+def _get_inputs_and_labels(data, args, eos_id, unk_id):
     span = args.context_size + 1
     context_window = args.context_window
     eos_handling = False
@@ -94,10 +79,11 @@ def _append_initial_data_to_buffer(buffer, data, data_index, eos_id,
 class Dataset:
     def __init__(self, args):
         if args.dataset == 'text8':
-            train_data, valid_data, test_data, eos_id = text8.load_data(args)
             raise NotImplementedError()  # TODO: handle_valid_date
+            train_data, valid_data, test_data, eos_id = text8.load_data(args)
         elif args.dataset == 'ptb':
-            train_data, valid_data, test_data, eos_id = ptb.load_data(args)
+            train_data, valid_data, test_data, eos_id, unk_id, self.word_to_id, test_labels_a, test_labels_b, test_scores = ptb.load_data(
+                args)
         else:
             raise NotImplementedError()
 
@@ -109,12 +95,13 @@ class Dataset:
         self.context_window = args.context_window
         self.context_size = args.context_size
         self.eos_id = eos_id
+        self.unk_id = unk_id
 
         self.train_data = train_data
         self.valid_inputs, self.valid_labels = _get_inputs_and_labels(
-            valid_data, args, eos_id)
+            valid_data, args, eos_id, unk_id)
         self.test_inputs, self.test_labels = _get_inputs_and_labels(
-            test_data, args, eos_id)
+            test_data, args, eos_id, unk_id)
 
         # initialize for batch
         span = args.context_size + 1
@@ -127,6 +114,10 @@ class Dataset:
         self.data_index = data_index
         self.eos_handling = False
 
+        self.test_labels_a = test_labels_a
+        self.test_labels_b = test_labels_b
+        self.test_scores = test_scores
+
     def generate_batch(self):
         # print('\n>> start generate_batch')
         batch_size = self.batch_size
@@ -135,6 +126,7 @@ class Dataset:
         data_index = self.data_index
         data = self.train_data
         eos_id = self.eos_id
+        unk_id = self.unk_id
         span = self.span
         buffer = self.buffer
         eos_handling = self.eos_handling

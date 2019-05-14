@@ -3,10 +3,25 @@ import math
 import tensorflow as tf
 
 
+def _get_cosine_similarity(a, b):
+    normalized_a = tf.nn.l2_normalize(a, axis=1)
+    normalized_b = tf.nn.l2_normalize(b, axis=1)
+    return tf.matmul(normalized_a, normalized_b, transpose_b=True)
+
+
+def _get_pred_scores(a, b):
+    normalized_a = tf.nn.l2_normalize(a, axis=1)
+    normalized_b = tf.nn.l2_normalize(b, axis=1)
+    return tf.reduce_sum(normalized_a * normalized_b, axis=1)
+
+
 def init_models(args):
     train_inputs = tf.placeholder(tf.int32, shape=[None, args.context_size])
     train_labels = tf.placeholder(tf.int32, shape=[None])
     train_labels_hot = tf.one_hot(train_labels, depth=args.vocabulary_size)
+
+    test_labels_a = tf.placeholder(tf.int32, shape=[None])
+    test_labels_b = tf.placeholder(tf.int32, shape=[None])
 
     # Look up embeddings for inputs.
     embeddings = tf.Variable(
@@ -50,15 +65,17 @@ def init_models(args):
     loss = tf.reduce_sum(costs)
     train_op = optimizer.minimize(loss)
 
-    pred_labels = tf.argmax(logits, axis=1, output_type=tf.int32)
-    corrects = tf.equal(pred_labels, train_labels)
-    corrects = tf.cast(corrects, tf.float32)
-    n_correct = tf.reduce_sum(corrects)
+    embed_as = tf.nn.embedding_lookup(embeddings, test_labels_a)
+    embed_bs = tf.nn.embedding_lookup(embeddings, test_labels_b)
+
+    pred_scores = _get_pred_scores(embed_as, embed_bs)
 
     return {
         'train_op': train_op,
         'loss': loss,
         'train_inputs': train_inputs,
         'train_labels': train_labels,
-        'n_correct': n_correct,
+        'test_labels_a': test_labels_a,
+        'test_labels_b': test_labels_b,
+        'pred_scores': pred_scores,
     }

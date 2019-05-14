@@ -7,9 +7,11 @@
 # python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
 # python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --normalize_input=False --context_window=2
 import math
+import random
 
 import numpy as np
 import tensorflow as tf
+from scipy.stats import spearmanr
 
 from .model import init_models
 from .dataset import Dataset
@@ -41,13 +43,48 @@ def ___get_performances(session, models, test_inputs, test_labels, tqdm, args):
     return perplexity, accuracy
 
 
+def ___get_accuracy(session, models, dataset, tqdm, args):
+    # print(sim_data)
+    word_to_id = dataset.word_to_id
+    word_to_id = {v: k for k, v in word_to_id.items()}
+
+    pred_scores = session.run(
+        models['pred_scores'],
+        feed_dict={
+            models['test_labels_a']: dataset.test_labels_a,
+            models['test_labels_b']: dataset.test_labels_b,
+        })
+    # print(pred_scores)
+
+    # for i in range(10):
+    #     print(pred_scores[i], dataset.test_scores[i])
+
+    score, _ = spearmanr(dataset.test_scores, pred_scores )
+
+    # for i in random.sample(range(dataset.sim_data.shape[0]), 10):
+    #     row = dataset.sim_data[i]
+    #     top_k = np.argsort(-similarity[i])
+    #     print(word_to_id[row[0]], word_to_id[row[1]], word_to_id[row[2]],
+    #           word_to_id[row[3]])
+    #     print([word_to_id[top_k[j]] for j in range(10)])
+    #     input('')
+
+    # if math.isnan(_loss):
+    #     raise Exception('_loss is NaN! T.T')
+    # n_correct += _n_correct
+    # accuracy = n_correct / dataset.sim_data.shape[0]
+    return score
+
+
 def __validate(session, models, dataset, tqdm, args):
-    valid_perplexity, valid_acc = ___get_performances(
-        session, models, dataset.valid_inputs, dataset.valid_labels, tqdm,
-        args)
-    test_perplexity, test_acc = ___get_performances(
-        session, models, dataset.test_inputs, dataset.test_labels, tqdm, args)
-    return valid_perplexity, valid_acc, test_perplexity, test_acc
+    # valid_perplexity, valid_acc = ___get_performances(
+    #     session, models, dataset.valid_inputs, dataset.valid_labels, tqdm,
+    #     args)
+    # test_perplexity, test_acc = ___get_performances(
+    #     session, models, dataset.test_inputs, dataset.test_labels, tqdm, args)
+    # return valid_perplexity, valid_acc, test_perplexity, test_acc
+    acc = ___get_accuracy(session, models, dataset, tqdm, args)
+    return 0, acc, 0, acc
 
 
 def _train(args):
@@ -69,10 +106,10 @@ def _train(args):
         tqdm = lambda x: x
 
     sum_loss = 0
-    max_valid_acc = 0.0
+    max_valid_acc = -1.0
     max_valid_iter = -1
-    final_test_acc = 0.0
-    max_test_acc = 0.0
+    final_test_acc = -1.0
+    max_test_acc = -1.0
     max_test_iter = -1
     for iter_idx in range(args.max_iter):
         batch_inputs, batch_labels = dataset.generate_batch()
@@ -157,7 +194,7 @@ def main():
         default=1000,
         help='num_sampled. Number of negative examples to sample.')
     parser.add_argument(
-        '--max_iter', type=int, default=10000000, help='Max iter')
+        '--max_iter', type=int, default=100000000, help='Max iter')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -167,7 +204,7 @@ def main():
     parser.add_argument(
         '--valid_iter',
         type=int,
-        default=1000,
+        default=100,
         help='iter unit for validation')
     parser.add_argument(
         '--normalize_input',
