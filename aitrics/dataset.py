@@ -1,4 +1,4 @@
-import pickle, os
+import pickle
 import numpy as np
 from sklearn.utils import class_weight
 
@@ -17,7 +17,7 @@ X_train, y_train, X_test, y_test, class_weights, disease
 def init_data(args):
 
     # get dataset name
-    diseases = os.listdir(args.data_path)
+    diseases = ['cardiovascular1', 'fattyliver3', 'hypertension4', 'heartfailure1', 'diabetes4']
     disease = diseases[args.choose_dataset - 1]
 
     # whether to use modified dataset

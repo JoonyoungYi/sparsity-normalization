@@ -14,7 +14,7 @@ def init_model(args):
     if args.model == 'mlp':
         model = Sequential()
 
-        model.add(Dense(50, input_dim=sequence_length*34))
+        model.add(Dense(100, input_dim=sequence_length*34))
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
@@ -22,9 +22,9 @@ def init_model(args):
         model.add(Activation('relu'))
         
         if args.dropout:
-            model.add(Dropout(0.8))
+            model.add(Dropout(0.5))
 
-        model.add(Dense(30))
+        model.add(Dense(100))
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
@@ -32,7 +32,7 @@ def init_model(args):
         model.add(Activation('relu'))
 
         if args.dropout:
-            model.add(Dropout(0.8))
+            model.add(Dropout(0.5))
 
         model.add(Dense(1, activation='sigmoid'))
 
@@ -49,20 +49,20 @@ def init_model(args):
         model = Sequential()
 
         if args.layer_norm_lstm:
-            model.add(LSTM(units=16, input_shape=(sequence_length, 34), layer_norm=True,
+            model.add(LSTM(units=100, input_shape=(sequence_length, 34), layer_norm=True,
                            return_sequences=True))
         else:
-            model.add(CuDNNLSTM(units=16, input_shape=(sequence_length, 34),
+            model.add(CuDNNLSTM(units=100, input_shape=(sequence_length, 34),
                            return_sequences=True))
 
         if args.dropout:
-            model.add(Dropout(0.8))
+            model.add(Dropout(0.5))
 
         if args.layer_norm_lstm:
-            model.add(LSTM(units=16, layer_norm=True,
+            model.add(LSTM(units=100, layer_norm=True,
                            return_sequences=False))
         else:
-            model.add(CuDNNLSTM(units=16,
+            model.add(CuDNNLSTM(units=100,
                            return_sequences=False))
 
         model.add(Dense(1, activation='sigmoid'))
