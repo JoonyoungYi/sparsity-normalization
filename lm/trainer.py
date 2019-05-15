@@ -4,14 +4,13 @@
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
 # ex.
-# python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
-# python3 -m word2vec.trainer --dataset=ptb --gpu_memory_fraction=0.1 --normalize_input=False --context_window=2
+# python3 -m lm.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
+# python3 -m lm.trainer --dataset=ptb --gpu_memory_fraction=0.1 --normalize_input=False --context_window=2
 import math
 import random
 
 import numpy as np
 import tensorflow as tf
-from scipy.stats import spearmanr
 
 from .model import init_models
 from .dataset import Dataset
@@ -22,69 +21,27 @@ from common.utils import str2bool
 def ___get_performances(session, models, test_inputs, test_labels, tqdm, args):
     n_valid_batch = args.batch_size
     cross_entropy_loss = 0.0
-    n_correct = 0
     for i in tqdm(range(0, test_inputs.shape[0], n_valid_batch)):
-        # print(i + n_valid_batch, n_correct)
-        # input('')
-        _loss, _n_correct = session.run(
-            (models['loss'], models['n_correct']),
+        _loss = session.run(
+            models['loss'],
             feed_dict={
                 models['train_inputs']: test_inputs[i:i + n_valid_batch],
                 models['train_labels']: test_labels[i:i + n_valid_batch]
             })
-        # print(_loss)
         if math.isnan(_loss):
             raise Exception('_loss is NaN! T.T')
         cross_entropy_loss += _loss
-        n_correct += _n_correct
 
-    perplexity = math.exp(cross_entropy_loss / test_inputs.shape[0])
-    accuracy = n_correct / test_inputs.shape[0]
-    return perplexity, accuracy
-
-
-def ___get_accuracy(session, models, dataset, tqdm, args):
-    # print(sim_data)
-    word_to_id = dataset.word_to_id
-    word_to_id = {v: k for k, v in word_to_id.items()}
-
-    pred_scores = session.run(
-        models['pred_scores'],
-        feed_dict={
-            models['test_labels_a']: dataset.test_labels_a,
-            models['test_labels_b']: dataset.test_labels_b,
-        })
-    # print(pred_scores)
-
-    # for i in range(10):
-    #     print(pred_scores[i], dataset.test_scores[i])
-
-    score, _ = spearmanr(dataset.test_scores, pred_scores )
-
-    # for i in random.sample(range(dataset.sim_data.shape[0]), 10):
-    #     row = dataset.sim_data[i]
-    #     top_k = np.argsort(-similarity[i])
-    #     print(word_to_id[row[0]], word_to_id[row[1]], word_to_id[row[2]],
-    #           word_to_id[row[3]])
-    #     print([word_to_id[top_k[j]] for j in range(10)])
-    #     input('')
-
-    # if math.isnan(_loss):
-    #     raise Exception('_loss is NaN! T.T')
-    # n_correct += _n_correct
-    # accuracy = n_correct / dataset.sim_data.shape[0]
-    return score
+    return math.exp(cross_entropy_loss / test_inputs.shape[0])
 
 
 def __validate(session, models, dataset, tqdm, args):
-    # valid_perplexity, valid_acc = ___get_performances(
-    #     session, models, dataset.valid_inputs, dataset.valid_labels, tqdm,
-    #     args)
-    # test_perplexity, test_acc = ___get_performances(
-    #     session, models, dataset.test_inputs, dataset.test_labels, tqdm, args)
-    # return valid_perplexity, valid_acc, test_perplexity, test_acc
-    acc = ___get_accuracy(session, models, dataset, tqdm, args)
-    return 0, acc, 0, acc
+    valid_perplexity = ___get_performances(session, models,
+                                           dataset.valid_inputs,
+                                           dataset.valid_labels, tqdm, args)
+    test_perplexity = ___get_performances(session, models, dataset.test_inputs,
+                                          dataset.test_labels, tqdm, args)
+    return valid_perplexity, test_perplexity
 
 
 def _train(args):
@@ -106,11 +63,11 @@ def _train(args):
         tqdm = lambda x: x
 
     sum_loss = 0
-    max_valid_acc = -1.0
-    max_valid_iter = -1
-    final_test_acc = -1.0
-    max_test_acc = -1.0
-    max_test_iter = -1
+    min_valid_perplexity = float('inf')
+    min_valid_iter = -1
+    final_test_perplexity = float('inf')
+    min_test_perplexity = float('inf')
+    min_test_iter = -1
     for iter_idx in range(args.max_iter):
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
@@ -128,25 +85,25 @@ def _train(args):
             # The average loss is an estimate of the loss over the last (args.valid_iter) batches.
             train_loss = float(sum_loss / args.valid_iter)
             sum_loss = 0
-            valid_perplexity, valid_acc, test_perplexity, test_acc = __validate(
+            valid_perplexity, test_perplexity = __validate(
                 session, models, dataset, tqdm, args)
 
-            if valid_acc > max_valid_acc:
-                max_valid_acc = valid_acc
-                max_valid_iter = iter_idx
-                final_test_acc = test_acc
+            if valid_perplexity < min_valid_perplexity:
+                min_valid_perplexity = valid_perplexity
+                min_valid_iter = iter_idx
+                final_test_perplexity = test_perplexity
 
-            if test_acc > max_test_acc:
-                max_test_acc = test_acc
-                max_test_iter = iter_idx
+            if test_perplexity < min_test_perplexity:
+                min_test_perplexity = test_perplexity
+                min_test_iter = iter_idx
 
             print(">>", iter_idx, '%4f' % train_loss)
-            print(" -", '%4f' % valid_acc, '%4f' % max_valid_acc,
-                  max_valid_iter)
-            print(" -", '%4f' % test_acc, '%4f' % final_test_acc,
-                  '%4f' % max_test_acc, max_test_iter)
+            print(" -", '%4f' % valid_perplexity, '%4f' % min_valid_perplexity,
+                  min_valid_iter)
+            print(" -", '%4f' % test_perplexity, '%4f' % final_test_perplexity,
+                  '%4f' % min_test_perplexity, min_test_iter)
 
-        if iter_idx > max_valid_iter + args.iter_early_stop:
+        if iter_idx > min_valid_iter + args.iter_early_stop:
             break
 
     session.close()
@@ -159,7 +116,7 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='text8',
+        default='ptb',
         choices=[
             'text8',  # text8 dataset
             'ptb',  # pentree bank dataset
@@ -173,10 +130,7 @@ def main():
         default=1000,
         help='integer for batch number.')
     parser.add_argument(
-        '--context_window',
-        type=int,
-        default=1,
-        help='context_window. How many words to consider left and right.')
+        '--num_steps', type=int, default=20, help='num_stemps to see')
     parser.add_argument(
         '--vocabulary_size',
         type=int,
@@ -186,26 +140,27 @@ def main():
     parser.add_argument(
         '--embedding_size',
         type=int,
-        default=640,
+        default=200,
         help='embedding_size. Dimension of the embedding vector.')
     parser.add_argument(
-        '--num_sampled',
+        '--n_hidden_unit',
         type=int,
-        default=1000,
-        help='num_sampled. Number of negative examples to sample.')
+        default=200,
+        help='the number of hidden unit')
+    parser.add_argument(
+        '--n_hidden_layer',
+        type=int,
+        default=2,
+        help='The number of hidden unit')
     parser.add_argument(
         '--max_iter', type=int, default=100000000, help='Max iter')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        # default=1e-2,
-        default=1e-4,
+        default=1e-5,
         help='learning rate for optimizer.')
     parser.add_argument(
-        '--valid_iter',
-        type=int,
-        default=100,
-        help='iter unit for validation')
+        '--valid_iter', type=int, default=100, help='iter unit for validation')
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
@@ -231,50 +186,7 @@ def main():
         default=0.5,
         help='per_process_gpu_memory_fraction')
 
-    # parser.add_argument(
-    #     '--n_hidden_layer',
-    #     type=int,
-    #     default=1,
-    #     help='The number of hidden unit')
-    # parser.add_argument(
-    #     '--use_user_vector',
-    #     type=str2bool,
-    #     # default=True,
-    #     default=False,
-    #     help='Whether use user vector.')
-    #
-    # parser.add_argument(
-    #     '--lambda_w1',
-    #     type=float,
-    #     default=0.0,
-    #     help='lambda for weight decay.')
-    # parser.add_argument(
-    #     '--lambda_w2',
-    #     type=float,
-    #     default=0.0,
-    #     help='lambda for weight decay.')
-    # parser.add_argument(
-    #     '--dataset',
-    #     type=str,
-    #     choices=[
-    #         Dataset.KIND_MOVIELENS_100k,
-    #         Dataset.KIND_MOVIELENS_1M,
-    #         Dataset.KIND_MOVIELENS_10M,
-    #     ],
-    #     default=Dataset.KIND_MOVIELENS_100k,
-    #     # default=Dataset.KIND_MOVIELENS_1M,
-    #     # default=Dataset.KIND_MOVIELENS_10M,
-    #     help='Optimizer')
-    # parser.add_argument(
-    #     '--sparse_tensor',
-    #     type=str2bool,
-    #     default=True,
-    #     help='whether use sparse tensor.')
-
     args = parser.parse_args()
-    assert args.context_window > 0
-    assert args.batch_size and args.batch_size > 0
-    args.context_size = args.context_window * 2
     assert args.dataset == 'ptb'
     if args.dataset == 'ptb':
         assert args.vocabulary_size == 10000
