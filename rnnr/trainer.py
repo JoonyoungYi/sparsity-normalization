@@ -68,6 +68,8 @@ from . import reader
 from . import util
 
 from tensorflow.python.client import device_lib
+from tensorflow.python.ops import array_ops
+from tensorflow.nn.rnn_cell import LSTMStateTuple
 
 flags = tf.flags
 logging = tf.logging
@@ -88,7 +90,9 @@ flags.DEFINE_string("rnn_mode", None,
                     "The low level implementation of lstm cell: one of CUDNN, "
                     "BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, "
                     "and lstm_block_cell classes.")
-flags.DEFINE_bool("normalize_input", False, "Whether normalize input.")
+# flags.DEFINE_bool("normalize_input", False, "Whether normalize input.")
+flags.DEFINE_bool("zero_imputation", False,
+                  "Whether using zero imputation rather than <unk>.")
 FLAGS = flags.FLAGS
 BASIC = "basic"
 CUDNN = "cudnn"
@@ -113,7 +117,9 @@ class PTBInput(object):
 class PTBModel(object):
     """The PTB model."""
 
-    def __init__(self, is_training, config, input_, unk_id=None):
+    def __init__(self, is_training, config, input_, unk_id=None, FLAGS=None):
+        assert FLAGS is not None
+
         self._is_training = is_training
         self._input = input_
         self._rnn_params = None
@@ -127,17 +133,9 @@ class PTBModel(object):
             embedding = tf.get_variable(
                 "embedding", [vocab_size, size], dtype=data_type())
             inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
-            if unk_id is not None:
-                inputs = tf.where(input_.input_data == unk_id, inputs,
-                                  tf.zeros_like(inputs))
-
-                divider = tf.maximum(
-                    tf.reduce_sum(
-                        tf.where(input_.input_data == unk_id,
-                                 tf.zeros_like(input_.input_data),
-                                 tf.ones_like(input_.input_data)),
-                        axis=1), 1)
-                inputs /= tf.reshape(tf.cast(divider, tf.float32), [-1, 1, 1])
+            if FLAGS.zero_imputation:
+                inputs = tf.where(input_.input_data == unk_id,
+                                  tf.zeros_like(inputs), inputs)
 
         if is_training and config.keep_prob < 1:
             inputs = tf.nn.dropout(inputs, config.keep_prob)
@@ -173,6 +171,8 @@ class PTBModel(object):
         grads, _ = tf.clip_by_global_norm(
             tf.gradients(self._cost, tvars), config.max_grad_norm)
         optimizer = tf.train.GradientDescentOptimizer(self._lr)
+        # grads = tf.gradients(self._cost, tvars)
+        # optimizer = tf.train.AdamOptimizer(self._lr)
         self._train_op = optimizer.apply_gradients(
             zip(grads, tvars),
             global_step=tf.train.get_or_create_global_step())
@@ -213,14 +213,25 @@ class PTBModel(object):
 
     def _get_lstm_cell(self, config, is_training):
         if config.rnn_mode == BASIC:
-            return tf.contrib.rnn.BasicLSTMCell(
-                config.hidden_size,
-                forget_bias=0.0,
-                state_is_tuple=True,
+            # from .lstm import BasicLSTMCell
+            # return BasicLSTMCell(
+            #     config.hidden_size,
+            #     forget_bias=0.0,
+            #     state_is_tuple=False,
+            #     reuse=not is_training)
+            # return tf.nn.rnn_cell.BasicLSTMCell(
+            #     config.hidden_size,
+            #     forget_bias=0.0,
+            #     state_is_tuple=True,
+            #     reuse=not is_training)
+            return tf.nn.rnn_cell.BasicRNNCell(
+                num_units=config.hidden_size,
+                activation=tf.nn.tanh,
                 reuse=not is_training)
         if config.rnn_mode == BLOCK:
             return tf.contrib.rnn.LSTMBlockCell(
                 config.hidden_size, forget_bias=0.0)
+
         raise ValueError("rnn_mode %s not supported" % config.rnn_mode)
 
     def _build_rnn_graph_lstm(self, inputs, config, is_training):
@@ -236,7 +247,7 @@ class PTBModel(object):
                     cell, output_keep_prob=config.keep_prob)
             return cell
 
-        cell = tf.contrib.rnn.MultiRNNCell(
+        cell = tf.nn.rnn_cell.MultiRNNCell(
             [make_cell() for _ in range(config.num_layers)],
             state_is_tuple=True)
 
@@ -254,8 +265,28 @@ class PTBModel(object):
         outputs = []
         with tf.variable_scope("RNN"):
             for time_step in range(self.num_steps):
-                if time_step > 0: tf.get_variable_scope().reuse_variables()
-                (cell_output, state) = cell(inputs[:, time_step, :], state)
+
+                if time_step > 0:
+                    tf.get_variable_scope().reuse_variables()
+
+                    if False:
+                        s1, s2 = state
+                        s1_c, s1_h = s1
+                        s2_c, s2_h = s2
+
+                        s1 = LSTMStateTuple(s1_c,
+                                            s1_h * time_step / (time_step + 1))
+                        s2 = LSTMStateTuple(s2_c,
+                                            s2_h * time_step / (time_step + 1))
+                        state = (s1, s2)
+
+                        i = inputs[:, time_step, :] / (time_step + 1)
+                    else:
+                        i = inputs[:, time_step, :]
+                else:
+                    i = inputs[:, time_step, :]
+
+                (cell_output, state) = cell(i, state)
                 outputs.append(cell_output)
         output = tf.reshape(tf.concat(outputs, 1), [-1, config.hidden_size])
         return output, state
@@ -340,15 +371,17 @@ class PTBModel(object):
 class SmallConfig(object):
     """Small config."""
     init_scale = 0.1
-    learning_rate = 1.0
+    learning_rate = 1.0  # learning_rate = 2e-4
     max_grad_norm = 5
     num_layers = 2
     num_steps = 20
     hidden_size = 200
+    early_stop_epoch = 10
     max_epoch = 4
-    max_max_epoch = 13
+    # max_max_epoch = 13
+    max_max_epoch = 1000
     keep_prob = 1.0
-    lr_decay = 0.5
+    lr_decay = 0.5  # lr_decay = 1.0
     batch_size = 20
     vocab_size = 10000
     rnn_mode = BLOCK
@@ -475,8 +508,17 @@ def main(_):
 
     raw_data = reader.ptb_raw_data(FLAGS.data_path)
     train_data, valid_data, test_data, word_to_id = raw_data
+    unk_id= word_to_id['<unk>']
+    print(sum(1 for t in train_data if t != unk_id))
+    print(sum(1 for t in train_data if t == unk_id))
+    print(sum(1 for t in valid_data if t != unk_id))
+    print(sum(1 for t in valid_data if t == unk_id))
+    print(sum(1 for t in test_data if t != unk_id))
+    print(sum(1 for t in test_data if t == unk_id))
+    input('!!!')
 
-    if FLAGS.normalize_input:
+
+    if FLAGS.zero_imputation:
         unk_id = word_to_id.get('<unk>')
         assert unk_id is not None
     else:
@@ -484,8 +526,8 @@ def main(_):
 
     config = get_config()
     eval_config = get_config()
-    eval_config.batch_size = 1
-    eval_config.num_steps = 1
+    # eval_config.batch_size = 1
+    # eval_config.num_steps = 1
 
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(-config.init_scale,
@@ -500,7 +542,8 @@ def main(_):
                     is_training=True,
                     config=config,
                     input_=train_input,
-                    unk_id=unk_id)
+                    unk_id=unk_id,
+                    FLAGS=FLAGS)
             tf.summary.scalar("Training Loss", m.cost)
             tf.summary.scalar("Learning Rate", m.lr)
 
@@ -513,7 +556,8 @@ def main(_):
                     is_training=False,
                     config=config,
                     input_=valid_input,
-                    unk_id=unk_id)
+                    unk_id=unk_id,
+                    FLAGS=FLAGS)
             tf.summary.scalar("Validation Loss", mvalid.cost)
 
         with tf.name_scope("Test"):
@@ -525,7 +569,8 @@ def main(_):
                     is_training=False,
                     config=eval_config,
                     input_=test_input,
-                    unk_id=unk_id)
+                    unk_id=unk_id,
+                    FLAGS=FLAGS)
 
         models = {"Train": m, "Valid": mvalid, "Test": mtest}
         for name, model in models.items():
@@ -546,12 +591,18 @@ def main(_):
             model.import_ops()
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
         config_proto = tf.ConfigProto(allow_soft_placement=soft_placement)
+
+        min_valid_perplexity = float('inf')
+        min_valid_epoch = -1
+        final_test_perplexity = float('inf')
+        min_test_perplexity = float('inf')
+        min_test_epoch = -1
+        lr_decay = 1
         with sv.managed_session(config=config_proto) as session:
             for i in range(config.max_max_epoch):
-                lr_decay = config.lr_decay**max(i + 1 - config.max_epoch, 0.0)
                 m.assign_lr(session, config.learning_rate * lr_decay)
 
-                print("Epoch: %d Learning rate: %.3f" % (i + 1,
+                print("Epoch: %d Learning rate: %.5f" % (i + 1,
                                                          session.run(m.lr)))
                 train_perplexity = run_epoch(
                     session, m, eval_op=m.train_op, verbose=True)
@@ -560,9 +611,26 @@ def main(_):
                 valid_perplexity = run_epoch(session, mvalid)
                 print("Epoch: %d Valid Perplexity: %.3f" % (i + 1,
                                                             valid_perplexity))
+                test_perplexity = run_epoch(session, mtest)
+                print("Epoch: %d Test  Perplexity: %.3f" % (i + 1,
+                                                            test_perplexity))
 
-            test_perplexity = run_epoch(session, mtest)
-            print("Test Perplexity: %.3f" % test_perplexity)
+                if min_valid_perplexity > valid_perplexity:
+                    min_valid_perplexity = valid_perplexity
+                    min_valid_epoch = i
+                    final_test_perplexity = test_perplexity
+                else:
+                    lr_decay *= config.lr_decay
+
+                if min_test_perplexity > test_perplexity:
+                    min_test_perplexity = test_perplexity
+                    min_test_epoch = i
+
+                print("Min  : %d Test  Perplexity: %.3f\tPerplexity: %.3f" %
+                      (min_valid_epoch + 1, final_test_perplexity,
+                       min_valid_perplexity))
+                print("Min  : %d Test  Perplexity: %.3f" %
+                      (min_test_epoch + 1, min_test_perplexity))
 
             if FLAGS.save_path:
                 print("Saving model to %s." % FLAGS.save_path)
