@@ -75,6 +75,9 @@ def _train(args):
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
+        print(batch_inputs)
+        print(batch_labels)
+        input('')
         _, loss = session.run(
             [models['train_op'], models['loss']],
             feed_dict={

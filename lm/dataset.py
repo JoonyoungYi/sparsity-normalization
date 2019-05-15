@@ -24,12 +24,11 @@ def _get_inputs_and_labels(data, args, eos_id, unk_id):
         if token == eos_id:
             _init_buffer(buffer, args.num_steps)
         elif token == unk_id:
-            pass
+            buffer.append(token)
         else:
             test_inputs.append([t if t != unk_id else -1 for t in buffer])
             test_labels.append(token)
-
-        buffer.append(token)
+            buffer.append(token)
 
         data_index = data_index + 1
         if data_index >= len(data):
@@ -87,15 +86,16 @@ class Dataset:
         while i < batch_size:
             token = data[data_index]
             if token == eos_id:
+                data_index = (data_index + 1) % len(data)
                 _init_buffer(buffer, num_steps)
             elif token == unk_id:
-                pass
+                buffer.append(token)
             else:
                 batch[i, :] = [t if t != unk_id else -1 for t in buffer]
                 labels[i] = token
                 i += 1
+                buffer.append(token)
 
-            buffer.append(token)
             data_index = (data_index + 1) % len(data)
 
         self.data_index = data_index
