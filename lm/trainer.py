@@ -26,7 +26,8 @@ def ___get_performances(session, models, test_inputs, test_labels, tqdm, args):
             models['loss'],
             feed_dict={
                 models['train_inputs']: test_inputs[i:i + n_valid_batch],
-                models['train_labels']: test_labels[i:i + n_valid_batch]
+                models['train_labels']: test_labels[i:i + n_valid_batch],
+                models['training']: False
             })
         if math.isnan(_loss):
             raise Exception('_loss is NaN! T.T')
@@ -68,6 +69,8 @@ def _train(args):
     final_test_perplexity = float('inf')
     min_test_perplexity = float('inf')
     min_test_iter = -1
+
+    learning_rate = args.learning_rate
     for iter_idx in range(args.max_iter):
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
@@ -76,7 +79,9 @@ def _train(args):
             [models['train_op'], models['loss']],
             feed_dict={
                 models['train_inputs']: batch_inputs,
-                models['train_labels']: batch_labels
+                models['train_labels']: batch_labels,
+                models['learning_rate']: learning_rate,
+                models['training']: True,
             })
         sum_loss += loss
 
@@ -92,12 +97,15 @@ def _train(args):
                 min_valid_perplexity = valid_perplexity
                 min_valid_iter = iter_idx
                 final_test_perplexity = test_perplexity
+            else:
+                if args.optimizer == 'sgd':
+                    learning_rate *= (1 / 1.15)
 
             if test_perplexity < min_test_perplexity:
                 min_test_perplexity = test_perplexity
                 min_test_iter = iter_idx
 
-            print(">>", iter_idx, '%4f' % train_loss)
+            print(">>", iter_idx, '%4f' % train_loss, learning_rate)
             print(" -", '%4f' % valid_perplexity, '%4f' % min_valid_perplexity,
                   min_valid_iter)
             print(" -", '%4f' % test_perplexity, '%4f' % final_test_perplexity,
@@ -127,10 +135,10 @@ def main():
     parser.add_argument(
         '--batch_size',
         type=int,
-        default=1000,
+        default=10000,
         help='integer for batch number.')
     parser.add_argument(
-        '--num_steps', type=int, default=20, help='num_stemps to see')
+        '--num_steps', type=int, default=35, help='num_stemps to see')
     parser.add_argument(
         '--vocabulary_size',
         type=int,
@@ -140,27 +148,29 @@ def main():
     parser.add_argument(
         '--embedding_size',
         type=int,
-        default=200,
+        default=500,
         help='embedding_size. Dimension of the embedding vector.')
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=200,
+        default=500,
         help='the number of hidden unit')
     parser.add_argument(
         '--n_hidden_layer',
         type=int,
-        default=2,
-        help='The number of hidden unit')
+        default=3,
+        help='The number of hidden layer')
     parser.add_argument(
         '--max_iter', type=int, default=100000000, help='Max iter')
     parser.add_argument(
+        '--drop_rate', type=float, default=0.2, help='drop rate')
+    parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-5,
+        default=1e-3,
         help='learning rate for optimizer.')
     parser.add_argument(
-        '--valid_iter', type=int, default=100, help='iter unit for validation')
+        '--valid_iter', type=int, default=10, help='iter unit for validation')
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
@@ -185,6 +195,8 @@ def main():
         type=float,
         default=0.5,
         help='per_process_gpu_memory_fraction')
+    parser.add_argument(
+        '--max_grad_norm', type=float, default=5, help='max_grad_norm')
 
     args = parser.parse_args()
     assert args.dataset == 'ptb'

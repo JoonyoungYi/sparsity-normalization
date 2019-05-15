@@ -3,7 +3,7 @@ import math
 import tensorflow as tf
 
 
-def _forward(x, weights, biases):
+def _forward(x, weights, biases, args, training):
     # if args.activation_fn == 'relu':
     #     activation_fn = tf.nn.relu
     # elif args.activation_fn == 'tanh':
@@ -21,8 +21,9 @@ def _forward(x, weights, biases):
 
         if i < len(biases) - 1:
             layer = activation_fn(layer)
-        #     layer = tf.layers.dropout(
-        #         layer, rate=args.drop_rate, training=training)
+            if args.drop_rate > 1e-5:
+                layer = tf.layers.dropout(
+                    layer, rate=args.drop_rate, training=training)
         #
         #     if (i + 1) in args.normalize_layer_indexes:
         #         divider = tf.maximum(
@@ -59,6 +60,8 @@ def _init_weights(args):
 def init_models(args):
     train_inputs = tf.placeholder(tf.int32, shape=[None, args.num_steps])
     train_labels = tf.placeholder(tf.int32, shape=[None])
+    learning_rate = tf.placeholder(tf.float32)
+    training = tf.placeholder(tf.bool)
     train_labels_hot = tf.one_hot(train_labels, depth=args.vocabulary_size)
 
     weights, biases = _init_weights(args)
@@ -75,7 +78,7 @@ def init_models(args):
                  tf.zeros_like(train_inputs), tf.ones_like(train_inputs))
     divider = tf.cast(tf.reduce_sum(m, axis=1, keepdims=True), tf.float32)
     input_layer /= divider
-    output_layer = _forward(input_layer, weights, biases)
+    output_layer = _forward(input_layer, weights, biases, args, training)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=train_labels_hot, logits=output_layer)
@@ -83,17 +86,24 @@ def init_models(args):
 
     # Construct the SGD optimizer using a learning rate of 1.0.
     if args.optimizer == 'sgd':
-        optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(
+            tf.gradients(loss, tvars), args.max_grad_norm)
+        train_op = optimizer.apply_gradients(
+            zip(grads, tvars),
+            global_step=tf.train.get_or_create_global_step())
     elif args.optimizer == 'adam':
-        optimizer = tf.train.AdamOptimizer(args.learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate)
+        train_op = optimizer.minimize(loss)
     else:
         raise NotImplementedError()
-
-    train_op = optimizer.minimize(loss)
 
     return {
         'train_op': train_op,
         'loss': loss,
+        'training': training,
         'train_inputs': train_inputs,
         'train_labels': train_labels,
+        'learning_rate': learning_rate,
     }
