@@ -31,6 +31,7 @@ args = parser.parse_args()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 best_epoch = 0
+evaluated_acc = 0
 test_best_acc = 0
 test_best_epoch = 0
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -131,6 +132,9 @@ def train(epoch):
 def valid(epoch):
     global best_acc
     global best_epoch
+    global evaluated_acc
+    global test_best_acc
+    global test_best_epoch
     net.eval()
     valid_loss = 0
     correct = 0
@@ -149,6 +153,25 @@ def valid(epoch):
             progress_bar(batch_idx, len(validloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (valid_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
+    test_loss = 0
+    test_correct = 0
+    test_total = 0
+    with torch.no_grad():
+        for batch_idx, (inputs, targets) in enumerate(testloader):
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = net(inputs)
+            loss = criterion(outputs, targets)
+
+            test_loss += loss.item()
+            _, predicted = outputs.max(1)
+            test_total += targets.size(0)
+            test_correct += predicted.eq(targets).sum().item()
+
+            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                % (test_loss/(batch_idx+1), 100.*test_correct/test_total, test_correct, test_total))
+
+    test_acc = 100.*test_correct/test_total
+
     # Save checkpoint.
     acc = 100.*correct/total
     if acc > best_acc:
@@ -163,42 +186,19 @@ def valid(epoch):
         torch.save(state, 'vgg16/checkpoint/ckpt.{}'.format(args.model))
         best_acc = acc
         best_epoch = epoch
+        evaluated_acc = test_acc
+
+    if test_acc > test_best_acc:
+        test_best_acc = test_acc
+        test_best_epoch = epoch
 
     print("Best")
     print("valid acc: {}".format(best_acc))
     print("valid epoch: {}".format(best_epoch))
-
-def test(epoch):
-    global test_best_acc
-    global test_best_epoch
-    net.eval()
-    test_loss = 0
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(testloader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-
-            test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
-
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
-    # Save checkpoint.
-    acc = 100.*correct/total
-    if acc > test_best_acc:
-        test_best_acc = acc
-        test_best_epoch = epoch
-
+    print("evaluated acc: {}".format(evaluated_acc))
     print("test acc: {}".format(test_best_acc))
     print("test epoch: {}".format(test_best_epoch))
 
 for epoch in range(start_epoch, start_epoch+args.epochs):
     train(epoch)
     valid(epoch)
-    test(epoch)
