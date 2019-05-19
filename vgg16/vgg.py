@@ -12,6 +12,7 @@ cfg = {
     'normal-04712': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_N', 'M', '256_X_X', '256_X_X', '256_X_N', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_N', '512_X_X', 'M'],
     'normal-all': ['64_X_I', '64_X_N', 'M', '128_X_X', '128_X_N', 'M', '256_X_X', '256_X_N', '256_X_N', 'M', '512_X_X', '512_X_N', '512_X_N', 'M', '512_X_X', '512_X_N', '512_X_N', 'M'],
     'bn_vanilla': ['64_B_X', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
+    'bn_vanilla_save': ['64_B_X', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-0': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-07': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_N', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-049': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_N', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_N', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
@@ -45,8 +46,8 @@ class Conv2d_input_normal(nn.Module):
 
         self.bias = nn.Parameter(torch.zeros(self.out_channels))
 
-        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
-        bound = 1 / sqrt(fan_in)
+        self.fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
+        bound = 1 / sqrt(self.fan_in)
         nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
@@ -56,9 +57,8 @@ class Conv2d_input_normal(nn.Module):
         x = self.conv(x)
         divider = self.conv_C(binarized_x)
         divider = torch.max(divider, torch.Tensor([1.0]).to('cuda'))
-        m_divider = torch.mean(divider)
 
-        x = torch.div(x*m_divider, divider)
+        x = torch.div(x*self.fan_in, divider)
 
         x = x + self.bias.unsqueeze(1).unsqueeze(1)
         return x 
@@ -89,8 +89,8 @@ class Conv2d_hidden_normal(nn.Module):
 
         self.bias = nn.Parameter(torch.zeros(self.out_channels))
         
-        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
-        bound = 1 / sqrt(fan_in)
+        self.fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
+        bound = 1 / sqrt(self.fan_in)
         nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
@@ -100,9 +100,8 @@ class Conv2d_hidden_normal(nn.Module):
         x = self.conv(x)
 
         divider = self.conv_C(sigmoid_x)
-        m_divider = torch.mean(divider)
 
-        x = torch.div(x*m_divider, divider)
+        x = torch.div(x*self.fan_in, divider)
 
         x = x + self.bias.unsqueeze(1).unsqueeze(1)
         return x
