@@ -38,7 +38,7 @@ def init_model(args):
     if args.model == 'mlp':
         model = Sequential()
 
-        model.add(Dense(100, input_dim=sequence_length*34))
+        model.add(Dense(50, input_dim=sequence_length*34))
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
@@ -48,9 +48,9 @@ def init_model(args):
         model.add(Activation('relu'))
         
         if args.dropout:
-            model.add(Dropout(0.5))
+            model.add(Dropout(0.8))
 
-        model.add(Dense(100))
+        model.add(Dense(30))
 
         if args.batch_norm_mlp:
             model.add(BatchNormalization())
@@ -60,7 +60,7 @@ def init_model(args):
         model.add(Activation('relu'))
 
         if args.dropout:
-            model.add(Dropout(0.5))
+            model.add(Dropout(0.8))
 
         model.add(Dense(1, activation='sigmoid'))
 

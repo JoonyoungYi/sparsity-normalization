@@ -85,7 +85,7 @@ parser.add_argument(
 parser.add_argument(
     '--learning_rate',
     type=float,
-    default=1e-1)
+    default=1e-2)
 
 parser.add_argument(
     '--verbose',
@@ -101,7 +101,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # set gpu memory fraction
-if args.gpu_memory_fraction > 0.9:
+if args.gpu_memory_fraction < 0.9:
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     keras.backend.tensorflow_backend.set_session(sess)
