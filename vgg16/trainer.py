@@ -16,6 +16,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 import os
 import argparse
+from common.utils import str2bool
 
 from .vgg import *
 from .utils import progress_bar
@@ -25,7 +26,8 @@ parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--seed', default=1, type=int)
 parser.add_argument('--model', type=str)
-parser.add_argument('--epochs', default=160, type=int)
+parser.add_argument('--dropout', type=str2bool, default=False)
+parser.add_argument('--epochs', default=3000, type=int)
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -85,7 +87,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 
 # Model
 print('==> Building model..')
-net = VGG(args.model)
+net = VGG(args.model, args.dropout)
 net = net.to(device)
 print(net)
 
@@ -97,7 +99,7 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('vgg16/checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('vgg16/checkpoint/ckpt.{}'.format(args.model))
+    checkpoint = torch.load('vgg16/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
@@ -183,7 +185,7 @@ def valid(epoch):
         }
         if not os.path.isdir('vgg16/checkpoint'):
             os.mkdir('vgg16/checkpoint')
-        torch.save(state, 'vgg16/checkpoint/ckpt.{}'.format(args.model))
+        torch.save(state, 'vgg16/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
         best_acc = acc
         best_epoch = epoch
         evaluated_acc = test_acc

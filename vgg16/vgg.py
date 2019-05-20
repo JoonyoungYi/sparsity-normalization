@@ -7,12 +7,13 @@ from math import sqrt
 cfg = {
     'vanilla': ['64_X_X', '64_X_X', 'M', '128_X_X', '128_X_X', 'M', '256_X_X', '256_X_X', '256_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
     'normal-0': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_X', 'M', '256_X_X', '256_X_X', '256_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
+    'dropout': ['64_X_X', '64_X_X', 'M', '128_X_X', '128_X_X', 'M', '256_X_X', '256_X_X', '256_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
+    'dropout_normal-0': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_X', 'M', '256_X_X', '256_X_X', '256_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
     'normal-07': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_X', 'M', '256_X_X', '256_X_X', '256_X_N', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
     'normal-049': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_N', 'M', '256_X_X', '256_X_X', '256_X_X', 'M', '512_X_X', '512_X_N', '512_X_X', 'M', '512_X_X', '512_X_X', '512_X_X', 'M'],
     'normal-04712': ['64_X_I', '64_X_X', 'M', '128_X_X', '128_X_N', 'M', '256_X_X', '256_X_X', '256_X_N', 'M', '512_X_X', '512_X_X', '512_X_X', 'M', '512_X_X', '512_X_N', '512_X_X', 'M'],
     'normal-all': ['64_X_I', '64_X_N', 'M', '128_X_X', '128_X_N', 'M', '256_X_X', '256_X_N', '256_X_N', 'M', '512_X_X', '512_X_N', '512_X_N', 'M', '512_X_X', '512_X_N', '512_X_N', 'M'],
     'bn_vanilla': ['64_B_X', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
-    'bn_vanilla_save': ['64_B_X', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-0': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-07': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_X', 'M', '256_B_X', '256_B_X', '256_B_N', 'M', '512_B_X', '512_B_X', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
     'bn_normal-049': ['64_B_I', '64_B_X', 'M', '128_B_X', '128_B_N', 'M', '256_B_X', '256_B_X', '256_B_X', 'M', '512_B_X', '512_B_N', '512_B_X', 'M', '512_B_X', '512_B_X', '512_B_X', 'M'],
@@ -107,8 +108,9 @@ class Conv2d_hidden_normal(nn.Module):
         return x
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name):
+    def __init__(self, vgg_name, dropout):
         super(VGG, self).__init__()
+        self.dropout = dropout
         self.features = self._make_layers(cfg[vgg_name])
         self.classifier = nn.Linear(512, 10)
 
@@ -125,6 +127,8 @@ class VGG(nn.Module):
         for x in cfg:
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+                if self.dropout:
+                    layers += [nn.Dropout(p=0.25)]
             else:
                 x = x.split('_')
                 out_channels, batch_norm, input_norm, hidden_norm = int(x[0]), x[1] == 'B', x[2] == 'I', x[2] == 'N'
