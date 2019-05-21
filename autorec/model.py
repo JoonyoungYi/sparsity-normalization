@@ -19,12 +19,6 @@ def _init_weights(n_col, args):
     n_units = [n_col] + [args.n_hidden_unit] * args.n_hidden_layer + [n_col]
 
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
-        # if i == 1 and hidden_unit_numbers[0] == column_number:
-        #     # kaiming init 이다. (first layer는 xavier init과 동일.)
-        #     # 첫번째 레이어는 sparsity 고려해 줘야 한다.
-        #     limit = math.sqrt(3 / input_unit_number / 0.063)
-        # else:
-        # kaiming init 이다.
         limit = math.sqrt(6 / n_in_unit)
 
         weight = tf.Variable(

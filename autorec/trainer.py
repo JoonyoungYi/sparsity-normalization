@@ -142,12 +142,15 @@ def _train(args):
     results.append(args.sparse_tensor)
     results.append(args.n_batch)
     results.append(args.optimizer)
-    results.append(args.lambda_w1)
-    results.append(args.lambda_w2)
+    results.append(args.lambda_w)
     results.append(args.seed)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
-    save_results_to_file('autorec', args.dataset, results)
+
+    filename = args.dataset
+    if args.filename:
+        filename += '-' + args.filename
+    save_results_to_file('autorec', filename, results)
 
 
 def main():
@@ -174,7 +177,7 @@ def main():
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=False,
+        default=True,
         help='Whether normalize input.')
     parser.add_argument(
         '--use_user_vector',
@@ -185,7 +188,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-4,
+        default=1e-3,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')
@@ -196,21 +199,24 @@ def main():
         help='the number of epochation for early stop.')
 
     parser.add_argument(
-        '--lambda_w1',
-        type=float,
-        default=0.0,
-        help='lambda for weight decay.')
-    parser.add_argument(
-        '--lambda_w2',
-        type=float,
-        default=0.0,
-        help='lambda for weight decay.')
+        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
         choices=['rprop', 'adam'],
         default='adam',
         help='Optimizer')
+    parser.add_argument(
+        '--filename',
+        type=str,
+        default='None',
+        help='log filename')
+    parser.add_argument(
+        '--K_denominator',
+        type=float,
+        default=500,
+        # default=None,
+        help='K')
     parser.add_argument(
         '--dataset',
         type=str,
@@ -231,8 +237,7 @@ def main():
     parser.add_argument(
         '--n_batch',
         type=int,
-        # default=None,
-        default=1000,
+        default=0,  # default=1000,
         help='0 for full batch. integer for batch number.')
 
     args = parser.parse_args()
@@ -242,6 +247,9 @@ def main():
     elif args.n_batch < 0:
         print('args.n_batch should not be negative.')
         assert False
+
+    args.lambda_w1 = args.lambda_w
+    args.lambda_w2 = args.lambda_w
 
     if args.sparse_tensor:
         # RProp optimizer can be used only for dense tensor.
