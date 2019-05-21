@@ -8,10 +8,11 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
-def _normalize_input(x):
+def _normalize_input(x, n_in):
     for i in range(x.shape[0]):
         row = x[i]
         count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+        row *= n_in
         row /= count_nonzero
     return x
 
@@ -78,14 +79,31 @@ class Dataset:
         else:
             raise NotImplementedError()
 
+        if args.dataset == "mnist" or args.dataset == "fashion":
+            n_in, n_out = 784, 10
+        elif args.dataset == 'cifar10':
+            if args.grey_scale:
+                n_in, n_out = 32 * 32, 10
+            else:
+                n_in, n_out = 32 * 32 * 3, 10
+        elif args.dataset == 'cifar100':
+            if args.grey_scale:
+                n_in, n_out = 32 * 32, 100
+            else:
+                n_in, n_out = 32 * 32 * 3, 100
+        else:
+            raise NotImplementedError()
+        self.n_in = n_in
+        self.n_out = n_out
+
         # sparsity injection
         if args.inject_sparsity:
             train_x, train_g = inject_sparsity(train_x, args)
             test_x, test_g = inject_sparsity(test_x, args)
         else:
             if args.normalize_input:
-                train_x = _normalize_input(train_x)
-                test_x = _normalize_input(test_x)
+                train_x = _normalize_input(train_x, n_in)
+                test_x = _normalize_input(test_x, n_in)
             train_g = None
             test_g = None
 
@@ -138,20 +156,3 @@ class Dataset:
         else:
             self.total_x = None
             self.total_y = None
-
-        if args.dataset == "mnist" or args.dataset == "fashion":
-            n_in, n_out = 784, 10
-        elif args.dataset == 'cifar10':
-            if args.grey_scale:
-                n_in, n_out = 32 * 32, 10
-            else:
-                n_in, n_out = 32 * 32 * 3, 10
-        elif args.dataset == 'cifar100':
-            if args.grey_scale:
-                n_in, n_out = 32 * 32, 100
-            else:
-                n_in, n_out = 32 * 32 * 3, 100
-        else:
-            raise NotImplementedError()
-        self.n_in = n_in
-        self.n_out = n_out
