@@ -12,6 +12,7 @@ from .configs import *
 from .model import init_models
 from common.utils import str2bool
 from common.utils import set_seed
+from common.utils import save_results_to_file
 
 
 def __get_rmse(session, models, x, y, n_batch):
@@ -55,10 +56,7 @@ def _train(args):
     set_seed(args.seed)
 
     dataset = Dataset(
-        Dataset.KIND_MOVIELENS_1M,
-        # Dataset.KIND_MOVIELENS_100k,
-        Dataset.SPLIT_DEFAULT_10_PERCENT,
-        seed=args.seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
     dataset.init_full_matrices()
 
     n_user, n_item = dataset.get_n_user_and_n_item()
@@ -157,6 +155,19 @@ def _train(args):
 
     session.close()
 
+    results = []
+    results.append(args.use_user_vector)
+    results.append(args.normalize_input)
+    results.append(args.parameter_sharing)
+    results.append(args.use_ordinal_cost)
+    results.append(args.averaging_possible_choices)
+    results.append(args.lambda_1)
+    results.append(args.lambda_2)
+    results.append(args.seed)
+    results.append(final_test_rmse)
+    results.append(min_test_rmse)
+    save_results_to_file('cfnade', args.dataset, results)
+
 
 def main():
     import argparse
@@ -164,6 +175,7 @@ def main():
     parser = argparse.ArgumentParser(description='CFNADE-tensorflow')
     parser.add_argument(
         '--dataset',
+        type=str,
         default=Dataset.KIND_MOVIELENS_1M,
         choices=[
             Dataset.KIND_MOVIELENS_100k, Dataset.KIND_MOVIELENS_1M,
@@ -209,6 +221,11 @@ def main():
         type=str2bool,
         default=False,
         help='Whether use user vector')
+    parser.add_argument(
+        '--averaging_possible_choices',
+        type=str2bool,
+        default=True,
+        help='Whether use user averaging_possible_choices')
     parser.add_argument(
         '--gpu_memory_fraction',
         type=float,
