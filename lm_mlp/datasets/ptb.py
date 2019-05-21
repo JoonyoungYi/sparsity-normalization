@@ -21,12 +21,26 @@ def _build_vocab(filename):
     words, _ = list(zip(*count_pairs))
     word_to_id = dict(zip(words, range(len(words))))
 
-    return word_to_id
+    d = {}
+    for key, value in word_to_id.items():
+        s = 0
+        if value == word_to_id['<eos>']:
+            d[key] = -1
+            continue
+        elif value == word_to_id['<unk>']:
+            d[key] = -2
+            continue
+        elif value > word_to_id['<eos>'] and value > word_to_id['<unk>']:
+            s = 2
+        elif value > word_to_id['<eos>'] or value > word_to_id['<unk>']:
+            s = 1
+        d[key] = value - s
+    return d
 
 
 def _file_to_word_ids(filename, word_to_id):
     data = _read_words(filename)
-    return [word_to_id[word] for word in data if word in word_to_id]
+    return [word_to_id[word] if word in word_to_id else -2 for word in data]
 
 
 def _ptb_raw_data(data_path=None):
@@ -40,8 +54,6 @@ def _ptb_raw_data(data_path=None):
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
 
-    eos_id = word_to_id['<eos>']
-    unk_id = word_to_id['<unk>']
     return train_data, valid_data, test_data, word_to_id
 
 

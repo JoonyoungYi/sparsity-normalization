@@ -4,8 +4,7 @@
 # - https://gist.github.com/yxtay/a94d971955d901c4690129580a4eafb9
 # - https://stackoverflow.com/questions/37394970/tensorflow-word2vec-cbow-model
 # ex.
-# python3 -m lm.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
-# python3 -m lm.trainer --dataset=ptb --gpu_memory_fraction=0.1 --normalize_input=False --context_window=2
+# python3 -m lm_rnn.trainer --dataset=ptb --gpu_memory_fraction=0.1 --context_window=3
 import math
 import random
 
@@ -22,11 +21,13 @@ def ___get_performances(session, models, test_inputs, test_labels, tqdm, args):
     n_valid_batch = args.batch_size
     cross_entropy_loss = 0.0
     for i in tqdm(range(0, test_inputs.shape[0], n_valid_batch)):
+        _test_inputs = test_inputs[i:i + n_valid_batch]
+        _test_labels = test_labels[i:i + n_valid_batch]
         _loss = session.run(
             models['loss'],
             feed_dict={
-                models['train_inputs']: test_inputs[i:i + n_valid_batch],
-                models['train_labels']: test_labels[i:i + n_valid_batch],
+                models['train_inputs']: _test_inputs,
+                models['train_labels']: _test_labels,
                 models['training']: False
             })
         if math.isnan(_loss):
@@ -75,17 +76,33 @@ def _train(args):
         batch_inputs, batch_labels = dataset.generate_batch()
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
-        print(batch_inputs)
-        print(batch_labels)
-        input('')
-        _, loss = session.run(
-            [models['train_op'], models['loss']],
+        # print(batch_inputs)
+        # print(batch_labels)
+        # results = session.run(
+        #     [models['_embed'], models['_embeddings']],
+        #     feed_dict={
+        #         models['train_inputs']: batch_inputs,
+        #         models['train_labels']: batch_labels,
+        #         models['learning_rate']: learning_rate,
+        #         models['training']: True,
+        #     })
+        # print(results[0])
+        # print(results[1][batch_inputs[0][-1]])
+        # input('')
+        # for i in range(9998):
+        #     print(results[1][i][:5])
+        # input('')
+
+        _, _, loss = session.run(
+            [models['_assert_ops'], models['train_op'], models['loss']],
             feed_dict={
                 models['train_inputs']: batch_inputs,
                 models['train_labels']: batch_labels,
                 models['learning_rate']: learning_rate,
                 models['training']: True,
             })
+        # print(loss)
+        # input('')
         sum_loss += loss
 
         if iter_idx % args.valid_iter == 0 and iter_idx > 0:
@@ -136,51 +153,55 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for dataset')
     parser.add_argument(
-        '--batch_size',
-        type=int,
-        default=10000,
-        help='integer for batch number.')
+        '--batch_size', type=int, default=40, help='integer for batch number.')
     parser.add_argument(
-        '--num_steps', type=int, default=35, help='num_stemps to see')
+        '--num_steps', type=int, default=20, help='num_stemps to see')
     parser.add_argument(
         '--vocabulary_size',
         type=int,
         # default=50000,
-        default=10000,
+        default=9998,
         help='vocabulary_size.')
     parser.add_argument(
         '--embedding_size',
         type=int,
-        default=500,
+        default=200,
         help='embedding_size. Dimension of the embedding vector.')
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=500,
+        default=200,
         help='the number of hidden unit')
     parser.add_argument(
         '--n_hidden_layer',
         type=int,
-        default=3,
+        default=1,
         help='The number of hidden layer')
     parser.add_argument(
         '--max_iter', type=int, default=100000000, help='Max iter')
     parser.add_argument(
-        '--drop_rate', type=float, default=0.2, help='drop rate')
+        '--drop_rate', type=float, default=0.0, help='drop rate')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument(
-        '--valid_iter', type=int, default=10, help='iter unit for validation')
+        '--valid_iter',
+        type=int,
+        default=5000,
+        help='iter unit for validation')
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
         default=True,
         help='Whether normalize input.')
     parser.add_argument(
+        '--activation_fn', type=str, default='tanh', help='activation_fn')
+    parser.add_argument(
         '--use_tqdm', type=str2bool, default=False, help='Whether use tqdm')
+    parser.add_argument(
+        '--use_normalization_1', type=str2bool, default=False, help='')
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -204,7 +225,7 @@ def main():
     args = parser.parse_args()
     assert args.dataset == 'ptb'
     if args.dataset == 'ptb':
-        assert args.vocabulary_size == 10000
+        assert args.vocabulary_size == 9998
     _train(args)
 
 

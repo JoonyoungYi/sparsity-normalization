@@ -58,6 +58,8 @@ def _init_weights(args):
 
 
 def init_models(args):
+    _assert_ops = []
+
     train_inputs = tf.placeholder(tf.int32, shape=[None, args.num_steps])
     train_labels = tf.placeholder(tf.int32, shape=[None])
     learning_rate = tf.placeholder(tf.float32)
@@ -65,19 +67,31 @@ def init_models(args):
     train_labels_hot = tf.one_hot(train_labels, depth=args.vocabulary_size)
 
     weights, biases = _init_weights(args)
+    for w_or_b in weights + biases:
+        _assert_ops.append([
+            tf.debugging.assert_all_finite(w_or_b,
+                                           'weight or bias is not finite!')
+        ])
 
     # Look up embeddings for inputs.
     embeddings = tf.Variable(
-        tf.random_uniform([args.vocabulary_size, args.embedding_size], -1.0,
-                          1.0))  # first hidden layer의 weight
+        tf.random_uniform([args.vocabulary_size, args.embedding_size], -0.1,
+                          0.1))  # first hidden layer의 weight
+    _assert_ops.append(
+        tf.debugging.assert_all_finite(embeddings,
+                                       'embeddings is not finite!'))
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
-    embed = tf.where(train_inputs == -1, tf.zeros_like(embed), embed)
 
     input_layer = tf.reshape(embed, [-1, args.embedding_size * args.num_steps])
-    m = tf.where(train_inputs == -1,
-                 tf.zeros_like(train_inputs), tf.ones_like(train_inputs))
-    divider = tf.cast(tf.reduce_sum(m, axis=1, keepdims=True), tf.float32)
+    m = tf.where(
+        tf.greater(train_inputs, -1),
+        tf.ones_like(train_inputs), tf.zeros_like(train_inputs))
+    divider = tf.maximum(
+        tf.cast(tf.reduce_sum(m, axis=1, keepdims=True), tf.float32), 1.0)
     input_layer /= divider
+    _assert_ops.append(
+        tf.debugging.assert_all_finite(input_layer,
+                                       'input_layer is not finite!'))
     output_layer = _forward(input_layer, weights, biases, args, training)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -100,6 +114,9 @@ def init_models(args):
         raise NotImplementedError()
 
     return {
+        '_assert_ops': _assert_ops,
+        '_embed': embed,
+        '_embeddings': embeddings,
         'train_op': train_op,
         'loss': loss,
         'training': training,
