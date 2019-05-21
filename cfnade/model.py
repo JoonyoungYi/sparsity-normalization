@@ -34,6 +34,8 @@ def _forward(x_hot, weights, biases, args, training, x=None):
     assert len(weights) == len(biases)
 
     if args.parameter_sharing:
+        # QUESTION: I think this part is author's mistake.
+        # reverse=False should be added in cumsum function.
         _x_hot = tf.cumsum(x_hot, axis=2, reverse=True)
     else:
         _x_hot = x_hot
@@ -65,11 +67,7 @@ def _forward(x_hot, weights, biases, args, training, x=None):
 
     layer = tf.reshape(layer, tf.shape(x_hot))
     if args.parameter_sharing:
-        # QUESTION: I think this part is author's mistake.
-        # reverse=True should be added in cumsum function.
         layer = tf.cumsum(layer, axis=2)
-        # layer = tf.cumsum(layer, axis=2, reverse=True)
-
     return layer
 
 
@@ -97,14 +95,18 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
             (tf.log(y_prob) - tf.log(y_prob_k1)) * mask_k1, axis=2)
         ordinal_costs = ordinal_costs_1k + ordinal_costs_k1
 
-        costs = tf.reduce_sum(ordinal_costs, axis=1) * D / (D - d + 1e-6)
+        costs = tf.reduce_sum(ordinal_costs, axis=1)
+        if args.averaging_possible_choices:
+            costs *= D / (D - d + 1e-6)
         ordinal_cost = tf.reduce_mean(costs)
         rec_loss = ordinal_cost
     else:
         costs = tf.nn.softmax_cross_entropy_with_logits_v2(
             labels=y_hot, logits=y_hat)
         costs = m * costs
-        costs = tf.reduce_sum(costs, axis=1) * D / (D - d + 1e-6)
+        costs = tf.reduce_sum(costs, axis=1)
+        if args.averaging_possible_choices:
+            costs *= D / (D - d + 1e-6)
         standard_cost = tf.reduce_mean(
             costs)  # paper said this is regular cost.
         rec_loss = standard_cost
