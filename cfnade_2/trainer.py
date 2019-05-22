@@ -215,7 +215,8 @@ def main():
     parser.add_argument(
         '--use_ordinal_cost',
         type=str2bool,
-        default=False,
+        # default=False,
+        default=True,
         help='Whether use ordinal cost')
     parser.add_argument(
         '--use_user_vector',
@@ -235,10 +236,7 @@ def main():
         help='per_process_gpu_memory_fraction')
 
     parser.add_argument(
-        '--lambda_w',
-        type=float,
-        default=0.0,
-        help='lambda for weight decay.')
+        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
@@ -255,3 +253,11 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
+# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
+# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
+
+# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
+# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
+# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
