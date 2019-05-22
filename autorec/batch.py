@@ -19,9 +19,9 @@ def _sparse__get_count(x, n_row):
     return c
 
 
-def _sparse__normalize(x, c):
+def _sparse__normalize(x, c, n_col):
     for i in range(x.shape[0]):
-        x[i][2] /= c[int(x[i][0])]
+        x[i][2] *= (n_col / c[int(x[i][0])])
     return x
 
 
@@ -64,13 +64,21 @@ class Batch:
             self.row_indices = row_indices
 
             if args.normalize_input:
+                # n_mutiplier = n_col
+                if args.K_denominator:
+                    n_mutiplier = args.K_denominator
+                else:
+                    n_mutiplier = n_col
+
                 train_c = np.clip(
                     _sparse__get_count(train_x, n_row), a_min=1, a_max=None)
-                train_x = _sparse__normalize(train_x, train_c)
+                train_x = _sparse__normalize(train_x, train_c, n_mutiplier)
+                # train_x *= n_col
 
                 test_c = np.clip(
                     _sparse__get_count(test_x, n_row), a_min=1, a_max=None)
-                test_x = _sparse__normalize(test_x, test_c)
+                test_x = _sparse__normalize(test_x, test_c, n_mutiplier)
+                # train_x *= n_col
 
             # self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
             self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
@@ -116,11 +124,13 @@ class Batch:
                     np.count_nonzero(train_x, axis=1), a_min=1, a_max=None)
                 train_x /= np.matmul(
                     np.reshape(train_c, [-1, 1]), np.ones((1, n_col)))
+                train_x *= n_col
 
                 test_c = np.clip(
                     np.count_nonzero(test_x, axis=1), a_min=1, a_max=None)
                 test_x /= np.matmul(
                     np.reshape(test_c, [-1, 1]), np.ones((1, n_col)))
+                test_x *= n_col
 
             self.train_x = train_x
             self.train_y = train_y

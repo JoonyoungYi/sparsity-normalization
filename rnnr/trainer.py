@@ -86,15 +86,21 @@ flags.DEFINE_integer("num_gpus", 1,
                      "If larger than 1, Grappler AutoParallel optimizer "
                      "will create multiple training replicas with each GPU "
                      "running one replica.")
-flags.DEFINE_string("rnn_mode", None,
-                    "The low level implementation of lstm cell: one of CUDNN, "
-                    "BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, "
-                    "and lstm_block_cell classes.")
+flags.DEFINE_string(
+    "rnn_mode", None,
+    "The low level implementation of lstm cell: one of CUDNN, "
+    "VANILLA, BASIC, and BLOCK, representing cudnn_lstm, vanilla_rnn, basic_lstm, "
+    "and lstm_block_cell classes. ")
 # flags.DEFINE_bool("normalize_input", False, "Whether normalize input.")
 flags.DEFINE_bool("zero_imputation", False,
                   "Whether using zero imputation rather than <unk>.")
+flags.DEFINE_bool("normalization_1", False,
+                  "각 hidden layer의 state를 time stamp 기준으로 나눔.")
+# flags.DEFINE_bool("normalization_2", False,
+#                   "lstm 자체 연산이 O(x)가 되도록 계속 유지하게 설정.")
 FLAGS = flags.FLAGS
 BASIC = "basic"
+VANILLA = "vanilla"
 CUDNN = "cudnn"
 BLOCK = "block"
 
@@ -168,14 +174,16 @@ class PTBModel(object):
 
         self._lr = tf.Variable(0.0, trainable=False)
         tvars = tf.trainable_variables()
+
         grads, _ = tf.clip_by_global_norm(
             tf.gradients(self._cost, tvars), config.max_grad_norm)
         optimizer = tf.train.GradientDescentOptimizer(self._lr)
-        # grads = tf.gradients(self._cost, tvars)
-        # optimizer = tf.train.AdamOptimizer(self._lr)
         self._train_op = optimizer.apply_gradients(
             zip(grads, tvars),
             global_step=tf.train.get_or_create_global_step())
+
+        # grads = tf.gradients(self._cost, tvars)
+        # optimizer = tf.train.AdamOptimizer(self._lr)
 
         self._new_lr = tf.placeholder(
             tf.float32, shape=[], name="new_learning_rate")
@@ -205,7 +213,12 @@ class PTBModel(object):
                      tf.float32)
         h = tf.zeros([config.num_layers, self.batch_size, config.hidden_size],
                      tf.float32)
-        self._initial_state = (tf.contrib.rnn.LSTMStateTuple(h=h, c=c), )
+
+        if configs.rnn_mode != VANILLA:
+            self._initial_state = (tf.contrib.rnn.LSTMStateTuple(h=h, c=c), )
+        else:
+            self._initial_state = h
+
         outputs, h, c = self._cell(inputs, h, c, self._rnn_params, is_training)
         outputs = tf.transpose(outputs, [1, 0, 2])
         outputs = tf.reshape(outputs, [-1, config.hidden_size])
@@ -213,17 +226,19 @@ class PTBModel(object):
 
     def _get_lstm_cell(self, config, is_training):
         if config.rnn_mode == BASIC:
-            # from .lstm import BasicLSTMCell
-            # return BasicLSTMCell(
-            #     config.hidden_size,
-            #     forget_bias=0.0,
-            #     state_is_tuple=False,
-            #     reuse=not is_training)
+            from .lstm import BasicLSTMCell
+            return BasicLSTMCell(
+                config.hidden_size,
+                forget_bias=0.0,
+                state_is_tuple=True,
+                reuse=not is_training,
+                FLAGS=FLAGS)
             # return tf.nn.rnn_cell.BasicLSTMCell(
             #     config.hidden_size,
             #     forget_bias=0.0,
             #     state_is_tuple=True,
             #     reuse=not is_training)
+        if config.rnn_mode == VANILLA:
             return tf.nn.rnn_cell.BasicRNNCell(
                 num_units=config.hidden_size,
                 activation=tf.nn.tanh,
@@ -269,24 +284,27 @@ class PTBModel(object):
                 if time_step > 0:
                     tf.get_variable_scope().reuse_variables()
 
-                    if False:
-                        s1, s2 = state
-                        s1_c, s1_h = s1
-                        s2_c, s2_h = s2
+                    # if False:
+                    #     s1, s2 = state
+                    #     s1_c, s1_h = s1
+                    #     s2_c, s2_h = s2
+                    #
+                    #     s1 = LSTMStateTuple(s1_c,
+                    #                         s1_h * time_step / (time_step + 1))
+                    #     s2 = LSTMStateTuple(s2_c,
+                    #                         s2_h * time_step / (time_step + 1))
+                    #     state = (s1, s2)
+                    #
+                    #     i = inputs[:, time_step, :] / (time_step + 1)
+                    # else:
+                    #     i = inputs[:, time_step, :]
+                # else:
 
-                        s1 = LSTMStateTuple(s1_c,
-                                            s1_h * time_step / (time_step + 1))
-                        s2 = LSTMStateTuple(s2_c,
-                                            s2_h * time_step / (time_step + 1))
-                        state = (s1, s2)
-
-                        i = inputs[:, time_step, :] / (time_step + 1)
-                    else:
-                        i = inputs[:, time_step, :]
-                else:
-                    i = inputs[:, time_step, :]
+                i = inputs[:, time_step, :]
 
                 (cell_output, state) = cell(i, state)
+                if FLAGS.normalization_1:
+                    cell_output /= (time_step + 1)
                 outputs.append(cell_output)
         output = tf.reshape(tf.concat(outputs, 1), [-1, config.hidden_size])
         return output, state
@@ -377,7 +395,7 @@ class SmallConfig(object):
     num_steps = 20
     hidden_size = 200
     early_stop_epoch = 10
-    max_epoch = 4
+    # max_epoch = 4
     # max_max_epoch = 13
     max_max_epoch = 1000
     keep_prob = 1.0
@@ -454,9 +472,13 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     for step in range(model.input.epoch_size):
         feed_dict = {}
-        for i, (c, h) in enumerate(model.initial_state):
-            feed_dict[c] = state[i].c
-            feed_dict[h] = state[i].h
+        try:
+            for i, (c, h) in enumerate(model.initial_state):
+                feed_dict[c] = state[i].c
+                feed_dict[h] = state[i].h
+        except:
+            for i, (s) in enumerate(model.initial_state):
+                feed_dict[s] = state[i]
 
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
@@ -487,10 +509,11 @@ def get_config():
         config = TestConfig()
     else:
         raise ValueError("Invalid model: %s", FLAGS.model)
+
     if FLAGS.rnn_mode:
         config.rnn_mode = FLAGS.rnn_mode
-    if FLAGS.num_gpus != 1 or tf.__version__ < "1.3.0":
-        config.rnn_mode = BASIC
+    # if FLAGS.num_gpus != 1 or tf.__version__ < "1.3.0":
+    #     config.rnn_mode = BASIC
     return config
 
 
@@ -508,15 +531,14 @@ def main(_):
 
     raw_data = reader.ptb_raw_data(FLAGS.data_path)
     train_data, valid_data, test_data, word_to_id = raw_data
-    unk_id= word_to_id['<unk>']
-    print(sum(1 for t in train_data if t != unk_id))
-    print(sum(1 for t in train_data if t == unk_id))
-    print(sum(1 for t in valid_data if t != unk_id))
-    print(sum(1 for t in valid_data if t == unk_id))
-    print(sum(1 for t in test_data if t != unk_id))
-    print(sum(1 for t in test_data if t == unk_id))
-    input('!!!')
-
+    # unk_id = word_to_id['<unk>']
+    # print(sum(1 for t in train_data if t != unk_id))
+    # print(sum(1 for t in train_data if t == unk_id))
+    # print(sum(1 for t in valid_data if t != unk_id))
+    # print(sum(1 for t in valid_data if t == unk_id))
+    # print(sum(1 for t in test_data if t != unk_id))
+    # print(sum(1 for t in test_data if t == unk_id))
+    # input('!!!')
 
     if FLAGS.zero_imputation:
         unk_id = word_to_id.get('<unk>')

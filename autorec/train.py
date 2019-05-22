@@ -7,7 +7,26 @@ def main():
     """
         main module
 
-        ex. python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---exp=default ---lambdas=100,200,300,400,500 ---seeds=2,3,4,5
+        ex.
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=100,200,300,400,500 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=400,500,600,700,800 ---seeds=2,3,4,5 --filename=item-normal --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=100,200,300,400,500 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=user-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=400,500,600,700,800 ---seeds=2,3,4,5 --filename=item-normal --normalize_input=True
+
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=300,400,500,600,700 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=item-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=200,300,500,600,800,900 ---seeds=1 --filename=item-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=300,400,500,600,700 ---seeds=2,3,4,5 --filename=item-normal --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=500,600,700,800,900 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=user-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=200,300,500,600,800,900 ---seeds=1 --filename=user-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=800,900,1000,2000,3000 ---seeds=2 --filename=user-normal --normalize_input=True
+
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=30,40,50,60,70 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False --epoch_early_stop=1000
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=50,60,70,80,90 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False --epoch_early_stop=1000
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=30,40,50,60,70 --filename=item-default --normalize_input=False --epoch_early_stop=1000 ---seeds=3
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=50,60,70,80,90 --filename=item-default --normalize_input=False --epoch_early_stop=1000 ---seeds=3
     """
     args = []
     exp = None
@@ -17,49 +36,29 @@ def main():
         if arg.startswith('---'):
             m = re.search('---(?P<key>[\w\-\d\W]+)\=(?P<value>.*)$', arg)
             key, value = m.group('key'), m.group('value')
-            if key == 'exp':
-                exp = value
-                assert value in ['default', 'default-2', 'normal-2']
-            elif key == 'lambdas':
+            if key == 'lambdas':
                 lambdas = [float(t) for t in value.split(',')]
             elif key == 'seeds':
                 seeds = [int(t) for t in value.split(',')]
             else:
                 raise NotImplementedError()
         elif arg.startswith('--'):
-            for t in ['normalize_input', 'seed', 'lambda_w1', 'lambda_w2']:
+            for t in ['seed', 'lambda_w']:
                 if arg.startswith('--' + t):
                     raise Exception('Do not pass argument {}'.format(t))
             args.append(arg)
         else:
             raise NotImplementedError()
 
-    assert exp
     assert lambdas
     assert seeds
 
     commands = []
-    if exp == 'default':
+    for seed in seeds:
         for l in lambdas:
-            for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=False --seed={seed} --lambda_w1={l} --lambda_w2={l} ".format(
-                    seed=seed, l=l) + ' '.join(args)
-                commands.append(command)
-    elif exp == 'default-2':
-        for l in lambdas:
-            for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=False --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
-                    seed=seed, l=l) + ' '.join(args)
-                commands.append(command)
-    elif exp == 'normal-2':
-        for l in lambdas:
-            for seed in seeds:
-                command = "python3 -m autorec.trainer --normalize_input=True --seed={seed} --lambda_w1=0.0 --lambda_w2={l} ".format(
-                    seed=seed, l=l) + ' '.join(args)
-                commands.append(command)
-    else:
-        raise NotImplementedError()
-    # os.system(command)
+            command = "python3 -m autorec.trainer --seed={seed} --lambda_w={l} ".format(
+                seed=seed, l=l) + ' '.join(args)
+            commands.append(command)
 
     for command in commands:
         print('\n$', command)
