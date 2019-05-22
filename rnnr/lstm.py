@@ -28,6 +28,7 @@ import collections
 import hashlib
 import numbers
 
+import tensorflow as tf
 from tensorflow.python.eager import context
 from tensorflow.python.framework import constant_op
 from tensorflow.python.framework import dtypes
@@ -659,6 +660,7 @@ class BasicLSTMCell(LayerRNNCell):
                  reuse=None,
                  name=None,
                  dtype=None,
+                 FLAGS=None,
                  **kwargs):
         """Initialize the basic LSTM cell.
 
@@ -700,6 +702,9 @@ class BasicLSTMCell(LayerRNNCell):
 
         # Inputs must be 2-dimensional.
         self.input_spec = base_layer.InputSpec(ndim=2)
+
+        # if FLAGS is not None:
+        #     self._normalization_2 = FLAGS.normalization_2
 
         self._num_units = num_units
         self._forget_bias = forget_bias
@@ -761,11 +766,14 @@ class BasicLSTMCell(LayerRNNCell):
             c, h = array_ops.split(value=state, num_or_size_splits=2, axis=one)
 
         # print(inputs)
-        gate_inputs = math_ops.matmul(
-            array_ops.concat([inputs, h], 1), self._kernel)
+        divide = math_ops.divide
+        new_x = array_ops.concat([inputs, h], 1)
+        # if self._normalization_2:
+        #     new_x_l0 = tf.reshape(tf.cast(
+        #         math_ops.count_nonzero(new_x, axis=1), tf.float32), [-1, 1])
+        #     new_x = divide(new_x, new_x_l0)
+        gate_inputs = math_ops.matmul(new_x, self._kernel)
         gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
-        # print(gate_inputs)
-        # input('')
 
         # i = input_gate, j = new_input, f = forget_gate, o = output_gate
         i, j, f, o = array_ops.split(
@@ -778,7 +786,10 @@ class BasicLSTMCell(LayerRNNCell):
         # performance improvement. So using those at the cost of readability.
         add = math_ops.add
         multiply = math_ops.multiply
-        new_c = add(multiply(c, sigmoid(add(f, forget_bias_tensor))), multiply(sigmoid(i), self._activation(j)))
+
+        new_c = add(
+            multiply(c, sigmoid(add(f, forget_bias_tensor))),
+            multiply(sigmoid(i), self._activation(j)))
         new_h = multiply(self._activation(new_c), sigmoid(o))
 
         if self._state_is_tuple:
