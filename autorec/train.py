@@ -21,9 +21,12 @@ def main():
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=500,600,700,800,900 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=user-normal-explore --normalize_input=True
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=200,300,500,600,800,900 ---seeds=1 --filename=user-normal-explore --normalize_input=True
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=800,900,1000,2000,3000 ---seeds=2 --filename=user-normal --normalize_input=True
 
-        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=30,40,50,60,70 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False --epoch_early_stop=10000
-        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=50,60,70,80,90 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False --epoch_early_stop=10000
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=30,40,50,60,70 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False --epoch_early_stop=1000
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=50,60,70,80,90 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False --epoch_early_stop=1000
+        python3 -m autorec.train --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=30,40,50,60,70 --filename=item-default --normalize_input=False --epoch_early_stop=1000 ---seeds=3
+        python3 -m autorec.train --use_user_vector=True --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 ---lambdas=50,60,70,80,90 --filename=item-default --normalize_input=False --epoch_early_stop=1000 ---seeds=3
     """
     args = []
     exp = None
