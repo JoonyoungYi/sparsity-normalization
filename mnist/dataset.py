@@ -8,11 +8,10 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
-def _normalize_input(x, n_in):
+def _normalize_input(x):
     for i in range(x.shape[0]):
         row = x[i]
         count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-        row *= n_in
         row /= count_nonzero
     return x
 
@@ -102,8 +101,8 @@ class Dataset:
             test_x, test_g = inject_sparsity(test_x, args)
         else:
             if args.normalize_input:
-                train_x = _normalize_input(train_x, n_in)
-                test_x = _normalize_input(test_x, n_in)
+                train_x = _normalize_input(train_x)
+                test_x = _normalize_input(test_x)
             train_g = None
             test_g = None
 
