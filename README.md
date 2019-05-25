@@ -12,13 +12,19 @@
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
+cd .. && cd home/server02/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server03/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=3
 cd .. && cd home/server04/HVS-tensorflow
 cd .. && cd home/server05/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server09/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server12/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server13/HVS-tensorflow
 cd .. && cd home/server14/HVS-tensorflow
+cd .. && cd home/server17/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server20/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server22/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server23/HVS-tensorflow
-cd .. && cd home/joonyoung/ml/HVS-tensorflow
+cd .. && cd home/joonyoung/ml/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 pip3 install -r requirements.txt
 ```
 
