@@ -43,7 +43,7 @@ def _inject_sparsity(x, args):
                 # print(row)
                 # row = np.true_divide(row, )
                 divider = x.shape[1] - m[0].shape[0]
-                assert divider >=1
+                assert divider >= 1
                 # print(row.shape)
                 # print(divider)
                 row /= divider
@@ -115,7 +115,7 @@ def _load_congress():
 
 
 class Dataset:
-    def __init__(self, args, column_multiplier):
+    def __init__(self, args):
         # https://scikit-learn.org/stable/datasets/index.html
         # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
         # https://datascienceschool.net/view-notebook/577a01e24d4f456bb5060da6e47054e1/
@@ -150,8 +150,10 @@ class Dataset:
             x = _normalize_feature(x)
 
         # augment features
-        print(x.shape)
-        x = np.concatenate([x] * column_multiplier, axis=1)
+        print('>> x.shape:', x.shape)
+        if args.n_replication > 1:
+            x = np.concatenate([x] * args.n_replication, axis=1)
+            print('>> x.shape:', x.shape)
 
         # split
         perm = np.random.permutation(x.shape[0])
