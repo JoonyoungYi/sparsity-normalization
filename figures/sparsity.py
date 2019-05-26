@@ -85,6 +85,9 @@ def main():
         color=color,
         bottom=1,
         histtype='stepfilled')
+    axs[0].set_ylabel('# of instances')
+    axs[0].set_xlabel('# of nonzero units')
+
 
     axs[1].set_title("MNIST")
     axs[1].hist(
@@ -95,6 +98,7 @@ def main():
         color=color,
         bottom=1,
         histtype='stepfilled')
+    axs[1].set_xlabel('# of nonzero units')
 
     axs[2].set_title("Fashion MNIST")
     axs[2].hist(
@@ -105,6 +109,7 @@ def main():
         color=color,
         bottom=1,
         histtype='stepfilled')
+    axs[2].set_xlabel('# of nonzero units')
 
     axs[3].set_title("CIFAR")
     axs[3].hist(
@@ -115,6 +120,7 @@ def main():
         color=color,
         bottom=1,
         histtype='stepfilled')
+    axs[3].set_xlabel('# of nonzero units')
 
     fig.savefig('figures/sparsities/histogram.png', format='png')
     fig.savefig('figures/sparsities/histogram.pdf', format='pdf')

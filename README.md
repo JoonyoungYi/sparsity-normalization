@@ -23,7 +23,7 @@ cd .. && cd home/server14/HVS-tensorflow
 cd .. && cd home/server17/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server20/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server22/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server23/HVS-tensorflow
+cd .. && cd home/server23/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/joonyoung/ml/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
 pip3 install -r requirements.txt
 ```
