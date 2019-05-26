@@ -8,7 +8,11 @@ def main():
         main module
 
         ex.
-        python3 -m uci.train ---n_replications=1,2,3,4,5,6,7,8,9,10
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=sparsity-normal
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=default
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=impute-mean
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=concat-neg
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=concat-pos
     """
     args = []
     exp = None
@@ -32,7 +36,6 @@ def main():
         else:
             raise NotImplementedError()
 
-    assert lambdas
     assert seeds
 
     commands = []

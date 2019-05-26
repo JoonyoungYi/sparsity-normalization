@@ -8,6 +8,7 @@ from .model import init_models
 from .dataset import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
+from common.utils import save_results_to_file
 
 
 def _train(args):
@@ -109,8 +110,16 @@ def _train(args):
             break
 
     session.close()
-    return final_test_error, test_activations[-1], test_sparse_activations[
-        -1], test_dense_activations[-1]
+
+    # final_test_error, test_activations[-1], test_sparse_activations[
+    #     -1], test_dense_activations[-1]
+
+    results = []
+    results.append(args.kind)
+    results.append(args.seed)
+    results.append(args.n_replication)
+    results.append(final_test_error)
+    save_results_to_file('uci', args.dataset, results)
 
 
 def main():
