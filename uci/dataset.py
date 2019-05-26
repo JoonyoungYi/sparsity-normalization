@@ -40,11 +40,11 @@ def _inject_sparsity(x, args):
             # assert np.sum(row) > 1e-8
 
             if args.normalize_input:
-                # print(row)
                 # row = np.true_divide(row, )
                 divider = x.shape[1] - m[0].shape[0]
                 assert divider >= 1
                 # print(row.shape)
+                # print(row)
                 # print(divider)
                 row /= divider
                 # print(row)

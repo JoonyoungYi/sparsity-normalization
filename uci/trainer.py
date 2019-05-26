@@ -129,7 +129,7 @@ def main():
         # default='congress',
         choices=[
             'boston', 'diabetes', 'california', 'iris', 'wine', 'cancer',
-            'congress'
+            'congress',
         ],
         help='dataset.')
     parser.add_argument(
