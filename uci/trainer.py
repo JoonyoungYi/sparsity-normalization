@@ -128,7 +128,12 @@ def main():
         # default='cancer',
         # default='congress',
         choices=[
-            'boston', 'diabetes', 'california', 'iris', 'wine', 'cancer',
+            'boston',
+            'diabetes',
+            'california',
+            'iris',
+            'wine',
+            'cancer',
             'congress',
         ],
         help='dataset.')
@@ -176,10 +181,13 @@ def main():
         help='learning rate of optimizer')
 
     parser.add_argument(
-        '--normalize_input',
-        type=str2bool,
-        default=True,
-        # default=False,
+        '--kind',
+        type=str,
+        default='default',
+        choices=[
+            'default', 'sparsity-normal', 'impute-mean', 'concat-pos',
+            'concat-neg'
+        ],
         help='Whether normalize input layer by our method.')
     parser.add_argument(
         '--normalize_feature',
