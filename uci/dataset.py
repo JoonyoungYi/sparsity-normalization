@@ -23,35 +23,52 @@ def _normalize_feature(x):
 
 def _inject_sparsity(x, args):
     g = np.zeros(x.shape[0])  # g means group
-    if args.inject_sparsity:
-        for i in range(x.shape[0]):
-            row = x[i]
+    if not args.inject_sparsity:
+        return x, g
 
-            m = None
-            while m is None or m[0].shape[0] >= x.shape[1]:
-                if random.random() < 0.5:
-                    m = np.where(np.random.random(x.shape[1]) < 0.2)
-                    g[i] = 1
-                else:
-                    m = np.where(np.random.random(x.shape[1]) < 0.8)
-                    g[i] = -1
+    ms = np.ones(x.shape)
+    for i in range(x.shape[0]):
+        row = x[i]
 
-            row[m] = 0
-            # assert np.sum(row) > 1e-8
+        m = None
+        while m is None or m[0].shape[0] >= x.shape[1]:
+            if random.random() < 0.5:
+                m = np.where(np.random.random(x.shape[1]) < 0.2)
+                g[i] = 1
+            else:
+                m = np.where(np.random.random(x.shape[1]) < 0.8)
+                g[i] = -1
 
-            if args.normalize_input:
-                # print(row)
-                # row = np.true_divide(row, )
-                divider = x.shape[1] - m[0].shape[0]
-                assert divider >=1
-                # print(row.shape)
-                # print(divider)
-                row /= divider
-                # print(row)
-                # input('')
-            x[i] = row
+        row[m] = 0
+        ms[i][m] = 0
+        # assert np.sum(row) > 1e-8
 
-    return x, g
+        if args.kind == 'sparsity-normal':
+            divider = x.shape[1] - m[0].shape[0]
+            assert divider >= 1
+            row /= divider
+        x[i] = row
+
+    if args.kind == 'impute-mean':
+        # compute and impute mean
+        for j in range(x.shape[1]):
+            count, total = 0, 0
+            for i in range(x.shape[0]):
+                if ms[i][j] > 0.5:
+                    count += 1
+                    total += x[i][j]
+            avg = total / count
+
+            for i in range(x.shape[0]):
+                if ms[i][j] < 0.5:
+                    x[i][j] = avg
+        return x, g
+    elif args.kind == 'concat-pos':
+        return np.concatenate([x, ms], axis=1), g
+    elif args.kind == 'concat-neg':
+        return np.concatenate([x, 1 - ms], axis=1), g
+    else:
+        return x, g
 
 
 def _split_sparse_and_dense_group(test_x, g):
@@ -115,7 +132,7 @@ def _load_congress():
 
 
 class Dataset:
-    def __init__(self, args, column_multiplier):
+    def __init__(self, args):
         # https://scikit-learn.org/stable/datasets/index.html
         # https://datascienceschool.net/view-notebook/4b948c4d99c94213bf02bcff2ced88eb/
         # https://datascienceschool.net/view-notebook/577a01e24d4f456bb5060da6e47054e1/
@@ -150,8 +167,10 @@ class Dataset:
             x = _normalize_feature(x)
 
         # augment features
-        print(x.shape)
-        x = np.concatenate([x] * column_multiplier, axis=1)
+        print('>> x.shape:', x.shape)
+        if args.n_replication > 1:
+            x = np.concatenate([x] * args.n_replication, axis=1)
+            print('>> x.shape:', x.shape)
 
         # split
         perm = np.random.permutation(x.shape[0])

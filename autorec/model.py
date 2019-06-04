@@ -15,7 +15,6 @@ ACTIVATION_FUNCTION = tf.nn.sigmoid
 def _init_weights(n_col, args):
     weights, biases = [], []
 
-    assert args.n_hidden_layer == 1
     n_units = [n_col] + [args.n_hidden_unit] * args.n_hidden_layer + [n_col]
 
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
@@ -65,11 +64,8 @@ def _get_loss(y, y_hat, weights, args):
         user_error = tf.reduce_sum(error, axis=1)
         rec_loss = tf.reduce_sum(user_error * m_user)
 
-    reg_loss = tf.reduce_sum([
-        tf.reduce_sum(tf.square(w)) * l
-        for l, w in zip([args.lambda_w1, args.lambda_w2], weights)
-    ])
-    return rec_loss + 0.5 * reg_loss
+    reg_loss = tf.reduce_sum([tf.reduce_sum(tf.square(w)) for w in weights])
+    return rec_loss + 0.5 * args.lambda_w * reg_loss
 
 
 def _get_rmse(y, y_hat, args, epsilon=0.0):
