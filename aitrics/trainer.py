@@ -1,5 +1,6 @@
 import argparse
 import random
+import time
 import numpy as np
 from sklearn.metrics import roc_auc_score
 import tensorflow as tf
@@ -9,7 +10,6 @@ from common.utils import str2bool
 from common.utils import save_results_to_file
 from .model import init_model
 from .dataset import init_data
-import time
 
 startTime = time.time()
 
@@ -25,10 +25,6 @@ parser.add_argument(
     type=int,
     default=1)
 parser.add_argument(
-    '--use_modified',
-    type=str2bool,
-    default=False)
-parser.add_argument(
     '--screen_print',
     type=str2bool,
     default=False)
@@ -36,9 +32,11 @@ parser.add_argument(
     '--file_print',
     type=str2bool,
     default=True)
-
 parser.add_argument(
-    '--seed', type=int, default=1)
+    '--seed',
+    type=int,
+    default=1)
+
 parser.add_argument(
     '--model',
     type=str,
@@ -65,10 +63,15 @@ parser.add_argument(
     default=False,
     help='Whether to add layer_norm in lstm model')
 parser.add_argument(
-    '--normalize_input',
+    '--sparsity_normalization',
     type=str2bool,
     default=False,
-    help='Whether normalize input layer.')
+    help='Whether to apply sparsity normalization')
+parser.add_argument(
+    '--K_prime',
+    type=float,
+    default=1.0,
+    help='K_prime in Algorithm 1 of the paper')
 
 parser.add_argument(
     '--epochs',
@@ -131,15 +134,14 @@ model.fit(X_train, y_train,
           callbacks=[early_stopping_callback]) # early stopping callback
 
 # model evaluation
-model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
 scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 
 if args.screen_print:
     print("\nResult of {}".format(disease))
     print("Best AUC: {}\n".format(scores[2]))
 
-endTime = time.time() - startTime
-endTime = int(endTime/60)
+elapsedTime = time.time() - startTime
+elapsedTime = int(endTime/60)
 
 if args.file_print:
     # save results to file
@@ -147,10 +149,10 @@ if args.file_print:
     results.append(args.dropout)
     results.append(args.batch_norm_mlp)
     results.append(args.layer_norm_lstm)
-    results.append(args.normalize_input)
+    results.append(args.sparsity_normalization)
     results.append(disease)
     results.append(args.seed)
     results.append(scores[2])
     results.append(args.epochs_early_stop)
-    results.append(endTime)
+    results.append(elapsedTime)
     save_results_to_file('aitrics', args.model, results)

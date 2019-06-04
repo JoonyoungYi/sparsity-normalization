@@ -4,6 +4,7 @@ from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, BatchNorm
 from .LayerNormLSTM import LSTM
 
 class LayerNormalization(Layer):
+    """Layer normalization for mlp model"""
     def __init__(self, **kwargs):
         super(LayerNormalization, self).__init__(**kwargs)
 
@@ -28,13 +29,22 @@ class LayerNormalization(Layer):
         return input_shape
 
 def init_model(args):
-    # whether to use modified dataset
-    if args.use_modified:
-        sequence_length = 5
-    else:
-        sequence_length = 4
+    """
+    Input:
+    args.model
+    args.batch_norm_mlp
+    args.layer_norm_mlp
+    args.layer_norm_lstm
+    args.dropout
+    args.epochs_early_stop
 
-    # construct model
+    Output:
+    model
+    early_stopping_callback
+    """
+    sequence_length = 4
+
+    # construct mlp model
     if args.model == 'mlp':
         model = Sequential()
 
@@ -64,15 +74,7 @@ def init_model(args):
 
         model.add(Dense(1, activation='sigmoid'))
 
-        # early stopping callback
-        early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_auc',
-                                                min_delta=0.0001,
-                                                patience=args.epochs_early_stop,
-                                                verbose=1,
-                                                mode='max',
-                                                baseline=None,
-                                                restore_best_weights=True)
-
+    # construct lstm model
     elif args.model == 'lstm':
         model = Sequential()
 
@@ -95,14 +97,14 @@ def init_model(args):
 
         model.add(Dense(1, activation='sigmoid'))
 
-        # early stopping callback
-        early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_auc',
-                                                min_delta=0.0001,
-                                                patience=args.epochs_early_stop,
-                                                verbose=1,
-                                                mode='max',
-                                                baseline=None,
-                                                restore_best_weights=True)
+    # early stopping callback
+    early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_auc',
+                                            min_delta=0.0001,
+                                            patience=args.epochs_early_stop,
+                                            verbose=1,
+                                            mode='max',
+                                            baseline=None,
+                                            restore_best_weights=True)
 
     model.summary()
 

@@ -2,31 +2,27 @@ import pickle
 import numpy as np
 from sklearn.utils import class_weight
 
-'''Requirements of init_data
-args.data_path
-args.choose_dataset
-args.use_modified
-args.model
-args.normalize_input
-'''
-
-'''Output of init_data
-X_train, y_train, X_test, y_test, class_weights, disease
-'''
-
 def init_data(args):
+    """
+    Requirements:
+    proper datasets in the args.data_path
 
+    Input:
+    args.data_path
+    args.choose_dataset
+    args.sparsity_normalization
+    args.K_prime
+    args.model
+
+    Output:
+    X_train, y_train, X_test, y_test, class_weights, disease
+    """
     # get dataset name
     diseases = ['cardiovascular1', 'fattyliver3', 'hypertension4', 'heartfailure1', 'diabetes4']
     disease = diseases[args.choose_dataset - 1]
 
-    # whether to use modified dataset
-    if args.use_modified:
-        file_name = "/datasets_modified.pkl"
-        sequence_length = 5
-    else:
-        file_name = "/datasets.pkl"
-        sequence_length = 4
+    file_name = "/datasets.pkl"
+    sequence_length = 4
 
     # load dataset
     data_file = args.data_path + '/' + disease + file_name
@@ -38,12 +34,13 @@ def init_data(args):
 
     # [0,1] normalization
     max_feature = np.amax(X_train, 0)
-    max_feature = max_feature + (max_feature < 1e-5) # zero to one
+    max_feature = np.maximum(max_feature, 1)
     X_train /= max_feature
 
-    if args.normalize_input:
+    if args.sparsity_normalization:
         train_num_records = data["train_num_records"]*34
         L0_norm = np.expand_dims(train_num_records, 1)
+        X_train *= args.K_prime
         X_train /= L0_norm
 
     if args.model == 'lstm':
@@ -59,9 +56,10 @@ def init_data(args):
     # [0,1] normalization by using max_feature of training data
     X_test /= max_feature
 
-    if args.normalize_input:
+    if args.sparsity_normalization:
         valid_num_records = data["valid_num_records"]*34
         L0_norm = np.expand_dims(valid_num_records, 1)
+        X_test *= args.K_prime
         X_test /= L0_norm
 
     if args.model == 'lstm':
