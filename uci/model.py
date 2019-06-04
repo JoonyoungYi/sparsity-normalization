@@ -22,17 +22,6 @@ def _forward(x, weights, biases, training, args):
             layers.append(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
-
-            # if args.normalize:
-            #     divider = tf.maximum(
-            #         tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
-            #         1)
-            #     divider = tf.matmul(
-            #         tf.expand_dims(divider, axis=1),
-            #         tf.ones([1, layer.shape[1]]))
-            #     if args.drop_rate and args.drop_rate > 1e-8:
-            #         divider /= tf.where(training, args.drop_rate, 1.0)
-            #     layer /= divider
         else:
             layers.append(layer)
 
@@ -85,8 +74,9 @@ def init_models(args, n_feature, n_class=None):
         loss = tf.reduce_sum(_costs)
         error = 1.0 - _get_accuracy(_y_hot, y_hat)
     else:
-        loss = tf.reduce_sum(tf.square(y - tf.reshape(y_hat, [-1])))
-        error = _get_rmse(y, y_hat)
+        _y_hat= tf.reshape(y_hat, [-1])
+        loss = tf.reduce_sum(tf.square(y - _y_hat))
+        error = _get_rmse(y, _y_hat)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss, var_list=weights + biases)
