@@ -16,54 +16,85 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 import os
 import argparse
-from common.utils import str2bool
+from common.utils import str2bool, integer_list
 
 from .vgg import *
 from .utils import progress_bar
 
 parser = argparse.ArgumentParser(description='VGG16')
-parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
-parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--seed', default=1, type=int)
-parser.add_argument('--model', type=str)
-parser.add_argument('--dropout', type=str2bool, default=False)
-parser.add_argument('--epochs', default=3000, type=int)
+parser.add_argument('--lr',
+                    default=1e-3,
+                    type=float,
+                    help='learning rate')
+parser.add_argument('--resume', '-r',
+                    action='store_true',
+                    help='resume from checkpoint')
+parser.add_argument('--seed',
+                    default=1,
+                    type=int)
+parser.add_argument('--model',
+                    type=str,
+                    help='model name for checkpoint')
+parser.add_argument('--sparsity_normalization',
+                    default=False,
+                    type=str2bool,
+                    help='whether to apply sparsity normalization')
+parser.add_argument('--normalize_layer_indexes',
+                    default=[],
+                    type=integer_list,
+                    help='list of layers to which normalization is applied')
+parser.add_argument('--batch_norm',
+                    default=False,
+                    type=str2bool)
+parser.add_argument('--dropout',
+                    default=False,
+                    type=str2bool)
+parser.add_argument('--fan_in_K_prime',
+                    default=False,
+                    type=str2bool,
+                    help='Set K_prime to fan_in (See Algorithm 1 in the paper)')
+parser.add_argument('--epochs',
+                    default=3000,
+                    type=int)
 args = parser.parse_args()
 
+forbidden_layer_index = [0, 3, 6, 10, 14]
+for layer_index in args.normalize_layer_indexes:
+    assert layer_index in forbidden_layer_index
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-best_acc = 0  # best test accuracy
+best_acc = 0  # start from 0 or last best validation accuracy
 best_epoch = 0
 evaluated_acc = 0
 test_best_acc = 0
 test_best_epoch = 0
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
+# Setting seed for reproducing
 random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-# Data
+# Data preparation
 print('==> Preparing data..')
 transform_train = transforms.Compose([
-    #transforms.RandomCrop(32, padding=4),
-    #transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
 trainset = torchvision.datasets.CIFAR10(root='vgg16/data', train=True, download=True, transform=transform_train)
+# Load trainloader
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
 
 validset = torchvision.datasets.CIFAR10(root='vgg16/data', train=False, download=True, transform=transform_test)
 testset = torchvision.datasets.CIFAR10(root='vgg16/data', train=False, download=True, transform=transform_test)
 
+# Split validation set from test set
 num_test = len(testset)
 indices = list(range(num_test))
 split = int(np.floor(0.5 * num_test))
@@ -74,6 +105,7 @@ test_idx, valid_idx = indices[split:], indices[:split]
 test_sampler = SubsetRandomSampler(test_idx)
 valid_sampler = SubsetRandomSampler(valid_idx)
 
+# Load testloader and validloader
 testloader = torch.utils.data.DataLoader(
     testset, batch_size=100, sampler=test_sampler,
     num_workers=2,
@@ -85,9 +117,9 @@ validloader = torch.utils.data.DataLoader(
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-# Model
+# Model construction
 print('==> Building model..')
-net = VGG(args.model, args.dropout)
+net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, args.batch_norm, args.dropout, args.fan_in_K_prime)
 net = net.to(device)
 print(net)
 
@@ -105,7 +137,6 @@ if args.resume:
     start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-#optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
 # Training
@@ -131,13 +162,17 @@ def train(epoch):
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
+# Validation
 def valid(epoch):
+    # define as global to use again
     global best_acc
     global best_epoch
     global evaluated_acc
     global test_best_acc
     global test_best_epoch
     net.eval()
+
+    # calculate validation accuracy
     valid_loss = 0
     correct = 0
     total = 0
@@ -155,6 +190,9 @@ def valid(epoch):
             progress_bar(batch_idx, len(validloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (valid_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
+    acc = 100.*correct/total
+
+    # calculate test accuracy 
     test_loss = 0
     test_correct = 0
     test_total = 0
@@ -175,7 +213,6 @@ def valid(epoch):
     test_acc = 100.*test_correct/test_total
 
     # Save checkpoint.
-    acc = 100.*correct/total
     if acc > best_acc:
         print('Saving..')
         state = {
@@ -188,8 +225,10 @@ def valid(epoch):
         torch.save(state, 'vgg16/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
         best_acc = acc
         best_epoch = epoch
+        # Tracking test accuracy of the best model
         evaluated_acc = test_acc
 
+    # Tracking best test accuracy
     if test_acc > test_best_acc:
         test_best_acc = test_acc
         test_best_epoch = epoch
