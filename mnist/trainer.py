@@ -154,7 +154,7 @@ def train(args, seed):
     results.append(args.n_hidden_layer)
     results.append(args.inject_sparsity)
     results.append(args.grey_scale)
-    results.append(args.normalize_input)
+    results.append(args.sparsity_normalization)
     results.append(args.normalize_layer_indexes)
     results.append(args.L0_option)
     results.append(args.ignore_bias_layer_indexes)
@@ -229,11 +229,16 @@ def main():
         help='Whether inject sparsity.')
 
     parser.add_argument(
-        '--normalize_input',
+        '--sparsity_normalization',
         type=str2bool,
         # default=True,
         default=False,
-        help='Whether normalize input layers')
+        help='Whether to apply sparsity normalization')
+    parser.add_argument(
+        'K_prime',
+        type=float,
+        default=1,
+        help='K prime in the paper')
     parser.add_argument(
         '--normalize_layer_indexes',
         type=integer_list,
@@ -245,7 +250,7 @@ def main():
         '--L0_option',
         type=str,
         default='vanilla',
-        choices=['vanilla', 'prob1', 'prob2', 'tanh', 'sigmoid'])
+        choices=['vanilla', 'sigmoid'])
     parser.add_argument(
         '--ignore_bias_layer_indexes',
         type=integer_list,
