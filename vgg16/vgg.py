@@ -10,7 +10,7 @@ cfg = {
 
 class Conv2d_sparsity_normal(nn.Module):
     """Convolutional layer for sparsity normalization. (See Algorithm 2 in the paper)"""
-    def __init__(self, in_channels, out_channels, kernel_size, padding=0, fan_in_K_prime):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, fan_in_K_prime):
         super(Conv2d_sparsity_normal, self).__init__()
 
         self.in_channels = in_channels
@@ -62,7 +62,7 @@ class Conv2d_sparsity_normal(nn.Module):
 
 class Conv2d_hidden_normal(nn.Module):
     """Convolutional layer for hidden layer normalization."""
-    def __init__(self, in_channels, out_channels, kernel_size, padding=0, fan_in_K_prime):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, fan_in_K_prime):
         super(Conv2d_hidden_normal, self).__init__()
 
         self.in_channels = in_channels
@@ -148,18 +148,19 @@ class VGG(nn.Module):
 
                 if layer_idx in self.normalize_layer_indexes:
                     layers.pop() # There is a relu activation inside the Conv2d_hidden_normal
-                    layers += [Conv2d_hidden_normal(in_channels, out_channels, kernel_size=3, padding=1, self.fan_in_K_prime)]
+                    layers += [Conv2d_hidden_normal(in_channels, out_channels, kernel_size=3, padding=1, fan_in_K_prime=self.fan_in_K_prime)]
                 elif layer_idx == 0 and self.sparsity_normalization:
-                    layers += [Conv2d_sparsity_normal(in_channels, out_channels, kernel_size=3, padding=1, self.fan_in_K_prime)]
+                    layers += [Conv2d_sparsity_normal(in_channels, out_channels, kernel_size=3, padding=1, fan_in_K_prime=self.fan_in_K_prime)]
                 else:
                     layers += [nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)]
 
-                if batch_norm:
+                if self.batch_norm:
                     layers += [nn.BatchNorm2d(out_channels)]
 
                 layers += [nn.ReLU(inplace=True)]
-                layer_idx += 1
                            
                 in_channels = out_channels
+            layer_idx += 1
+
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)
