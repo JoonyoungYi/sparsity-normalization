@@ -60,7 +60,7 @@ args = parser.parse_args()
 
 forbidden_layer_index = [0, 3, 6, 10, 14]
 for layer_index in args.normalize_layer_indexes:
-    assert layer_index in forbidden_layer_index
+    assert layer_index not in forbidden_layer_index
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # start from 0 or last best validation accuracy
