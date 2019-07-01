@@ -26,7 +26,7 @@ raw_activations = np.load('results/mnist/{}.npy'.format(file_name))
 
 count_nonzero = np.count_nonzero(raw_activations > 1e-15, 2)
 
-fig, axs = plt.subplots(1, 2, sharey=True, tight_layout=True)
+fig, axs = plt.subplots(1, 2, tight_layout=True)
 
 axs[0].set_title("First Hidden Layer")
 axs[0].hist(count_nonzero[0], bins=len(np.unique(count_nonzero[0])))

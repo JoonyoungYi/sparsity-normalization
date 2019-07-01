@@ -15,6 +15,7 @@ def _forward(x, weights, biases, training, args):
 
     layer = x
     layers = []
+
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
         
@@ -24,22 +25,7 @@ def _forward(x, weights, biases, training, args):
         if i < len(biases) - 1:
 
             if (i + 1) in args.normalize_layer_indexes:
-                if args.L0_option == 'prob2':
-                    prob_L0 = tf.exp(layer)
-                    max_prob_L0 = tf.keras.backend.max(prob_L0, axis=1, keepdims=True)
-                    prob_L0 /= max_prob_L0
-                    divider = tf.keras.backend.sum(prob_L0, axis=1)
-                elif args.L0_option == 'prob1':
-                    max_layer = tf.maximum(
-                        tf.keras.backend.max(tf.abs(layer), axis=1),
-                        1)
-                    max_layer = tf.expand_dims(max_layer, axis=1)
-                    divider = layer / max_layer
-                    divider = (divider + 1)/2
-                    divider = tf.maximum(
-                        tf.keras.backend.sum(divider, axis=1),
-                        1)
-                elif args.L0_option == 'sigmoid':
+                if args.L0_option == 'sigmoid':
                     sigmoid_L0 = tf.sigmoid(layer)
                     divider = tf.keras.backend.sum(sigmoid_L0, axis=1)
 
@@ -57,11 +43,6 @@ def _forward(x, weights, biases, training, args):
                         tf.cast(tf.math.count_nonzero(layer, axis=1), tf.float32),
                         1)
                     divider = tf.stop_gradient(divider)  # make this as constant.
-                elif args.L0_option == 'tanh':
-                    tanh_L0 = tf.abs(layer)
-                    tanh_L0 = tf.tanh(tanh_L0)
-                    tanh_L0 = tf.keras.backend.sum(tanh_L0, axis=1)
-                    divider = tf.maximum(tanh_L0, 1)
 
                 divider = tf.matmul(
                     tf.expand_dims(divider, axis=1),
@@ -69,6 +50,7 @@ def _forward(x, weights, biases, training, args):
 
                 if args.drop_rate and args.drop_rate > 1e-8:
                     divider /= tf.where(training, args.drop_rate, 1.0)
+                layer *= args.K_prime
                 layer /= divider
         else:
             layers.append(layer)
@@ -80,7 +62,7 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if i == 0 and args.normalize_input or i in args.normalize_layer_indexes:
+        if i == 0 and args.sparsity_normalization or i in args.normalize_layer_indexes:
             limit = math.sqrt(6 / 1)
         else:
             limit = math.sqrt(6 / n_in)

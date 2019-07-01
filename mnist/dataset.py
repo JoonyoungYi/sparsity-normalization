@@ -8,10 +8,11 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
-def _normalize_input(x):
+def _sparsity_normalization(x, K_prime):
     for i in range(x.shape[0]):
         row = x[i]
         count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+        row *= K_prime
         row /= count_nonzero
     return x
 
@@ -32,9 +33,10 @@ def inject_sparsity(x, args):
                     g[i] = -1
 
             row[m] = 0
-            if args.normalize_input:
+            if args.sparsity_normalization:
                 divider = x.shape[1] - m[0].shape[0]
                 assert divider >= 1
+                row *= args.K_prime
                 row /= divider
             x[i] = row
     return x, g
@@ -100,9 +102,9 @@ class Dataset:
             train_x, train_g = inject_sparsity(train_x, args)
             test_x, test_g = inject_sparsity(test_x, args)
         else:
-            if args.normalize_input:
-                train_x = _normalize_input(train_x)
-                test_x = _normalize_input(test_x)
+            if args.sparsity_normalization:
+                train_x = _sparsity_normalization(train_x, args.K_prime)
+                test_x = _sparsity_normalization(test_x, args.K_prime)
             train_g = None
             test_g = None
 
