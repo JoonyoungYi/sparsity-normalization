@@ -147,7 +147,7 @@ def train(args, seed):
             break
 
     endTime = time.time() - startTime
-    endTime = int(endTime/60)
+    endTime = int(endTime / 60)
 
     results = []
     results.append(args.seed)
@@ -232,12 +232,9 @@ def main():
         type=str2bool,
         # default=True,
         default=False,
-        help='Whether to apply sparsity normalization')
+        help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        'K_prime',
-        type=float,
-        default=1,
-        help='K prime in the paper')
+        '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
         '--normalize_layer_indexes',
         type=integer_list,
