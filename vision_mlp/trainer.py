@@ -157,7 +157,6 @@ def train(args, seed):
     results.append(args.sparsity_normalization)
     results.append(args.normalize_layer_indexes)
     results.append(args.L0_option)
-    results.append(args.ignore_bias_layer_indexes)
     results.append(args.n_hidden_unit)
     results.append(test_sparse_acc)
     results.append(final_test_acc)
@@ -252,16 +251,6 @@ def main():
         default='vanilla',
         choices=['vanilla', 'sigmoid'])
     parser.add_argument(
-        '--ignore_bias_layer_indexes',
-        type=integer_list,
-        default=[],
-        help='bias를 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
-    parser.add_argument(
-        '--ignore_activation_layer_indexes',
-        type=integer_list,
-        default=[],
-        help='activation을 무시할 hidden layer index들의 리스트. 쉼표로 구분합니다. ')
-    parser.add_argument(
         '--plot_raw_activations',
         type=str2bool,
         default=False,
@@ -275,9 +264,6 @@ def main():
     args = parser.parse_args()
 
     for layer_index in args.normalize_layer_indexes:
-        assert layer_index <= args.n_hidden_layer
-        assert layer_index > 0
-    for layer_index in args.ignore_bias_layer_indexes:
         assert layer_index <= args.n_hidden_layer
         assert layer_index > 0
     if not (args.dataset == 'cifar10' or
