@@ -40,17 +40,17 @@ def train(args, seed):
     max_test_acc = 0.0
     max_test_iter_idx = 0
 
-    if args.plot_raw_activations:
-        raw_activations = session.run(
-            [models['raw_activations']],
+    if args.plot_activations:
+        activations = session.run(
+            models['layers'],
             feed_dict={
                 models['x']: total_x,
                 models['y']: total_y,
-                models['training']: True,
+                models['training']: False,
             })
-        raw_activations = np.array(raw_activations[0][:2])
-        np.save('.results/mnist/{}_raw_activations_before_training'.format(
-            args.dataset), raw_activations)
+        activations = np.array(activations[:args.n_hidden_layer])
+        np.save('.results/mnist/{}_activations_before_training'.format(
+            args.dataset), activations)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -88,39 +88,22 @@ def train(args, seed):
             max_valid_iter_idx = iter_idx
             final_test_acc = test_acc
 
-            test_activations = session.run(
-                models['activations'],
-                feed_dict={
-                    models['x']: test_x,
-                    models['training']: False,
-                })
-            test_variances = session.run(
-                models['variances'],
-                feed_dict={
-                    models['x']: test_x,
-                    models['training']: False,
-                })
-
-        print(test_activations)
-        print('{}'.format(final_test_acc))
-
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
-            if args.plot_raw_activations:
-                raw_activations = session.run(
-                    [models['raw_activations']],
+            if args.plot_activations:
+                activations = session.run(
+                    models['layers'],
                     feed_dict={
                         models['x']: total_x,
                         models['y']: total_y,
-                        models['training']: True,
+                        models['training']: False,
                     })
-                raw_activations = np.array(raw_activations[0][:2])
-                np.save(
-                    '.results/mnist/{}_raw_activations_after_training'.format(
-                        args.dataset), raw_activations)
+                activations = np.array(activations[:args.n_hidden_layer])
+                np.save('.results/mnist/{}_activations_after_training'.format(
+                    args.dataset), activations)
             break
 
     endTime = time.time() - startTime
@@ -129,14 +112,12 @@ def train(args, seed):
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
-    results.append(args.inject_sparsity)
     results.append(args.grey_scale)
     results.append(args.sparsity_normalization)
     results.append(args.normalize_layer_indexes)
     results.append(args.L0_option)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
-    results.append(test_activations[-1])
     results.append(endTime)
     save_results_to_file('mnist', args.dataset, results)
 
@@ -210,7 +191,7 @@ def main():
         default='vanilla',
         choices=['vanilla', 'sigmoid'])
     parser.add_argument(
-        '--plot_raw_activations',
+        '--plot_activations',
         type=str2bool,
         default=False,
         help='Whether plot raw activations')
