@@ -1,6 +1,6 @@
-# HVS-tensorflow
+# SN-tensorflow
 
-* Handling Variable Sparsity for Deep Networks에 관한 연구 실험.
+* Sparsity Normalization에 관한 연구 실험.
 
 ## Environment
 
@@ -12,19 +12,19 @@
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
-cd .. && cd home/server02/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server03/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=3
-cd .. && cd home/server04/HVS-tensorflow
-cd .. && cd home/server05/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server09/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server12/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server13/HVS-tensorflow
-cd .. && cd home/server14/HVS-tensorflow
-cd .. && cd home/server17/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server20/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server22/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server23/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/joonyoung/ml/HVS-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server02/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server03/SN-tensorflow && export CUDA_VISIBLE_DEVICES=3
+cd .. && cd home/server04/SN-tensorflow
+cd .. && cd home/server05/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server09/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server12/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server13/SN-tensorflow
+cd .. && cd home/server14/SN-tensorflow
+cd .. && cd home/server17/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server20/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server22/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server23/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/joonyoung/ml/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 pip3 install -r requirements.txt
 ```
 
@@ -45,9 +45,10 @@ python3 -m cfnade.trainer
 python3 -m uci.trainer
 ```
 
-* MNIST 데이터셋 실험. 자세한 하이퍼파라미터는 mnist/trainer.py 파일 참조.
+* Vision 데이터셋(MNIST, Fashion MNIST, CIFAR-10, CIFAR-100) MLP 실험.
+  * 자세한 하이퍼파라미터는 vision/trainer.py 파일 참조.
 ```
-python3 -m mnist.trainer
+python3 -m vision.trainer
 ```
 
 * AITRICS 데이터셋 실험. 자세한 하이퍼파라미터는 aitrics/trainer.py 파일 참조.
