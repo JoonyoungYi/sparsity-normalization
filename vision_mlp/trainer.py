@@ -30,8 +30,8 @@ def train(args, seed):
     total_x = dataset.total_x
     total_y = dataset.total_y
 
-    gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args, dataset.n_in, dataset.n_out)
@@ -183,11 +183,6 @@ def main():
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
-    parser.add_argument(
-        '--gpu_memory_fraction',
-        type=float,
-        default=0.3,
-        help='per_process_gpu_memory_fraction')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
