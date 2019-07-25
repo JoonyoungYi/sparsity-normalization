@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 
-from movielens.dataset import Dataset
+from common.dataset.movielens import Dataset
 from .configs import *
 from .model import init_models
 from .batch import Batch
