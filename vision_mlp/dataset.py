@@ -103,7 +103,7 @@ class Dataset:
         self.test_y = test_y
 
         # merge train, valid, test to plot activation histogram
-        if args.plot_raw_activations:  # for safety.
+        if args.plot_activations:  # for safety.
             self.total_x = np.concatenate((train_x, valid_x, test_x))
             self.total_y = np.concatenate((train_y, valid_y, test_y))
         else:

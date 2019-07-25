@@ -59,7 +59,8 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if i == 0 and args.sparsity_normalization or i in args.normalize_layer_indexes:
+        if (i == 0 and args.sparsity_normalization
+            ) or i in args.normalize_layer_indexes:
             limit = math.sqrt(6 / 1)
         else:
             limit = math.sqrt(6 / n_in)
@@ -87,10 +88,6 @@ def init_models(args, n_in, n_out):
 
     layers = _forward(x, weights, biases, training, args)
     y_hat = layers[-1]
-    activations = [tf.reduce_mean(layer) for layer in layers]
-    variances = [tf.nn.moments(layer, [0, 1])[1] for layer in layers]
-
-    raw_activations = layers
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -106,8 +103,6 @@ def init_models(args, n_in, n_out):
         'training': training,
         'loss': loss,
         'accuracy': accuracy,
-        'activations': activations,
-        'variances': variances,
-        'raw_activations': raw_activations,
+        'layers': layers,
         'train_op': train_op,
     }
