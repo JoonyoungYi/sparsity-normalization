@@ -112,7 +112,6 @@ def train(args, seed):
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
-    results.append(args.grey_scale)
     results.append(args.sparsity_normalization)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
@@ -181,18 +180,8 @@ def main():
         type=str2bool,
         default=False,
         help='Whether plot raw activations')
-    parser.add_argument(
-        '--grey_scale',
-        type=str2bool,
-        default=False,
-        help='Whether use grey scaling in cifar dataset.')
 
     args = parser.parse_args()
-    if not (args.dataset == 'cifar10' or
-            args.dataset == 'cifar100') and args.grey_scale:
-        print('grey_scale only can be applied to cifar dataset!')
-        assert not args.grey_scale or args.dataset == 'cifar10' or args.dataset == 'cifar100'
-
     train(args, args.seed)
 
 
