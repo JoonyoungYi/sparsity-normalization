@@ -9,8 +9,12 @@ from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
 
+import time
+
 
 def train(args, seed):
+    startTime = time.time()
+
     set_seed(seed)
     dataset = Dataset(args)
     train_x = dataset.train_x
@@ -142,13 +146,17 @@ def train(args, seed):
                         args.dataset), raw_activations)
             break
 
+    endTime = time.time() - startTime
+    endTime = int(endTime/60)
+
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
     results.append(args.inject_sparsity)
     results.append(args.grey_scale)
-    results.append(args.normalize_input)
+    results.append(args.sparsity_normalization)
     results.append(args.normalize_layer_indexes)
+    results.append(args.L0_option)
     results.append(args.ignore_bias_layer_indexes)
     results.append(args.n_hidden_unit)
     results.append(test_sparse_acc)
@@ -157,6 +165,7 @@ def train(args, seed):
     results.append(test_sparse_activations[-1])
     results.append(test_activations[-1])
     results.append(test_dense_activations[-1])
+    results.append(endTime)
     save_results_to_file('mnist', args.dataset, results)
 
 
@@ -220,11 +229,16 @@ def main():
         help='Whether inject sparsity.')
 
     parser.add_argument(
-        '--normalize_input',
+        '--sparsity_normalization',
         type=str2bool,
         # default=True,
         default=False,
-        help='Whether normalize input layers')
+        help='Whether to apply sparsity normalization')
+    parser.add_argument(
+        'K_prime',
+        type=float,
+        default=1,
+        help='K prime in the paper')
     parser.add_argument(
         '--normalize_layer_indexes',
         type=integer_list,
@@ -232,6 +246,11 @@ def main():
         help=
         'normalize를 할 hidden layer index들의 리스트. 쉼표로 구분. 1,2,3 인 경우 1,2,3번 hidden layer를 normalize. 1 인 경우 1번째 hidden layer를 normalize.'
     )
+    parser.add_argument(
+        '--L0_option',
+        type=str,
+        default='vanilla',
+        choices=['vanilla', 'sigmoid'])
     parser.add_argument(
         '--ignore_bias_layer_indexes',
         type=integer_list,
