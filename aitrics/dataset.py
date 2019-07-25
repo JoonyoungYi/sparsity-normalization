@@ -1,0 +1,77 @@
+import pickle
+import numpy as np
+from sklearn.utils import class_weight
+
+def init_data(args):
+    """
+    Requirements:
+    proper datasets in the args.data_path
+
+    Input:
+    args.data_path
+    args.choose_dataset
+    args.sparsity_normalization
+    args.K_prime
+    args.model
+
+    Output:
+    X_train, y_train, X_test, y_test, class_weights, disease
+    """
+    # get dataset name
+    diseases = ['cardiovascular1', 'fattyliver3', 'hypertension4', 'heartfailure1', 'diabetes4']
+    disease = diseases[args.choose_dataset - 1]
+
+    file_name = "/datasets.pkl"
+    sequence_length = 4
+
+    # load dataset
+    data_file = args.data_path + '/' + disease + file_name
+    data = pickle.load(open(data_file, "rb"))
+
+    # training data setting
+    X_train = data["train_inputs"]
+    X_train = X_train.reshape((-1, sequence_length*34))
+
+    # [0,1] normalization
+    max_feature = np.amax(X_train, 0)
+    max_feature = np.maximum(max_feature, 1)
+    X_train /= max_feature
+
+    if args.sparsity_normalization:
+        train_num_records = data["train_num_records"]*34
+        L0_norm = np.expand_dims(train_num_records, 1)
+        X_train *= args.K_prime
+        X_train /= L0_norm
+
+    if args.model == 'lstm':
+        X_train = np.reshape(X_train, (-1, sequence_length, 34))
+
+    y_train = data["train_labels"]
+    y_train = np.ravel(y_train)
+
+    # validation data setting
+    X_test = data["valid_inputs"]
+    X_test = X_test.reshape((-1 ,sequence_length*34))
+
+    # [0,1] normalization by using max_feature of training data
+    X_test /= max_feature
+
+    if args.sparsity_normalization:
+        valid_num_records = data["valid_num_records"]*34
+        L0_norm = np.expand_dims(valid_num_records, 1)
+        X_test *= args.K_prime
+        X_test /= L0_norm
+
+    if args.model == 'lstm':
+        X_test = np.reshape(X_test, (-1, sequence_length, 34))
+
+    y_test = data["valid_labels"]
+    y_test = np.ravel(y_test)
+
+    # compute class weights for handling imbalance
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                      np.unique(y_train),
+                                                      y_train)
+    class_weights = dict(zip([0, 1], class_weights))
+
+    return X_train, y_train, X_test, y_test, class_weights, disease
