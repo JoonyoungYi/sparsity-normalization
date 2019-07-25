@@ -46,9 +46,9 @@ python3 -m uci.trainer
 ```
 
 * Vision 데이터셋(MNIST, Fashion MNIST, CIFAR-10, CIFAR-100) MLP 실험.
-  * 자세한 하이퍼파라미터는 vision/trainer.py 파일 참조.
+  * 자세한 하이퍼파라미터는 vision_mlp/trainer.py 파일 참조.
 ```
-python3 -m vision.trainer
+python3 -m vision_mlp.trainer
 ```
 
 * AITRICS 데이터셋 실험. 자세한 하이퍼파라미터는 aitrics/trainer.py 파일 참조.

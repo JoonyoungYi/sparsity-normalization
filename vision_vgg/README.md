@@ -1,5 +1,6 @@
 # Train CIFAR10 with PyTorch
 
+* Vision VGG 16 관련 실험.
 I'm playing with [PyTorch](http://pytorch.org/) on the CIFAR10 dataset.
 
 ## Pros & cons
