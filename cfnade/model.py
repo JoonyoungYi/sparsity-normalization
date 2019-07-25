@@ -58,7 +58,7 @@ def _forward(x_hot, weights, biases, args, training, x=None):
                     divider = tf.reduce_sum(x_hot, axis=2)
                     divider = tf.reduce_sum(divider, axis=1, keepdims=True)
                     divider = tf.reshape(tf.maximum(divider, 1.0), [-1, 1])
-                layer /= divider
+                layer *= (args.n_hidden_unit / divider)
 
         layer = layer + bias
 

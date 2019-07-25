@@ -176,7 +176,7 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default=Dataset.KIND_MOVIELENS_1M,
+        default=Dataset.KIND_MOVIELENS_100k,
         choices=[
             Dataset.KIND_MOVIELENS_100k, Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M
@@ -197,23 +197,25 @@ def main():
     parser.add_argument(
         '--parameter_sharing',
         type=str2bool,
-        default=True,
+        # default=True,
+        default=False,
         help='parameter sharing')
     parser.add_argument(
         '--n_batch', type=int, default=512, help='the batch size')
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=False,
+        default=True,
         help='whether normalize input')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=0.0005,
+        default=0.001,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--use_ordinal_cost',
         type=str2bool,
+        # default=False,
         default=True,
         help='Whether use ordinal cost')
     parser.add_argument(
@@ -224,7 +226,8 @@ def main():
     parser.add_argument(
         '--averaging_possible_choices',
         type=str2bool,
-        default=True,
+        # default=True,
+        default=False,
         help='Whether use user averaging_possible_choices')
     parser.add_argument(
         '--gpu_memory_fraction',
@@ -233,15 +236,7 @@ def main():
         help='per_process_gpu_memory_fraction')
 
     parser.add_argument(
-        '--lambda_1',
-        type=float,
-        default=0.015,
-        help='lambda for weight decay.')
-    parser.add_argument(
-        '--lambda_2',
-        type=float,
-        default=0.015,
-        help='lambda for weight decay.')
+        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
@@ -251,8 +246,18 @@ def main():
         '--seed', type=int, default=1, help='the seed for dataset')
 
     args = parser.parse_args()
+    args.lambda_1 = args.lambda_w
+    args.lambda_2 = args.lambda_w
     _train(args)
 
 
 if __name__ == '__main__':
     main()
+
+# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
+# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
+# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
+
+# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
+# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
+# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
