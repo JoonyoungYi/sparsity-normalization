@@ -49,3 +49,9 @@ python3 -m uci.trainer
 ```
 python3 -m mnist.trainer
 ```
+
+* AITRICS 데이터셋 실험. 자세한 하이퍼파라미터는 aitrics/trainer.py 파일 참조.
+```
+python3 -m aitrics.data_preprocessing --data_path={data_path}
+python3 -m aitrics.trainer --data_path={data_path}
+```
