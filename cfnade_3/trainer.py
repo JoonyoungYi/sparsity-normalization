@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 
-from movielens.dataset import Dataset
+from common.dataset.movielens import Dataset
 from .batch import BatchManager
 from .configs import *
 from .model import init_models
