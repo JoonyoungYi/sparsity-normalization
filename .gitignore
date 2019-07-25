@@ -125,6 +125,7 @@ dmypy.json
 # custom
 configs/local.py
 results/
+.results/
 *.sh
 .keras/
 .movielens/

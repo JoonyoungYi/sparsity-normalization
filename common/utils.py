@@ -41,14 +41,14 @@ def _make_folder_if_not_exist(path):
 
 def save_results_to_file(code_name, dataset_name, results):
     # make results folder if not exists.
-    _make_folder_if_not_exist('results')
+    _make_folder_if_not_exist('.results')
 
     # make code_name folder if not exists.
-    _make_folder_if_not_exist('results/{}'.format(code_name))
+    _make_folder_if_not_exist('.results/{}'.format(code_name))
 
     # save results
     os.umask(0)
-    filepath = 'results/{code_name}/{dataset_name}.txt'.format(
+    filepath = '.results/{code_name}/{dataset_name}.txt'.format(
         code_name=code_name, dataset_name=dataset_name)
     with open(os.open(filepath, os.O_CREAT | os.O_WRONLY, 0o777), 'a') as f:
         line = '\t'.join([str(r) for r in results]) + '\n'
