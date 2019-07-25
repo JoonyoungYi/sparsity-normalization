@@ -151,7 +151,10 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
-        '--drop_rate', type=float, default=0.0, help='drop rate.')
+        '--dropconnect_rate',
+        type=float,
+        default=0.0,
+        help='drop rate for dropconnect.')
     parser.add_argument(
         '--learning_rate',
         type=float,

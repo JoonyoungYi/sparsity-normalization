@@ -18,13 +18,14 @@ def _forward(x, weights, biases, training, args):
     assert len(weights) == len(biases)
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
+        if args.dropconnect_rate > 1e-8:
+            raise NotImplementedError()
+            
         layer = tf.matmul(layer, weight) + bias
 
         if i < n_layer - 1:
             layer = activation_fn(layer)
             layers.append(layer)
-            layer = tf.layers.dropout(
-                layer, rate=args.drop_rate, training=training)
         else:
             layers.append(layer)
     return layers
