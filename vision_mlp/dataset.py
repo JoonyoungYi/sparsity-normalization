@@ -17,31 +17,6 @@ def _sparsity_normalization(x, K_prime):
     return x
 
 
-def inject_sparsity(x, args):
-    g = np.zeros(x.shape[0])
-    if args.inject_sparsity:
-        for i in range(x.shape[0]):
-            row = x[i]
-
-            m = None
-            while m is None or m[0].shape[0] >= x.shape[1]:
-                if random.random() < 0.5:
-                    m = np.where(np.random.random(x.shape[1]) < 0.2)
-                    g[i] = 1
-                else:
-                    m = np.where(np.random.random(x.shape[1]) < 0.8)
-                    g[i] = -1
-
-            row[m] = 0
-            if args.sparsity_normalization:
-                divider = x.shape[1] - m[0].shape[0]
-                assert divider >= 1
-                row *= args.K_prime
-                row /= divider
-            x[i] = row
-    return x, g
-
-
 class Dataset:
     def __init__(self, args):
         # load data
@@ -98,15 +73,9 @@ class Dataset:
         self.n_out = n_out
 
         # sparsity injection
-        if args.inject_sparsity:
-            train_x, train_g = inject_sparsity(train_x, args)
-            test_x, test_g = inject_sparsity(test_x, args)
-        else:
-            if args.sparsity_normalization:
-                train_x = _sparsity_normalization(train_x, args.K_prime)
-                test_x = _sparsity_normalization(test_x, args.K_prime)
-            train_g = None
-            test_g = None
+        if args.sparsity_normalization:
+            train_x = _sparsity_normalization(train_x, args.K_prime)
+            test_x = _sparsity_normalization(test_x, args.K_prime)
 
         # split
         train_perm = np.random.permutation(train_x.shape[0])
@@ -126,29 +95,12 @@ class Dataset:
         else:
             raise NotImplementedError()
 
-        if train_g and test_g:
-            dense_test_x = test_x[test_g > 0.5]
-            dense_test_y = test_y[test_g > 0.5]
-
-            sparse_test_x = test_x[test_g < -0.5]
-            sparse_test_y = test_y[test_g < -0.5]
-        else:
-            dense_test_x = test_x
-            dense_test_y = test_y
-
-            sparse_test_x = test_x
-            sparse_test_y = test_y
-
         self.train_x = train_x
         self.train_y = train_y
         self.valid_x = valid_x
         self.valid_y = valid_y
         self.test_x = test_x
         self.test_y = test_y
-        self.sparse_test_x = sparse_test_x
-        self.sparse_test_y = sparse_test_y
-        self.dense_test_x = dense_test_x
-        self.dense_test_y = dense_test_y
 
         # merge train, valid, test to plot activation histogram
         if args.plot_raw_activations:  # for safety.

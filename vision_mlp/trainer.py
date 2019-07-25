@@ -23,10 +23,6 @@ def train(args, seed):
     valid_y = dataset.valid_y
     test_x = dataset.test_x
     test_y = dataset.test_y
-    sparse_test_x = dataset.sparse_test_x
-    sparse_test_y = dataset.sparse_test_y
-    dense_test_x = dataset.dense_test_x
-    dense_test_y = dataset.dense_test_y
     total_x = dataset.total_x
     total_y = dataset.total_y
 
@@ -105,27 +101,8 @@ def train(args, seed):
                     models['training']: False,
                 })
 
-            test_sparse_activations, test_sparse_acc = session.run(
-                [models['activations'], models['accuracy']],
-                feed_dict={
-                    models['x']: sparse_test_x,
-                    models['y']: sparse_test_y,
-                    models['training']: False,
-                })
-            test_dense_activations, test_dense_acc = session.run(
-                [models['activations'], models['accuracy']],
-                feed_dict={
-                    models['x']: dense_test_x,
-                    models['y']: dense_test_y,
-                    models['training']: False,
-                })
-
-        print(test_sparse_activations)
         print(test_activations)
-        # print(test_variances)
-        print(test_dense_activations)
-        print(
-            '{} {} {}'.format(test_sparse_acc, final_test_acc, test_dense_acc))
+        print('{}'.format(final_test_acc))
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
@@ -158,12 +135,8 @@ def train(args, seed):
     results.append(args.normalize_layer_indexes)
     results.append(args.L0_option)
     results.append(args.n_hidden_unit)
-    results.append(test_sparse_acc)
     results.append(final_test_acc)
-    results.append(test_dense_acc)
-    results.append(test_sparse_activations[-1])
     results.append(test_activations[-1])
-    results.append(test_dense_activations[-1])
     results.append(endTime)
     save_results_to_file('mnist', args.dataset, results)
 
@@ -215,12 +188,6 @@ def main():
         type=float,
         default=1e-2,
         help='learning rate of optimizer')
-    parser.add_argument(
-        '--inject_sparsity',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether inject sparsity.')
 
     parser.add_argument(
         '--sparsity_normalization',
