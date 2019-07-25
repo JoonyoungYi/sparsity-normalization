@@ -1,4 +1,5 @@
 import random
+import time
 
 import tensorflow as tf
 import numpy as np
@@ -9,7 +10,19 @@ from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
 
-import time
+
+def _save_activations(args, session, models, dataset, before):
+    if args.plot_activations:
+        activations = session.run(
+            models['layers'],
+            feed_dict={
+                models['x']: dataset.total_x,
+                models['y']: dataset.total_y,
+                models['training']: False,
+            })
+        activations = np.array(activations[:args.n_hidden_layer])
+        np.save('.results/mnist/{}_activations_{}_training'.format(
+            args.dataset, "before" if before else "after"), activations)
 
 
 def train(args, seed):
@@ -23,8 +36,6 @@ def train(args, seed):
     valid_y = dataset.valid_y
     test_x = dataset.test_x
     test_y = dataset.test_y
-    total_x = dataset.total_x
-    total_y = dataset.total_y
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -33,24 +44,14 @@ def train(args, seed):
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
+    _save_activations(args, session, models, dataset, before=True)
+
     max_valid_acc = 0.0
     max_valid_iter_idx = 0
     final_test_acc = 0.0
 
     max_test_acc = 0.0
     max_test_iter_idx = 0
-
-    if args.plot_activations:
-        activations = session.run(
-            models['layers'],
-            feed_dict={
-                models['x']: total_x,
-                models['y']: total_y,
-                models['training']: False,
-            })
-        activations = np.array(activations[:args.n_hidden_layer])
-        np.save('.results/mnist/{}_activations_before_training'.format(
-            args.dataset), activations)
 
     for iter_idx in range(args.max_epoch):
         _, train_loss, train_acc = session.run(
@@ -87,23 +88,13 @@ def train(args, seed):
             max_valid_acc = valid_acc
             max_valid_iter_idx = iter_idx
             final_test_acc = test_acc
+            _save_activations(args, session, models, dataset, before=False)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
-            if args.plot_activations:
-                activations = session.run(
-                    models['layers'],
-                    feed_dict={
-                        models['x']: total_x,
-                        models['y']: total_y,
-                        models['training']: False,
-                    })
-                activations = np.array(activations[:args.n_hidden_layer])
-                np.save('.results/mnist/{}_activations_after_training'.format(
-                    args.dataset), activations)
             break
 
     endTime = time.time() - startTime
