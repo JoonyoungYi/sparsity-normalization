@@ -53,7 +53,7 @@ def train(args, seed):
                 models['training']: True,
             })
         raw_activations = np.array(raw_activations[0][:2])
-        np.save('results/mnist/{}_raw_activations_before_training'.format(
+        np.save('.results/mnist/{}_raw_activations_before_training'.format(
             args.dataset), raw_activations)
 
     for iter_idx in range(args.max_epoch):
@@ -142,7 +142,7 @@ def train(args, seed):
                     })
                 raw_activations = np.array(raw_activations[0][:2])
                 np.save(
-                    'results/mnist/{}_raw_activations_after_training'.format(
+                    '.results/mnist/{}_raw_activations_after_training'.format(
                         args.dataset), raw_activations)
             break
 
