@@ -18,7 +18,7 @@ def _forward(x, weights, biases, training, args):
 
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
-        
+
         if (i + 1) not in args.ignore_bias_layer_indexes:
             layer += bias
 
