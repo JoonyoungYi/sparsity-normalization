@@ -114,8 +114,6 @@ def train(args, seed):
     results.append(args.n_hidden_layer)
     results.append(args.grey_scale)
     results.append(args.sparsity_normalization)
-    results.append(args.normalize_layer_indexes)
-    results.append(args.L0_option)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
@@ -179,18 +177,6 @@ def main():
     parser.add_argument(
         '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
-        '--normalize_layer_indexes',
-        type=integer_list,
-        default=[],
-        help=
-        'normalize를 할 hidden layer index들의 리스트. 쉼표로 구분. 1,2,3 인 경우 1,2,3번 hidden layer를 normalize. 1 인 경우 1번째 hidden layer를 normalize.'
-    )
-    parser.add_argument(
-        '--L0_option',
-        type=str,
-        default='vanilla',
-        choices=['vanilla', 'sigmoid'])
-    parser.add_argument(
         '--plot_activations',
         type=str2bool,
         default=False,
@@ -202,10 +188,6 @@ def main():
         help='Whether use grey scaling in cifar dataset.')
 
     args = parser.parse_args()
-
-    for layer_index in args.normalize_layer_indexes:
-        assert layer_index <= args.n_hidden_layer
-        assert layer_index > 0
     if not (args.dataset == 'cifar10' or
             args.dataset == 'cifar100') and args.grey_scale:
         print('grey_scale only can be applied to cifar dataset!')
