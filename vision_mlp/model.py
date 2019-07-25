@@ -15,40 +15,16 @@ def _forward(x, weights, biases, training, args):
 
     layer = x
     layers = []
-
     assert len(weights) == len(biases)
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
 
         if i < n_layer - 1:
-            if (i + 1) in args.normalize_layer_indexes:
-                if args.L0_option == 'sigmoid':
-                    sigmoid_L0 = tf.sigmoid(layer)
-                    divider = tf.keras.backend.sum(sigmoid_L0, axis=1)
-
             layer = activation_fn(layer)
             layers.append(layer)
             layer = tf.layers.dropout(
                 layer, rate=args.drop_rate, training=training)
-
-            if (i + 1) in args.normalize_layer_indexes:
-                if args.L0_option == 'vanilla':
-                    divider = tf.maximum(
-                        tf.cast(
-                            tf.math.count_nonzero(layer, axis=1), tf.float32),
-                        1)
-                    divider = tf.stop_gradient(
-                        divider)  # make this as constant.
-
-                divider = tf.matmul(
-                    tf.expand_dims(divider, axis=1),
-                    tf.ones([1, layer.shape[1]]))
-
-                if args.drop_rate and args.drop_rate > 1e-8:
-                    divider /= tf.where(training, args.drop_rate, 1.0)
-                layer *= args.K_prime
-                layer /= divider
         else:
             layers.append(layer)
     return layers
@@ -59,8 +35,7 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if (i == 0 and args.sparsity_normalization
-            ) or i in args.normalize_layer_indexes:
+        if (i == 0 and args.sparsity_normalization):
             limit = math.sqrt(6 / 1)
         else:
             limit = math.sqrt(6 / n_in)
