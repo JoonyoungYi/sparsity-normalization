@@ -30,7 +30,7 @@ def _init_weights(n_col, args):
     return weights, biases
 
 
-def _forward(x_hot, weights, biases, args, training, x=None):
+def _forward(x_hot, weights, biases, args, training, x=None, n_class=None):
     assert len(weights) == len(biases)
 
     if args.parameter_sharing:
@@ -53,6 +53,9 @@ def _forward(x_hot, weights, biases, args, training, x=None):
                     divider = tf.cast(
                         tf.reduce_sum(x, axis=1, keepdims=True), tf.float32)
                     divider = tf.maximum(divider, 1.0)
+
+                    if n_class != 5:
+                        raise NotImplementedError()
                 else:
                     # parameter sharing을 하지 않는 경우에는 그냥 observed entries 수로 나눠주면 됨.
                     divider = tf.reduce_sum(x_hot, axis=2)
@@ -131,10 +134,18 @@ def _get_rmse(y, y_hat, v, epsilon=0):
     return rmse, sse, n
 
 
-def _get_y_hat_from_y_hat_hot(y_hat_hot):
-    y_hat = tf.tensordot(
-        tf.nn.softmax(y_hat_hot), [1., 2., 3., 4., 5.], [[2], [0]])
-    return y_hat
+def _get_y_hat_from_y_hat_hot(y_hat_hot, n_class):
+    if n_class == 5:
+        y_hat = tf.tensordot(
+            tf.nn.softmax(y_hat_hot), [1., 2., 3., 4., 5.], [[2], [0]])
+        return y_hat
+    elif n_class == 10:
+        y_hat = tf.tensordot(
+            tf.nn.softmax(y_hat_hot),
+            [1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [[2], [0]])
+        return y_hat
+    else:
+        raise NotImplementedError()
 
 
 def init_models(n_col, n_class, args):
@@ -142,19 +153,20 @@ def init_models(n_col, n_class, args):
     y = tf.placeholder(tf.int64, [None, n_col], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
-    x_hot = tf.one_hot(x - 1, 5)
-    y_hot = tf.one_hot(y - 1, 5)
+    x_hot = tf.one_hot(x - 1, n_class)
+    y_hot = tf.one_hot(y - 1, n_class)
     v = tf.cast(tf.greater(tf.reduce_sum(x, axis=1), 0), tf.float32)  # valid
 
     # init weights
     weights, biases = _init_weights(n_col * n_class, args)
-    y_hat_hot = _forward(x_hot, weights, biases, args, training, x=x)
+    y_hat_hot = _forward(
+        x_hot, weights, biases, args, training, x=x, n_class=n_class)
     loss = _get_loss(x_hot, y_hot, y_hat_hot, v, weights, args)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
-    y_hat = _get_y_hat_from_y_hat_hot(y_hat_hot)
+    y_hat = _get_y_hat_from_y_hat_hot(y_hat_hot, n_class)
     rmse, sse, n = _get_rmse(y, y_hat, v)
 
     return {

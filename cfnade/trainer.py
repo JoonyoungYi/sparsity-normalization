@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from common.dataset.movielens import Dataset
 from .batch import BatchManager
@@ -17,12 +18,14 @@ from common.utils import save_results_to_file
 
 def __get_rmse(session, models, x, y, n_batch):
     sse, n = 0.0, 0
-    for i in range(0, x.shape[0], n_batch):
+    for i in tqdm(range(0, x.shape[0], n_batch)):
+        _x = x[i:i + n_batch]
+        _y = y[i:i + n_batch]
         _sse, _n = session.run(
             (models['sse'], models['n']),
             feed_dict={
-                models['x']: x[i:i + n_batch],
-                models['y']: y[i:i + n_batch],
+                models['x']: _x,
+                models['y']: _y,
                 models['training']: False,
             }, )
         n += _n
@@ -40,16 +43,17 @@ def _validate(
         test_x,
         test_y, ):
 
-    # n_batch = args.n_batch
-    n_batch = test_x.shape[0]
+    print('>> start validation...')
+    n_batch = args.n_batch
+    # n_batch = test_x.shape[0]
     assert train_x.shape[0] == valid_x.shape[0]
     assert train_x.shape[0] == test_x.shape[0]
     assert train_x.shape[0] >= n_batch
 
-    train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
+    # train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
     valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch)
     test_rmse = __get_rmse(session, models, test_x, test_y, n_batch)
-    return train_rmse, valid_rmse, test_rmse
+    return 0.0, valid_rmse, test_rmse
 
 
 def _train(args):
@@ -62,11 +66,11 @@ def _train(args):
     n_user, n_item = dataset.get_n_user_and_n_item()
     n_class = dataset.n_class
 
-    train_x = dataset.train_matrix
-    valid_x = dataset.train_matrix
-    valid_y = dataset.valid_matrix
-    test_x = dataset.train_matrix + dataset.valid_matrix
-    test_y = dataset.test_matrix
+    train_x = dataset.train_matrix * 2
+    valid_x = dataset.train_matrix * 2
+    valid_y = dataset.valid_matrix * 2
+    test_x = (dataset.train_matrix + dataset.valid_matrix) * 2
+    test_y = dataset.test_matrix * 2
 
     if args.use_user_vector:
         n_col = n_item
@@ -104,16 +108,16 @@ def _train(args):
 
     train_losses = []
     for iter_idx in range(1, args.max_iter):
-        batch_x, batch_y = batch_manager.get_batch()
-
-        _, train_loss = session.run(
-            (models['train_op'], models['loss']),
-            feed_dict={
-                models['x']: batch_x,
-                models['y']: batch_y,
-                models['training']: True,
-            }, )
-        train_losses.append(train_loss)
+        for i in tqdm(range(train_x.shape[0] // args.n_batch)):
+            batch_x, batch_y = batch_manager.get_batch()
+            _, train_loss = session.run(
+                (models['train_op'], models['loss']),
+                feed_dict={
+                    models['x']: batch_x,
+                    models['y']: batch_y,
+                    models['training']: True,
+                }, )
+            train_losses.append(train_loss)
 
         if (iter_idx) % args.iter_validation == 0:
             train_rmse, valid_rmse, test_rmse = _validate(
@@ -253,11 +257,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
-# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
-# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=False --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=0.01
-
-# default+oc+ws+apc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=True --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=True --gpu_memory_fraction=0.3 --lambda_w=
-# default+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=False --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
-# normal+oc: python3 -m cfnade_2.trainer --dataset=movielens-1m --parameter_sharing=False --normalize_input=True --use_ordinal_cost=True --use_user_vector=True --averaging_possible_choices=False --gpu_memory_fraction=0.3 --lambda_w=
