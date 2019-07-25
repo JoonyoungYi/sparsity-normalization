@@ -66,11 +66,18 @@ def _train(args):
     n_user, n_item = dataset.get_n_user_and_n_item()
     n_class = dataset.n_class
 
-    train_x = dataset.train_matrix * 2
-    valid_x = dataset.train_matrix * 2
-    valid_y = dataset.valid_matrix * 2
-    test_x = (dataset.train_matrix + dataset.valid_matrix) * 2
-    test_y = dataset.test_matrix * 2
+    train_x = dataset.train_matrix
+    valid_x = dataset.train_matrix
+    valid_y = dataset.valid_matrix
+    test_x = (dataset.train_matrix + dataset.valid_matrix)
+    test_y = dataset.test_matrix
+
+    if args.dataset == Dataset.KIND_MOVIELENS_10M:
+        train_x = train_x * 2
+        valid_x = valid_x * 2
+        valid_y = valid_y * 2
+        test_x = test_x * 2
+        test_y = test_y * 2
 
     if args.use_user_vector:
         n_col = n_item
