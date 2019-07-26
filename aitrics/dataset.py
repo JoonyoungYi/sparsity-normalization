@@ -43,7 +43,7 @@ def init_data(args):
         X_train *= args.K_prime
         X_train /= L0_norm
 
-    if args.model == 'lstm':
+    if args.model == 'lstm' or args.model == '1dcnn':
         X_train = np.reshape(X_train, (-1, sequence_length, 34))
 
     y_train = data["train_labels"]
@@ -62,7 +62,7 @@ def init_data(args):
         X_test *= args.K_prime
         X_test /= L0_norm
 
-    if args.model == 'lstm':
+    if args.model == 'lstm' or args.model == '1dcnn':
         X_test = np.reshape(X_test, (-1, sequence_length, 34))
 
     y_test = data["valid_labels"]

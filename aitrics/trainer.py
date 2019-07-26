@@ -41,7 +41,7 @@ parser.add_argument(
     '--model',
     type=str,
     default='mlp',
-    choices=['mlp', 'lstm'])
+    choices=['mlp', 'lstm', '1dcnn'])
 parser.add_argument(
     '--dropout',
     type=str2bool,
@@ -62,6 +62,32 @@ parser.add_argument(
     type=str2bool,
     default=False,
     help='Whether to add layer_norm in lstm model')
+
+parser.add_argument(
+    '--conv_kernel_size',
+    type=int,
+    default=2,
+    choices=[2, 3])
+parser.add_argument(
+    '--conv_layer_num',
+    type=int,
+    default=1,
+    choices=[1, 2])
+parser.add_argument(
+    '--conv_padding',
+    type=str,
+    default='valid',
+    choices=['valid', 'causal', 'same'])
+parser.add_argument(
+    '--conv_act',
+    type=str,
+    default='relu',
+    choices=['relu', 'tanh'])
+parser.add_argument(
+    '--conv_filters',
+    type=int,
+    default=17)
+
 parser.add_argument(
     '--sparsity_normalization',
     type=str2bool,
@@ -80,7 +106,7 @@ parser.add_argument(
 parser.add_argument(
     '--epochs_early_stop',
     type=int,
-    default=1000)
+    default=500)
 parser.add_argument(
     '--batch_size',
     type=int,
@@ -125,7 +151,7 @@ model, early_stopping_callback = init_model(args)
 
 # model training
 model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
-model.fit(X_train, y_train,
+hist = model.fit(X_train, y_train,
           validation_data=(X_test, y_test),
           verbose=args.verbose,
           class_weight=class_weights,
@@ -141,18 +167,27 @@ if args.screen_print:
     print("Best AUC: {}\n".format(scores[2]))
 
 elapsedTime = time.time() - startTime
-elapsedTime = int(endTime/60)
+elapsedTime = int(elapsedTime/60)
 
 if args.file_print:
     # save results to file
     results = []
-    results.append(args.dropout)
-    results.append(args.batch_norm_mlp)
-    results.append(args.layer_norm_lstm)
-    results.append(args.sparsity_normalization)
     results.append(disease)
     results.append(args.seed)
-    results.append(scores[2])
+    results.append(args.learning_rate)
+
+    results.append(args.model)
+    results.append(args.dropout)
+
+    results.append(args.conv_kernel_size)
+    results.append(args.conv_layer_num)
+    results.append(args.conv_padding)
+    results.append(args.conv_act)
+    results.append(args.conv_filters)
+
     results.append(args.epochs_early_stop)
+    results.append(hist.epoch[-1])
+
+    results.append(scores[2])
     results.append(elapsedTime)
     save_results_to_file('aitrics', args.model, results)
