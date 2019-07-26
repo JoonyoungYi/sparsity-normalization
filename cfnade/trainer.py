@@ -5,7 +5,6 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
 from common.datasets.movielens import Dataset
 from .batch import BatchManager
@@ -16,9 +15,9 @@ from common.utils import set_seed
 from common.utils import save_results_to_file
 
 
-def __get_rmse(session, models, x, y, n_batch):
+def __get_rmse(session, models, x, y, n_batch, args):
     sse, n = 0.0, 0
-    for i in tqdm(range(0, x.shape[0], n_batch)):
+    for i in args.tqdm(range(0, x.shape[0], n_batch)):
         _x = x[i:i + n_batch]
         _y = y[i:i + n_batch]
         _sse, _n = session.run(
@@ -43,7 +42,9 @@ def _validate(
         test_x,
         test_y, ):
 
-    print('>> start validation...')
+    if args.use_tqdm:
+        print('>> start validation...')
+        
     n_batch = args.n_batch
     # n_batch = test_x.shape[0]
     assert train_x.shape[0] == valid_x.shape[0]
@@ -51,17 +52,17 @@ def _validate(
     assert train_x.shape[0] >= n_batch
 
     # train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
-    valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch)
-    test_rmse = __get_rmse(session, models, test_x, test_y, n_batch)
+    valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch, args)
+    test_rmse = __get_rmse(session, models, test_x, test_y, n_batch, args)
     return 0.0, valid_rmse, test_rmse
 
 
 def _train(args):
-    set_seed(args.seed)
-
     dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
     dataset.init_full_matrices()
+
+    set_seed(args.seed)
 
     n_user, n_item = dataset.get_n_user_and_n_item()
     n_class = dataset.n_class
@@ -115,7 +116,7 @@ def _train(args):
 
     train_losses = []
     for iter_idx in range(1, args.max_iter):
-        for i in tqdm(range(train_x.shape[0] // args.n_batch)):
+        for i in args.tqdm(range(train_x.shape[0] // args.n_batch)):
             batch_x, batch_y = batch_manager.get_batch()
             _, train_loss = session.run(
                 (models['train_op'], models['loss']),
@@ -231,6 +232,12 @@ def main():
         default=True,
         help='Whether use ordinal cost')
     parser.add_argument(
+        '--use_tqdm',
+        type=str2bool,
+        default=False,
+        # default=True,
+        help='Whether use tqdm library.')
+    parser.add_argument(
         '--use_user_vector',
         type=str2bool,
         default=False,
@@ -258,6 +265,12 @@ def main():
     args = parser.parse_args()
     args.lambda_1 = args.lambda_w
     args.lambda_2 = args.lambda_w
+
+    if args.use_tqdm:
+        from tqdm import tqdm
+        args.tqdm = tqdm
+    else:
+        args.tqdm = lambda x: x
 
     if args.dataset_seed is None:
         args.dataset_seed = args.seed
