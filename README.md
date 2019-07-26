@@ -25,6 +25,7 @@ cd .. && cd home/server17/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server20/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server22/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server23/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server24/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/joonyoung/ml/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 pip3 install -r requirements.txt
 ```

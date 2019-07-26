@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 
-from common.dataset.movielens import Dataset
+from common.datasets.movielens import Dataset
 from .batch import BatchManager
 from .configs import *
 from .model import init_models
@@ -99,8 +99,8 @@ def _train(args):
 
     batch_manager = BatchManager(train_x, args)
 
-    gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, dataset.n_class, args)
@@ -175,6 +175,7 @@ def _train(args):
     results.append(args.lambda_1)
     results.append(args.lambda_2)
     results.append(args.seed)
+    results.append(args.dataset_seed)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
     save_results_to_file('cfnade', args.dataset, results)
@@ -241,24 +242,25 @@ def main():
         default=False,
         help='Whether use user averaging_possible_choices')
     parser.add_argument(
-        '--gpu_memory_fraction',
-        type=float,
-        default=0.25,
-        help='per_process_gpu_memory_fraction')
-
-    parser.add_argument(
         '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
         default=1000,
         help='the number of iteration for early stop.')
+    parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
-        '--seed', type=int, default=1, help='the seed for dataset')
+        '--dataset_seed',
+        type=int,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
 
     args = parser.parse_args()
     args.lambda_1 = args.lambda_w
     args.lambda_2 = args.lambda_w
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
     _train(args)
 
 
