@@ -136,6 +136,7 @@ def _train(args):
     results.append(args.optimizer)
     results.append(args.lambda_w)
     results.append(args.seed)
+    results.append(args.dataset_seed)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
 
@@ -175,8 +176,8 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -196,7 +197,7 @@ def main():
         help='the number of epochation for early stop.')
 
     parser.add_argument(
-        '--lambda_w', type=float, default=500.0, help='lambda for weight decay.')
+        '--lambda_w', type=float, default=1000.0, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
