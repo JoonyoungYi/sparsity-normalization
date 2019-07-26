@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 
-from common.dataset.movielens import Dataset
+from common.datasets.movielens import Dataset
 from .configs import *
 from .model import init_models
 from .batch import Batch
@@ -55,19 +55,11 @@ def _validate(session, models, batch, args):
 
 def _train(args):
     dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
     set_seed(args.seed)
 
-    if args.dataset == Dataset.KIND_MOVIELENS_100k:
-        gpu_memory_fraction = 0.05
-    elif args.dataset == Dataset.KIND_MOVIELENS_1M:
-        gpu_memory_fraction = 0.1
-    elif args.dataset == Dataset.KIND_MOVIELENS_10M:
-        gpu_memory_fraction = 0.18
-    else:
-        gpu_memory_fraction = 1.0
-    gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=gpu_memory_fraction)
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     batch = Batch(dataset, args)
@@ -178,6 +170,7 @@ def main():
         '--normalize_input',
         type=str2bool,
         default=True,
+        # default=False,
         help='Whether normalize input.')
     parser.add_argument(
         '--use_user_vector',
@@ -190,8 +183,12 @@ def main():
         type=float,
         default=1e-3,
         help='learning rate for optimizer.')
+    parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
-        '--seed', type=int, default=1, help='the seed for dataset')
+        '--dataset_seed',
+        type=int,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
@@ -199,7 +196,7 @@ def main():
         help='the number of epochation for early stop.')
 
     parser.add_argument(
-        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
+        '--lambda_w', type=float, default=500.0, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -222,8 +219,8 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_100k,
-        # default=Dataset.KIND_MOVIELENS_1M,
+        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_1M,
         # default=Dataset.KIND_MOVIELENS_10M,
         help='Optimizer')
     parser.add_argument(
@@ -244,6 +241,9 @@ def main():
     elif args.n_batch < 0:
         print('args.n_batch should not be negative.')
         assert False
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
 
     if args.sparse_tensor:
         # RProp optimizer can be used only for dense tensor.
