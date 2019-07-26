@@ -1,6 +1,6 @@
 import keras
 from keras.models import Sequential
-from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization
+from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization, Conv1D, Flatten
 from .LayerNormLSTM import LSTM
 
 class LayerNormalization(Layer):
@@ -95,6 +95,22 @@ def init_model(args):
             model.add(CuDNNLSTM(units=100,
                            return_sequences=False))
 
+        model.add(Dense(1, activation='sigmoid'))
+
+    elif args.model == '1dcnn':
+        model = Sequential()
+
+        # In: [batch, 4, 34]
+        model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act), input_shape=(sequence_length, 34)))
+        # Out: [batch, ?, args.conv_filters]
+
+        if args.conv_layer_num == 2:
+            model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act)))
+            # Out: [batch, ?, args.conv_filters]
+
+        # Out: [batch, ?, args.conv_filters]
+        model.add(Flatten())
+        # Out: [batch, ?*args.conv_filters]
         model.add(Dense(1, activation='sigmoid'))
 
     # early stopping callback
