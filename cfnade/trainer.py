@@ -44,17 +44,20 @@ def _validate(
 
     if args.use_tqdm:
         print('>> start validation...')
-        
+
     n_batch = args.n_batch
     # n_batch = test_x.shape[0]
     assert train_x.shape[0] == valid_x.shape[0]
     assert train_x.shape[0] == test_x.shape[0]
     assert train_x.shape[0] >= n_batch
 
-    # train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
+    if args.print_train_rmse:
+        train_rmse = __get_rmse(session, models, train_x, train_x, n_batch, args)
+    else:
+        train_rmse = 0.0
     valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch, args)
     test_rmse = __get_rmse(session, models, test_x, test_y, n_batch, args)
-    return 0.0, valid_rmse, test_rmse
+    return train_rmse, valid_rmse, test_rmse
 
 
 def _train(args):
@@ -147,7 +150,8 @@ def _train(args):
             msg = '\n[ITER %6d]\n' % (iter_idx)
             msg += '  - train loss: {:12.1f}\n'.format(
                 sum(train_losses) / len(train_losses))
-            msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
+            if args.print_train_rmse:
+                msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
             msg += '  - valid rmse: {:12.8f}    (min: {:12.8f}, iter: {:d}, final: {:12.8f})\n'.format(
                 valid_rmse, min_valid_rmse, min_valid_rmse_iter_idx,
                 final_test_rmse)
@@ -261,6 +265,11 @@ def main():
         type=int,
         default=1,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    parser.add_argument(
+        '--print_train_rmse',
+        type=str2bool,
+        default=True,
+        help='Whether print train_rmse')
 
     args = parser.parse_args()
     args.lambda_1 = args.lambda_w
