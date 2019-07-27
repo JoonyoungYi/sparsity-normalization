@@ -26,7 +26,6 @@ def _init_weights(n_col, args):
 def _forward(train_x, weights, biases, training, args):
     assert len(weights) == len(biases)
 
-
     if args.activation_fn == 'sigmoid':
         activation_fn = tf.nn.sigmoid
     elif args.activation_fn == 'relu':
@@ -46,7 +45,9 @@ def _forward(train_x, weights, biases, training, args):
 
         if i < len(biases) - 1:
             layer = activation_fn(layer)
-            # layer = tf.layers.dropout(layer, rate=0.5, training=training)
+            if args.dropout_rate > 1e-8:
+                layer = tf.layers.dropout(
+                    layer, rate=args.dropout_rate, training=training)
     return layer
 
 
