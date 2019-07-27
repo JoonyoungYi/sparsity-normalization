@@ -71,9 +71,10 @@ test_best_epoch = 0
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Setting seed for reproducing
-random.seed(args.seed)
-torch.manual_seed(args.seed)
-np.random.seed(args.seed)
+# fix seed for split dataset
+random.seed(1)
+torch.manual_seed(1)
+np.random.seed(1)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -87,12 +88,12 @@ transform_test = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='vgg16/data', train=True, download=True, transform=transform_train)
+trainset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=True, download=True, transform=transform_train)
 # Load trainloader
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
 
-validset = torchvision.datasets.CIFAR10(root='vgg16/data', train=False, download=True, transform=transform_test)
-testset = torchvision.datasets.CIFAR10(root='vgg16/data', train=False, download=True, transform=transform_test)
+validset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=False, download=True, transform=transform_test)
+testset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=False, download=True, transform=transform_test)
 
 # Split validation set from test set
 num_test = len(testset)
@@ -115,6 +116,11 @@ validloader = torch.utils.data.DataLoader(
     num_workers=2,
 )
 
+# change seed for training
+random.seed(args.seed)
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
+
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model construction
@@ -130,8 +136,8 @@ if device == 'cuda':
 if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
-    assert os.path.isdir('vgg16/checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('vgg16/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
+    assert os.path.isdir('vision_vgg/checkpoint'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('vision_vgg/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
@@ -220,9 +226,9 @@ def valid(epoch):
             'acc': acc,
             'epoch': epoch,
         }
-        if not os.path.isdir('vgg16/checkpoint'):
-            os.mkdir('vgg16/checkpoint')
-        torch.save(state, 'vgg16/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
+        if not os.path.isdir('vision_vgg/checkpoint'):
+            os.mkdir('vision_vgg/checkpoint')
+        torch.save(state, 'vision_vgg/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
         best_acc = acc
         best_epoch = epoch
         # Tracking test accuracy of the best model

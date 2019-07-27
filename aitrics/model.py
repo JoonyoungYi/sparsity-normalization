@@ -102,15 +102,22 @@ def init_model(args):
 
         # In: [batch, 4, 34]
         model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act), input_shape=(sequence_length, 34)))
+
+        if args.dropout:
+            model.add(Dropout(0.8))
         # Out: [batch, ?, args.conv_filters]
 
         if args.conv_layer_num == 2:
             model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act)))
+            
+            if args.dropout:
+                model.add(Dropout(0.8))
             # Out: [batch, ?, args.conv_filters]
 
         # Out: [batch, ?, args.conv_filters]
         model.add(Flatten())
         # Out: [batch, ?*args.conv_filters]
+
         model.add(Dense(1, activation='sigmoid'))
 
     # early stopping callback
