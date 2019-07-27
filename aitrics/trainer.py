@@ -122,18 +122,13 @@ parser.add_argument(
     default=1,
     choices=[0, 1],
     help='0: silent, 1: progress bar')
-parser.add_argument(
-    '--gpu_memory_fraction',
-    type=float,
-    default=0.3)
 
 args = parser.parse_args()
 
-# set gpu memory fraction
-if args.gpu_memory_fraction < 0.9:
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
-    sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-    keras.backend.tensorflow_backend.set_session(sess)
+gpu_options = tf.GPUOptions()
+gpu_options.allow_growth = True
+sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+keras.backend.tensorflow_backend.set_session(sess)
 
 # manual_seed setting for reproduction
 random.seed(args.seed)
