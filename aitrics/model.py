@@ -1,6 +1,6 @@
 import keras
 from keras.models import Sequential
-from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, BatchNormalization, Conv1D, Flatten
+from keras.layers import Layer, Dense, Activation, CuDNNLSTM, Dropout, GaussianDropout, BatchNormalization, Conv1D, Flatten
 from .LayerNormLSTM import LSTM
 
 class LayerNormalization(Layer):
@@ -104,14 +104,14 @@ def init_model(args):
         model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act), input_shape=(sequence_length, 34)))
 
         if args.dropout:
-            model.add(Dropout(0.8))
+            model.add(GaussianDropout(0.5))
         # Out: [batch, ?, args.conv_filters]
 
         if args.conv_layer_num == 2:
             model.add(Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act)))
             
             if args.dropout:
-                model.add(Dropout(0.8))
+                model.add(GaussianDropout(0.5))
             # Out: [batch, ?, args.conv_filters]
 
         # Out: [batch, ?, args.conv_filters]
