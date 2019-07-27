@@ -19,10 +19,11 @@ cd .. && cd home/server04/SN-tensorflow
 cd .. && cd home/server05/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server09/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server12/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server13/SN-tensorflow
+cd .. && cd home/server13/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server14/SN-tensorflow
 cd .. && cd home/server17/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server20/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server19/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server20/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server22/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server23/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server24/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
