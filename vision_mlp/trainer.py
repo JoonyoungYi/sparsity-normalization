@@ -25,10 +25,11 @@ def _save_activations(args, session, models, dataset, before):
             args.dataset, "before" if before else "after"), activations)
 
 
-def train(args, seed):
+def train(args, seed, dataset_seed):
     startTime = time.time()
 
-    set_seed(seed)
+    set_seed(dataset_seed)
+
     dataset = Dataset(args)
     train_x = dataset.train_x
     train_y = dataset.train_y
@@ -36,6 +37,8 @@ def train(args, seed):
     valid_y = dataset.valid_y
     test_x = dataset.test_x
     test_y = dataset.test_y
+
+    set_seed(seed)
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -124,6 +127,12 @@ def main():
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
+        '--valid_split',
+        type=str,
+        default='from_train',
+        choices=['from_train', 'from_test'],
+        help='split validation set from train or test set')
+    parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
@@ -151,6 +160,8 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
+        '--dataset_seed', type=int, default=1, help='the seed for split dataset')
+    parser.add_argument(
         '--dropconnect_rate',
         type=float,
         default=0.0,
@@ -170,13 +181,15 @@ def main():
     parser.add_argument(
         '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
+        '--K_prime_opt', type=str, default='n0', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
+    parser.add_argument(
         '--plot_activations',
         type=str2bool,
         default=False,
         help='Whether plot raw activations')
 
     args = parser.parse_args()
-    train(args, args.seed)
+    train(args, args.seed, args.dataset_seed)
 
 
 if __name__ == '__main__':
