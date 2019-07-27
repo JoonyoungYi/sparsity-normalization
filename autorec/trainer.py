@@ -136,6 +136,7 @@ def _train(args):
     results.append(args.optimizer)
     results.append(args.lambda_w)
     results.append(args.seed)
+    results.append(args.n_hidden_unit)
     results.append(args.dataset_seed)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
@@ -176,19 +177,19 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-4,
         help='learning rate for optimizer.')
     parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
         '--dataset_seed',
         type=int,
-        default=1,
+        default=None,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--epoch_early_stop',
@@ -197,7 +198,7 @@ def main():
         help='the number of epochation for early stop.')
 
     parser.add_argument(
-        '--lambda_w', type=float, default=1000.0, help='lambda for weight decay.')
+        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -206,6 +207,13 @@ def main():
         help='Optimizer')
     parser.add_argument(
         '--filename', type=str, default='None', help='log filename')
+    parser.add_argument(
+        '--activation_fn',
+        type=str,
+        # default='relu',
+        default='sigmoid',
+        choices=['relu', 'sigmoid'],
+        help='')
     parser.add_argument(
         '--K_denominator',
         type=float,
@@ -221,9 +229,9 @@ def main():
             Dataset.KIND_MOVIELENS_10M,
         ],
         # default=Dataset.KIND_MOVIELENS_100k,
-        default=Dataset.KIND_MOVIELENS_1M,
-        # default=Dataset.KIND_MOVIELENS_10M,
-        help='Optimizer')
+        # default=Dataset.KIND_MOVIELENS_1M,
+        default=Dataset.KIND_MOVIELENS_10M,
+        help='dataset')
     parser.add_argument(
         '--sparse_tensor',
         type=str2bool,
@@ -232,7 +240,8 @@ def main():
     parser.add_argument(
         '--n_batch',
         type=int,
-        default=0,  # default=1000,
+        # default=0,
+        default=1000,
         help='0 for full batch. integer for batch number.')
 
     args = parser.parse_args()
@@ -260,4 +269,4 @@ if __name__ == '__main__':
 
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
 
-# python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=user-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=2 --lambda_w=
+# python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=item-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=1 --n_hidden_unit=1000 --K_denominator=1000 --lambda_w=
