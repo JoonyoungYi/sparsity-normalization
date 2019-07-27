@@ -269,4 +269,4 @@ if __name__ == '__main__':
 
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
 
-# python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=item-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=1 --n_hidden_unit=2000 --K_denominator=2000 --lambda_w=100
+# python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=item-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=1 --n_hidden_unit=2000 --K_denominator=2000 --lambda_w=300

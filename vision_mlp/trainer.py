@@ -28,8 +28,8 @@ def _save_activations(args, session, models, dataset, before):
 def train(args, seed):
     startTime = time.time()
 
-    set_seed(seed)
     dataset = Dataset(args)
+    set_seed(seed)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -117,8 +117,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='mnist',
-        # default='fashion',
+        # default='mnist',
+        default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -138,7 +138,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=512,
+        default=800,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -151,14 +151,37 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
+        '--dataset_seed',
+        type=int,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    parser.add_argument(
         '--dropconnect_rate',
         type=float,
-        default=0.0,
+        default=0.5,
         help='drop rate for dropconnect.')
+    parser.add_argument(
+        '--dropconnect_inference',
+        type=str,
+        default='sn',
+        # default='simple',
+        choices=['sn', 'simple', 'vanilla'],
+        help='')
+    parser.add_argument(
+        '--dropout_rate',
+        type=float,
+        default=0.0,
+        help='drop rate for dropout.')
+    parser.add_argument(
+        '--dropout_inference',
+        type=str,
+        default='sn',
+        choices=['sn', 'vanilla'],
+        help='')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-2,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(
@@ -168,7 +191,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=1, help='K prime in the paper')
+        '--K_prime', type=float, default=28 * 28, help='K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,
@@ -176,6 +199,13 @@ def main():
         help='Whether plot raw activations')
 
     args = parser.parse_args()
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
+
+    if args.dropout_rate > 1e-8 and args.dropconnect_rate > 1e-8:
+        raise Exception("dropout과 dropconnect 중 하나만 사용할 수 있습니다.")
+
     train(args, args.seed)
 
 
