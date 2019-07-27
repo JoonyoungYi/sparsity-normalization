@@ -185,6 +185,11 @@ def main():
         type=float,
         default=1e-4,
         help='learning rate for optimizer.')
+    parser.add_argument(
+        '--dropout_rate',
+        type=float,
+        default=0.0,
+        help='drop rate for dropout')
     parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
         '--dataset_seed',
@@ -228,9 +233,9 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_100k,
         # default=Dataset.KIND_MOVIELENS_1M,
-        default=Dataset.KIND_MOVIELENS_10M,
+        # default=Dataset.KIND_MOVIELENS_10M,
         help='dataset')
     parser.add_argument(
         '--sparse_tensor',
