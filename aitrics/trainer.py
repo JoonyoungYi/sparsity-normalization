@@ -66,27 +66,27 @@ parser.add_argument(
 parser.add_argument(
     '--conv_kernel_size',
     type=int,
-    default=2,
+    default=3,
     choices=[2, 3])
 parser.add_argument(
     '--conv_layer_num',
     type=int,
-    default=1,
+    default=2,
     choices=[1, 2])
 parser.add_argument(
     '--conv_padding',
     type=str,
-    default='valid',
+    default='causal',
     choices=['valid', 'causal', 'same'])
 parser.add_argument(
     '--conv_act',
     type=str,
-    default='relu',
+    default='tanh',
     choices=['relu', 'tanh'])
 parser.add_argument(
     '--conv_filters',
     type=int,
-    default=17)
+    default=34)
 
 parser.add_argument(
     '--sparsity_normalization',
@@ -98,6 +98,11 @@ parser.add_argument(
     type=float,
     default=1.0,
     help='K_prime in Algorithm 1 of the paper')
+parser.add_argument(
+    '--K_prime_opt',
+    type=str,
+    default='n0',
+    choices=['n0', 'n1', 'custom'])
 
 parser.add_argument(
     '--epochs',
@@ -141,21 +146,39 @@ def auc(y_true, y_pred):
 # get data
 X_train, y_train, X_test, y_test, class_weights, disease = init_data(args)
 
+# get binarized data for 1dconv SN
+if args.model == '1dcnn' and args.sparsity_normalization:
+    X_train_b = (X_train > 1e-10).astype(int)
+    X_test_b = (X_test > 1e-10).astype(int)
+
 # construct model
 model, early_stopping_callback = init_model(args)
 
 # model training
 model.compile(loss='binary_crossentropy', optimizer=Adam(args.learning_rate), metrics=['accuracy', auc])
-hist = model.fit(X_train, y_train,
-          validation_data=(X_test, y_test),
-          verbose=args.verbose,
-          class_weight=class_weights,
-          epochs=args.epochs,
-          batch_size=args.batch_size,
-          callbacks=[early_stopping_callback]) # early stopping callback
+
+if args.model == '1dcnn' and args.sparsity_normalization:
+    hist = model.fit([X_train, X_train_b], y_train,
+              validation_data=([X_test, X_test_b], y_test),
+              verbose=args.verbose,
+              class_weight=class_weights,
+              epochs=args.epochs,
+              batch_size=args.batch_size,
+              callbacks=[early_stopping_callback]) # early stopping callback
+else:
+    hist = model.fit(X_train, y_train,
+              validation_data=(X_test, y_test),
+              verbose=args.verbose,
+              class_weight=class_weights,
+              epochs=args.epochs,
+              batch_size=args.batch_size,
+              callbacks=[early_stopping_callback]) # early stopping callback
 
 # model evaluation
-scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
+if args.model == '1dcnn' and args.sparsity_normalization:
+    scores = model.evaluate([X_test, X_test_b], y_test, verbose=0, batch_size=args.batch_size)
+else:
+    scores = model.evaluate(X_test, y_test, verbose=0, batch_size=args.batch_size)
 
 if args.screen_print:
     print("\nResult of {}".format(disease))
