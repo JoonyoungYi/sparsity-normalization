@@ -138,7 +138,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=800,
+        default=10,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -156,32 +156,9 @@ def main():
         default=1,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
-        '--dropconnect_rate',
-        type=float,
-        default=0.5,
-        help='drop rate for dropconnect.')
-    parser.add_argument(
-        '--dropconnect_inference',
-        type=str,
-        default='sn',
-        # default='simple',
-        choices=['sn', 'simple', 'vanilla'],
-        help='')
-    parser.add_argument(
-        '--dropout_rate',
-        type=float,
-        default=0.0,
-        help='drop rate for dropout.')
-    parser.add_argument(
-        '--dropout_inference',
-        type=str,
-        default='sn',
-        choices=['sn', 'vanilla'],
-        help='')
-    parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-2,
         help='learning rate of optimizer')
 
     parser.add_argument(
@@ -202,9 +179,6 @@ def main():
 
     if args.dataset_seed is None:
         args.dataset_seed = args.seed
-
-    if args.dropout_rate > 1e-8 and args.dropconnect_rate > 1e-8:
-        raise Exception("dropout과 dropconnect 중 하나만 사용할 수 있습니다.")
 
     train(args, args.seed)
 
