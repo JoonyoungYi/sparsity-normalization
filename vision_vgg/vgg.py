@@ -41,7 +41,12 @@ class Conv2d_sparsity_normal(nn.Module):
         self.bias = nn.Parameter(torch.zeros(self.out_channels))
 
         self.fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
-        bound = 1 / sqrt(self.fan_in)
+
+        if self.fan_in_K_prime:
+            bound = 1 / sqrt(self.fan_in)
+        else:
+            bound = 1
+            nn.init.uniform_(self.conv.weight, -bound, bound)
         nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
