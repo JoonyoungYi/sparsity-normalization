@@ -138,6 +138,9 @@ if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=args.lr)
+
 if args.resume_best:
     # Load checkpoint.
     print('==> Resuming from best checkpoint..')
@@ -165,9 +168,6 @@ elif args.resume:
     test_best_acc = checkpoint['test_best_acc']
     test_best_epoch = checkpoint['test_best_epoch']
     start_epoch = checkpoint['epoch']+1
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
 # Training
 def train(epoch):
