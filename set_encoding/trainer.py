@@ -19,10 +19,10 @@ def _train(args):
         raise NotImplementedError()
 
     model = model.cuda()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.L1Loss().cuda()
     losses = []
-    for iter_idx in range(500):
+    for iter_idx in range(args.max_iter):
         x, y = dataset.get_train_batch(iter_idx)
         x, y = torch.from_numpy(x).float().cuda(), torch.from_numpy(
             y).float().cuda()
@@ -49,17 +49,13 @@ def main():
         # default='set-transformer',
         choices=['deep-set', 'set-transformer'],
         help='')
-    parser.add_argument(
-        '--max_iter',
-        type=int,
-        default='1000',
-        help='')
+    parser.add_argument('--max_iter', type=int, default='10000', help='')
     parser.add_argument(
         '--deepset_pooling',
         type=str,
-        default='max',
+        # default='max',
         # default='mean',
-        # default='sum',
+        default='sum',
         # default='min',
         choices=['max', 'mean', 'sum', 'min'],
         help='')

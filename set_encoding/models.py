@@ -8,23 +8,22 @@ class DeepSet(nn.Module):
     def __init__(self, pool="max"):
         super().__init__()
         self.enc = nn.Sequential(
-            nn.Linear(in_features=1, out_features=64),
-            nn.ReLU(),
-            nn.Linear(in_features=64, out_features=64),
-            nn.ReLU(),
-            nn.Linear(in_features=64, out_features=64),
-            nn.ReLU(),
-            nn.Linear(in_features=64, out_features=64), )
+            nn.Linear(in_features=1, out_features=100),
+            nn.Tanh(),
+            # nn.Linear(in_features=300, out_features=100),
+            # nn.Tanh(),
+            nn.Linear(in_features=100, out_features=30),
+            nn.Tanh(), )
         self.dec = nn.Sequential(
-            nn.Linear(in_features=64, out_features=64),
-            nn.ReLU(),
-            nn.Linear(in_features=64, out_features=1), )
+            nn.Linear(in_features=30, out_features=1), )
         self.pool = pool
 
     def forward(self, x):
+        # print(x.shape)
         x = self.enc(x)
+        # print(x.shape)
         if self.pool == "max":
-            x = x.max(dim=1)[0]
+            x = x.max(dim=1)
         elif self.pool == "mean":
             x = x.mean(dim=1)
         elif self.pool == "sum":
@@ -33,7 +32,10 @@ class DeepSet(nn.Module):
             x = x.min(dim=1)
         else:
             raise NotImplementedError()
+        # print(x.shape)
         x = self.dec(x)
+        # print(x.shape)
+        # input('')
         return x
 
 
