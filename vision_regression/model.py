@@ -39,11 +39,11 @@ def _init_weights(args, n_in, n_out):
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         if (i == 0 and args.sparsity_normalization):
-            limit = math.sqrt(6 / args.K_prime)
+            limit = math.sqrt(2 / args.K_prime)
         else:
-            limit = math.sqrt(6 / n_in)
+            limit = math.sqrt(2 / n_in)
 
-        weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
+        weight = tf.Variable(tf.truncated_normal([n_in, n_out], mean=0, stddev=limit))
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)
@@ -65,6 +65,7 @@ def init_models(args, n_in, n_out):
     accuracy = -tf.reduce_mean(costs)
 
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
+    # optimizer = tf.train.GradientDescentOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss)
 
     return {

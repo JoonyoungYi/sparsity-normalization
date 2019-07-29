@@ -13,12 +13,14 @@
 * docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
 ```
 sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
+docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
 cd .. && cd home/server01/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server02/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server03/SN-tensorflow && export CUDA_VISIBLE_DEVICES=3
+cd .. && cd home/server03/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server04/SN-tensorflow
 cd .. && cd home/server05/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server09/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/server10/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server12/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server13/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server14/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
