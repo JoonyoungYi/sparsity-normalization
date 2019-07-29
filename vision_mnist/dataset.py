@@ -22,7 +22,6 @@ def _sparsity_normalization(x, K_prime):
         row /= count_nonzero
     return x
 
-
 def _resize(images):
     _x = np.zeros(images.shape)
     print('>> image resizing...')
