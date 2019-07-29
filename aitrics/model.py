@@ -207,8 +207,6 @@ def init_model(args):
         divider = L0_layer(binarized_inputs)
         # divider: [batch, 4, 34]
 
-        # TODO: divider conv1d learning X
-
         # remove zero to divide properly
         divider = Zero2One()(divider)
 
