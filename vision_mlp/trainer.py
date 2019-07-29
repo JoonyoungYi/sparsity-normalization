@@ -107,6 +107,8 @@ def train(args, seed, dataset_seed):
     results.append(args.seed)
     results.append(args.n_hidden_layer)
     results.append(args.sparsity_normalization)
+    results.append(args.K_prime_opt)
+    results.append(args.K_prime)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
