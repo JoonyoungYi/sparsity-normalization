@@ -18,7 +18,7 @@ import argparse
 from common.utils import str2bool, integer_list
 
 from .vgg import *
-from .utils import progress_bar
+from .utils import progress_bar, print2file
 
 parser = argparse.ArgumentParser(description='VGG16')
 parser.add_argument('--lr',
@@ -197,6 +197,9 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
+        print2file('Epoch: {}'.format(epoch))
+        print2file('Train Accuracy: {:.4f}'.format(correct/total), args.model)
+
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
@@ -229,6 +232,7 @@ def valid(epoch):
                 % (valid_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
     acc = correct/total
+    print2file('Valid Accuracy: {:.4f}'.format(acc), args.model)
 
     # calculate test accuracy 
     test_loss = 0
@@ -249,6 +253,7 @@ def valid(epoch):
                 % (test_loss/(batch_idx+1), 100.*test_correct/test_total, test_correct, test_total))
 
     test_acc = test_correct/test_total
+    print2file('Test  Accuracy: {:.4f}\n'.format(test_acc), args.model)
 
     # Tracking best test accuracy
     if test_acc > (test_best_acc + 1e-4):
