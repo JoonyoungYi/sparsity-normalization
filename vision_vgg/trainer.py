@@ -55,6 +55,10 @@ parser.add_argument('--fan_in_K_prime',
                     default=False,
                     type=str2bool,
                     help='Set K_prime to fan_in (See Algorithm 1 in the paper)')
+parser.add_argument('--K_prime',
+                    default=1.0,
+                    type=float,
+                    help='Set K_prime (See Algorithm 1 in the paper)')
 parser.add_argument('--epochs',
                     default=3000,
                     type=int)
@@ -130,7 +134,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 
 # Model construction
 print('==> Building model..')
-net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, args.batch_norm, args.dropout, args.fan_in_K_prime)
+net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, args.batch_norm, args.dropout, args.fan_in_K_prime, args.K_prime)
 net = net.to(device)
 print(net)
 
