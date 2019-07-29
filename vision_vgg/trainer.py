@@ -81,9 +81,12 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Setting seed for reproducing
 # fix seed for split dataset
-random.seed(1)
-torch.manual_seed(1)
-np.random.seed(1)
+random.seed(2019)
+os.environ['PYTHONHASHSEED'] = str(2019)
+np.random.seed(2019)
+torch.manual_seed(2019)
+torch.cuda.manual_seed(2019)
+torch.cuda.manual_seed_all(2019)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -127,8 +130,13 @@ validloader = torch.utils.data.DataLoader(
 
 # change seed for training
 random.seed(args.seed)
-torch.manual_seed(args.seed)
+os.environ['PYTHONHASHSEED'] = str(args.seed)
 np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
