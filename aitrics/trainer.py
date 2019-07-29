@@ -203,6 +203,9 @@ if args.file_print:
     results.append(args.conv_act)
     results.append(args.conv_filters)
 
+    results.append(args.sparsity_normalization)
+    results.append(args.K_prime)
+
     results.append(args.epochs_early_stop)
     results.append(hist.epoch[-1])
 
