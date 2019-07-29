@@ -197,7 +197,7 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        print2file('Epoch: {}'.format(epoch))
+        print2file('Epoch: {}'.format(epoch), args.model)
         print2file('Train Accuracy: {:.4f}'.format(correct/total), args.model)
 
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
