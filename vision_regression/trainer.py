@@ -81,7 +81,7 @@ def train(args, seed):
         print('%6d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
               '%.4f' % valid_acc, '%.4f' % test_acc)
         print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_acc,
-              '%.4f' % final_test_acc)
+              '%.8f' % final_test_acc)
         print('%6d' % max_test_iter_idx, '%.4f' % max_test_acc)
 
         if max_valid_acc + 1e-5 < valid_acc:
@@ -95,6 +95,9 @@ def train(args, seed):
             max_test_iter_idx = iter_idx
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
+            break
+
+        if train_loss < 100 or train_acc > -0.001:
             break
 
     endTime = time.time() - startTime
@@ -129,7 +132,7 @@ def main():
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
-        '--max_epoch', type=int, default=1000000, help='Max epoch')
+        '--max_epoch', type=int, default=10000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
@@ -138,7 +141,7 @@ def main():
     parser.add_argument(
         '--n_hidden_layer',
         type=int,
-        default=3,
+        default=2,
         help='the number of hidden layers.')
     parser.add_argument(
         '--n_hidden_unit',
@@ -165,7 +168,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-4,
         help='learning rate of optimizer')
 
     parser.add_argument(
