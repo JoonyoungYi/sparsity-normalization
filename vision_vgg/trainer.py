@@ -146,10 +146,6 @@ net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, ar
 net = net.to(device)
 print(net)
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
-
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
