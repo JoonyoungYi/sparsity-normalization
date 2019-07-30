@@ -43,12 +43,10 @@ class Conv2d_sparsity_normal(nn.Module):
 
         self.fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
 
-        if self.fan_in_K_prime:
-            bound = 1 / sqrt(self.fan_in)
-        else:
-            bound = 1 / sqrt(self.K_prime)
-            nn.init.uniform_(self.conv.weight, -bound, bound)
-        nn.init.uniform_(self.bias, -bound, bound)
+        # init weights with normal (for low variance)
+        bound = 1 / sqrt(self.fan_in)
+        nn.init.kaiming_normal_(self.conv.weight, a=1)
+        nn.init.normal_(self.bias, std=bound)
 
     def forward(self, x):
         # These procedure follows Algorithm 2 of the paper.

@@ -40,7 +40,7 @@ parser.add_argument(
 parser.add_argument(
     '--model',
     type=str,
-    default='mlp',
+    default='1dcnn',
     choices=['mlp', 'lstm', '1dcnn'])
 parser.add_argument(
     '--dropout',
@@ -101,7 +101,7 @@ parser.add_argument(
 parser.add_argument(
     '--K_prime_opt',
     type=str,
-    default='n0',
+    default='custom',
     choices=['n0', 'n1', 'custom'])
 
 parser.add_argument(

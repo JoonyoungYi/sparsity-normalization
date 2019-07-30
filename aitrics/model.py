@@ -194,7 +194,7 @@ def init_model(args):
         # In: [batch, 4, 34]
         inputs = Input(shape=(sequence_length, 34), name='main_input')
         feature1 = Conv1D(filters=args.conv_filters, kernel_size=args.conv_kernel_size, padding=args.conv_padding, data_format='channels_last', activation=Activation(args.conv_act),
-                  use_bias=False)(inputs)
+                  use_bias=False, kernel_initializer='he_normal')(inputs)
         # x: [batch, 4, 34]
 
         # get binarized input and apply 1d conv with filter_value=1 and without bias

@@ -131,7 +131,7 @@ def main():
     parser.add_argument(
         '--valid_split',
         type=str,
-        default='from_train',
+        default='from_test',
         choices=['from_train', 'from_test'],
         help='split validation set from train or test set')
     parser.add_argument(
@@ -181,9 +181,9 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=1, help='K prime in the paper')
+        '--K_prime', type=float, default=150, help='K prime in the paper')
     parser.add_argument(
-        '--K_prime_opt', type=str, default='n0', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
+        '--K_prime_opt', type=str, default='custom', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,
