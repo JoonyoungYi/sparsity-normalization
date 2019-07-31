@@ -19,6 +19,7 @@ cd .. && cd home/server02/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES
 cd .. && cd home/server03/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server04/SN-tensorflow
 cd .. && cd home/server05/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
+cd .. && cd home/joonyoung/ml/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server09/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server10/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server12/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
@@ -30,7 +31,6 @@ cd .. && cd home/server20/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES
 cd .. && cd home/server22/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server23/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 cd .. && cd home/server24/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/joonyoung/ml/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
 pip3 install -r requirements.txt
 ```
 

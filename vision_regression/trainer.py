@@ -168,7 +168,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-4,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(

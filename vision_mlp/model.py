@@ -34,10 +34,10 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if (i == 0 and args.sparsity_normalization):
-            limit = math.sqrt(6 / 1)
-        else:
-            limit = math.sqrt(6 / n_in)
+        # if (i == 0 and args.sparsity_normalization):
+        #     limit = math.sqrt(6 / 1)
+        # else:
+        limit = math.sqrt(6 / n_in)
 
         weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
         bias = tf.Variable(tf.zeros([n_out]))

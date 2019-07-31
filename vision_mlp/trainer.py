@@ -168,7 +168,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=28 * 28, help='K prime in the paper')
+        '--K_prime', type=float, default=28*28, help='K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,
