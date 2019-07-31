@@ -138,7 +138,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=10,
+        default=5,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -146,7 +146,7 @@ def main():
         # default='tanh',
         default='relu',
         # default='sigmoid',
-        choices=['relu', 'tanh', 'sigmoid'],
+        choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'softplus', 'elu'],
         help='the activation function')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
@@ -168,7 +168,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=28*28, help='K prime in the paper')
+        '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,
