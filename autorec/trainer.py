@@ -245,8 +245,8 @@ def main():
     parser.add_argument(
         '--n_batch',
         type=int,
-        # default=0,
-        default=1000,
+        default=0,
+        # default=1000,
         help='0 for full batch. integer for batch number.')
 
     args = parser.parse_args()

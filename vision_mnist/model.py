@@ -24,6 +24,7 @@ def _forward(x, weights, biases, training, args):
         if i < n_layer - 1:
             layer = activation_fn(layer)
             layers.append(layer)
+            # layer = tf.layers.dropout(layer, 0.2, training=training)
         else:
             layers.append(layer)
     return layers
@@ -34,12 +35,14 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if (i == 0 and args.sparsity_normalization):
-            limit = math.sqrt(6 / args.K_prime)
-        else:
-            limit = math.sqrt(6 / n_in)
+        # if (i == 0 and args.sparsity_normalization):
+        #     limit = math.sqrt(6 / args.K_prime)
+        # else:
+        # stddev =
 
-        weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
+        weight = tf.Variable(
+            tf.truncated_normal(
+                [n_in, n_out], mean=0, stddev=math.sqrt(2 / n_in)))
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)
@@ -56,7 +59,7 @@ def _get_accuracy(y_hot, y_hat):
 
 
 def init_models(args, n_in, n_out):
-    x = tf.placeholder(tf.float32, [None, 28 * 28], name="x")
+    x = tf.placeholder(tf.float32, [None, n_in], name="x")
     y = tf.placeholder(tf.int32, [None], name="y")
     training = tf.placeholder(tf.bool, name="training")
 
@@ -115,6 +118,7 @@ def init_models(args, n_in, n_out):
     layers = _forward(x, weights, biases, training, args)
     y_hat = layers[-1]
     # y_hat = logits
+    y_hat_hot = tf.argmax(y_hat, 1)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -127,9 +131,10 @@ def init_models(args, n_in, n_out):
     return {
         'x': x,
         'y': y,
+        'y_hat_hot': y_hat_hot,
         'training': training,
         'loss': loss,
         'accuracy': accuracy,
-        # 'layers': layers,
+        'layers': layers,
         'train_op': train_op,
     }

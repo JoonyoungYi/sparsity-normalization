@@ -29,6 +29,7 @@ def train(args, seed):
 
     dataset = Dataset(args)
     set_seed(seed)
+
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -43,6 +44,9 @@ def train(args, seed):
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
+    np.save('vision_mnist/result-test-ys-{}.npy'.format(args.dataset), test_y)
+    # assert False
+
     # _save_activations(args, session, models, dataset, before=True)
 
     max_valid_acc = 0.0
@@ -53,14 +57,17 @@ def train(args, seed):
     max_test_iter_idx = 0
 
     for iter_idx in range(args.max_epoch):
-        for i in range(0, 50000, 10000):
+        train_accs = []
+        for i in range(0, train_x.shape[0], 5000):
             _, train_loss, train_acc = session.run(
                 [models['train_op'], models['loss'], models['accuracy']],
                 feed_dict={
-                    models['x']: train_x[i:i + 10000],
-                    models['y']: train_y[i:i + 10000],
+                    models['x']: train_x[i:i + 5000],
+                    models['y']: train_y[i:i + 5000],
                     models['training']: True,
                 })
+            train_accs.append(train_acc)
+        train_acc = sum(train_accs) / len(train_accs)
 
         valid_acc = session.run(
             models['accuracy'],
@@ -84,11 +91,32 @@ def train(args, seed):
               '%.4f' % final_test_acc)
         print('%6d' % max_test_iter_idx, '%.4f' % max_test_acc)
 
+        with open('vision_mnist/result-epochs-{}-{}.txt'.format(
+                args.sparsity_normalization, args.dataset).lower(), 'a') as f:
+            f.write('\t'.join(
+                str(t)
+                for t in
+                [iter_idx, train_loss, train_acc, valid_acc, test_acc]) + '\n')
+
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
             max_valid_iter_idx = iter_idx
             final_test_acc = test_acc
             # _save_activations(args, session, models, dataset, before=False)
+
+            test_outputs, test_yhats = session.run(
+                [models['layers'][-1], models['y_hat_hot']],
+                feed_dict={
+                    models['x']: test_x,
+                    models['y']: test_y,
+                    models['training']: False,
+                })
+
+            np.save('vision_mnist/result-outputs-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(),
+                    test_outputs)
+            np.save('vision_mnist/result-yhats-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(), test_yhats)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
@@ -138,7 +166,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=10,
+        default=512,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -168,7 +196,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=1, help='K prime in the paper')
+        '--K_prime', type=float, default=None, help='K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,

@@ -15,29 +15,40 @@ from .datasets import cifar100 as datasets_cifar100
 
 
 def _sparsity_normalization(x, K_prime):
+    if K_prime is None or K_prime <= 0:
+        cs = []
+        for i in range(x.shape[0]):
+            row = x[i]
+            count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
+            cs.append(count_nonzero)
+        K_prime = sum(cs) / len(cs)
+        print('>> calculated K_prime:', K_prime)
+        input('')
+
     for i in range(x.shape[0]):
         row = x[i]
         count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
         row *= K_prime
         row /= count_nonzero
-    return x
+        x[i] = row
+    return x, K_prime
 
-def _resize(images):
+
+def _resize(images, max_padding=42):
+    assert max_padding >= 0
+
     _x = np.zeros(images.shape)
     print('>> image resizing...')
     for i in tqdm(range(images.shape[0])):
         image_array = images[i]
-        # if random.random() < 0.5:
         image = Image.fromarray(image_array)
-        # image.save('vision_mnist/original.png')
-        image = ImageOps.expand(image, border=random.randint(0, 28))
-        image = image.resize((28, 28))
-        image_array = np.array(image)
+
+        padding = random.randint(0, max_padding)
+        if padding > 0:
+            image = ImageOps.expand(image, border=padding)
+            image = image.resize((28, 28))
+            image_array = np.array(image)
         _x[i] = image_array
-        # image.save('vision_mnist/converted.png')
-        #     input('!')
-        # else:
-        #     _x[i] = image_array
     return _x
 
 
@@ -59,13 +70,34 @@ class Dataset:
         set_seed(args.dataset_seed)
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
-        train_x = _resize(train_x)
-        test_x = _resize(test_x)
+        # train_valid_idx = train_y < 2
+        # train_x = train_x[train_valid_idx, :]
+        # train_y = train_y[train_valid_idx]
+        #
+        # test_valid_idx = test_y < 2
+        # test_x = test_x[test_valid_idx, :]
+        # test_y = test_y[test_valid_idx]
+
+        # print(train_x.shape)
+        # print(train_y.shape)
+        # input('')
+
+        if args.dataset == 'mnist' or args.dataset == 'fashion':
+            train_x = _resize(train_x)
+            test_x = _resize(test_x)
 
         # flatten and normalize
         if args.dataset == 'mnist' or args.dataset == 'fashion':
             train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
             test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+        elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+            train_x = 1.0 - train_x.reshape([-1, 32 * 32 * 3
+                                       ]).astype('float32') / 255.0
+            test_x = 1.0 - test_x.reshape([-1, 32 * 32 * 3
+                                     ]).astype('float32') / 255.0
+
+            train_y = train_y.reshape([-1])
+            test_y = test_y.reshape([-1])
         else:
             raise NotImplementedError()
 
@@ -82,19 +114,26 @@ class Dataset:
 
         # sparsity injection
         if args.sparsity_normalization:
-            train_x = _sparsity_normalization(train_x, args.K_prime)
-            test_x = _sparsity_normalization(test_x, args.K_prime)
+            train_x, K_prime = _sparsity_normalization(train_x, args.K_prime)
+            test_x, _ = _sparsity_normalization(test_x, K_prime)
 
         # split
-        train_perm = np.random.permutation(train_x.shape[0])
-        train_x = train_x[train_perm]
-        train_y = train_y[train_perm]
+        perm = np.random.permutation(test_x.shape[0])
+        test_x = test_x[perm]
+        test_y = test_y[perm]
 
         if args.dataset == 'mnist' or args.dataset == 'fashion':
-            valid_x = train_x[50000:]
-            train_x = train_x[:50000]
-            valid_y = train_y[50000:]
-            train_y = train_y[:50000]
+            split_idx = test_x.shape[0] // 2
+            valid_x = test_x[split_idx:]
+            test_x = test_x[:split_idx]
+            valid_y = test_y[split_idx:]
+            test_y = test_y[:split_idx]
+        elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+            split_idx = test_x.shape[0] // 2
+            valid_x = test_x[split_idx:]
+            test_x = test_x[:split_idx]
+            valid_y = test_y[split_idx:]
+            test_y = test_y[:split_idx]
         else:
             raise NotImplementedError()
 
