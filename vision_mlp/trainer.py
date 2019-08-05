@@ -106,6 +106,7 @@ def train(args, seed, dataset_seed):
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
+    results.append(args.activation_fn)
     results.append(args.sparsity_normalization)
     results.append(args.K_prime_opt)
     results.append(args.K_prime)
@@ -131,7 +132,7 @@ def main():
     parser.add_argument(
         '--valid_split',
         type=str,
-        default='from_test',
+        default='from_train',
         choices=['from_train', 'from_test'],
         help='split validation set from train or test set')
     parser.add_argument(
@@ -181,7 +182,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=150, help='K prime in the paper')
+        '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
         '--K_prime_opt', type=str, default='custom', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
     parser.add_argument(
