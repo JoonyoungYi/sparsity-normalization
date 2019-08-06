@@ -6,11 +6,6 @@ import tensorflow as tf
 from .configs import *
 from .rprop import RPropOptimizer
 
-ACTIVATION_FUNCTION = tf.nn.sigmoid
-
-# ACTIVATION_FUNCTION = tf.nn.tanh
-# ACTIVATION_FUNCTION = tf.nn.relu
-
 
 def _init_weights(n_col, args):
     weights, biases = [], []
@@ -31,6 +26,14 @@ def _init_weights(n_col, args):
 def _forward(train_x, weights, biases, training, args):
     assert len(weights) == len(biases)
 
+    if args.activation_fn == 'sigmoid':
+        activation_fn = tf.nn.sigmoid
+    elif args.activation_fn == 'relu':
+        activation_fn = tf.nn.relu
+    else:
+        # ACTIVATION_FUNCTION = tf.nn.tanh
+        raise NotImplementedError()
+
     layer = train_x
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         if i == 0 and args.sparse_tensor:
@@ -41,8 +44,10 @@ def _forward(train_x, weights, biases, training, args):
         layer = layer + bias
 
         if i < len(biases) - 1:
-            layer = ACTIVATION_FUNCTION(layer)
-            # layer = tf.layers.dropout(layer, rate=0.5, training=training)
+            layer = activation_fn(layer)
+            if args.dropout_rate > 1e-8:
+                layer = tf.layers.dropout(
+                    layer, rate=args.dropout_rate, training=training)
     return layer
 
 

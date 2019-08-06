@@ -5,9 +5,8 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
-from common.dataset.movielens import Dataset
+from common.datasets.movielens import Dataset
 from .batch import BatchManager
 from .configs import *
 from .model import init_models
@@ -16,9 +15,9 @@ from common.utils import set_seed
 from common.utils import save_results_to_file
 
 
-def __get_rmse(session, models, x, y, n_batch):
+def __get_rmse(session, models, x, y, n_batch, args):
     sse, n = 0.0, 0
-    for i in tqdm(range(0, x.shape[0], n_batch)):
+    for i in args.tqdm(range(0, x.shape[0], n_batch)):
         _x = x[i:i + n_batch]
         _y = y[i:i + n_batch]
         _sse, _n = session.run(
@@ -43,25 +42,30 @@ def _validate(
         test_x,
         test_y, ):
 
-    print('>> start validation...')
+    if args.use_tqdm:
+        print('>> start validation...')
+
     n_batch = args.n_batch
     # n_batch = test_x.shape[0]
     assert train_x.shape[0] == valid_x.shape[0]
     assert train_x.shape[0] == test_x.shape[0]
     assert train_x.shape[0] >= n_batch
 
-    # train_rmse = __get_rmse(session, models, train_x, train_x, n_batch)
-    valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch)
-    test_rmse = __get_rmse(session, models, test_x, test_y, n_batch)
-    return 0.0, valid_rmse, test_rmse
+    if args.print_train_rmse:
+        train_rmse = __get_rmse(session, models, train_x, train_x, n_batch, args)
+    else:
+        train_rmse = 0.0
+    valid_rmse = __get_rmse(session, models, valid_x, valid_y, n_batch, args)
+    test_rmse = __get_rmse(session, models, test_x, test_y, n_batch, args)
+    return train_rmse, valid_rmse, test_rmse
 
 
 def _train(args):
-    set_seed(args.seed)
-
     dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.seed)
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
     dataset.init_full_matrices()
+
+    set_seed(args.seed)
 
     n_user, n_item = dataset.get_n_user_and_n_item()
     n_class = dataset.n_class
@@ -99,8 +103,8 @@ def _train(args):
 
     batch_manager = BatchManager(train_x, args)
 
-    gpu_options = tf.GPUOptions(
-        per_process_gpu_memory_fraction=args.gpu_memory_fraction)
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(n_col, dataset.n_class, args)
@@ -115,7 +119,7 @@ def _train(args):
 
     train_losses = []
     for iter_idx in range(1, args.max_iter):
-        for i in tqdm(range(train_x.shape[0] // args.n_batch)):
+        for i in args.tqdm(range(train_x.shape[0] // args.n_batch)):
             batch_x, batch_y = batch_manager.get_batch()
             _, train_loss = session.run(
                 (models['train_op'], models['loss']),
@@ -146,7 +150,8 @@ def _train(args):
             msg = '\n[ITER %6d]\n' % (iter_idx)
             msg += '  - train loss: {:12.1f}\n'.format(
                 sum(train_losses) / len(train_losses))
-            msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
+            if args.print_train_rmse:
+                msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
             msg += '  - valid rmse: {:12.8f}    (min: {:12.8f}, iter: {:d}, final: {:12.8f})\n'.format(
                 valid_rmse, min_valid_rmse, min_valid_rmse_iter_idx,
                 final_test_rmse)
@@ -175,6 +180,7 @@ def _train(args):
     results.append(args.lambda_1)
     results.append(args.lambda_2)
     results.append(args.seed)
+    results.append(args.dataset_seed)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
     save_results_to_file('cfnade', args.dataset, results)
@@ -230,6 +236,12 @@ def main():
         default=True,
         help='Whether use ordinal cost')
     parser.add_argument(
+        '--use_tqdm',
+        type=str2bool,
+        default=False,
+        # default=True,
+        help='Whether use tqdm library.')
+    parser.add_argument(
         '--use_user_vector',
         type=str2bool,
         default=False,
@@ -241,24 +253,36 @@ def main():
         default=False,
         help='Whether use user averaging_possible_choices')
     parser.add_argument(
-        '--gpu_memory_fraction',
-        type=float,
-        default=0.25,
-        help='per_process_gpu_memory_fraction')
-
-    parser.add_argument(
         '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
     parser.add_argument(
         '--iter_early_stop',
         type=int,
         default=1000,
         help='the number of iteration for early stop.')
+    parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
-        '--seed', type=int, default=1, help='the seed for dataset')
+        '--dataset_seed',
+        type=int,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    parser.add_argument(
+        '--print_train_rmse',
+        type=str2bool,
+        default=True,
+        help='Whether print train_rmse')
 
     args = parser.parse_args()
     args.lambda_1 = args.lambda_w
     args.lambda_2 = args.lambda_w
+
+    if args.use_tqdm:
+        from tqdm import tqdm
+        args.tqdm = tqdm
+    else:
+        args.tqdm = lambda x: x
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
     _train(args)
 
 
