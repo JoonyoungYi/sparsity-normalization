@@ -37,7 +37,7 @@ def init_data(args):
     max_feature = np.maximum(max_feature, 1)
     X_train /= max_feature
 
-    if args.sparsity_normalization:
+    if args.sparsity_normalization and args.model != '1dcnn':
         train_num_records = data["train_num_records"]*34
         L0_norm = np.expand_dims(train_num_records, 1)
         X_train *= args.K_prime
@@ -56,7 +56,7 @@ def init_data(args):
     # [0,1] normalization by using max_feature of training data
     X_test /= max_feature
 
-    if args.sparsity_normalization:
+    if args.sparsity_normalization and args.model != '1dcnn':
         valid_num_records = data["valid_num_records"]*34
         L0_norm = np.expand_dims(valid_num_records, 1)
         X_test *= args.K_prime

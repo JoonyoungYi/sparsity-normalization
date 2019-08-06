@@ -11,6 +11,10 @@ import math
 import torch.nn as nn
 import torch.nn.init as init
 
+def print2file(string, filename):
+    with open('{}.txt'.format(filename), 'a') as f:
+        f.write(string)
+        f.write('\n')
 
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
