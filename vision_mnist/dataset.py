@@ -14,7 +14,7 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
-def _sparsity_normalization(x, K_prime):
+def _sparsity_normalization(x, K_prime=None):
     if K_prime is None or K_prime <= 0:
         cs = []
         for i in range(x.shape[0]):
@@ -34,22 +34,33 @@ def _sparsity_normalization(x, K_prime):
     return x, K_prime
 
 
-def _resize(images, max_padding=42):
+def _resize(images, max_padding=28):
     assert max_padding >= 0
 
-    _x = np.zeros(images.shape)
-    print('>> image resizing...')
-    for i in tqdm(range(images.shape[0])):
-        image_array = images[i]
-        image = Image.fromarray(image_array)
+    if max_padding > 0.5:
+        _x = np.zeros(images.shape)
+        _g = np.zeros(images.shape[0])
+        print('>> image resizing...')
+        for i in tqdm(range(images.shape[0])):
+            image_array = images[i]
+            image = Image.fromarray(image_array)
 
-        padding = random.randint(0, max_padding)
-        if padding > 0:
-            image = ImageOps.expand(image, border=padding)
-            image = image.resize((28, 28))
-            image_array = np.array(image)
-        _x[i] = image_array
-    return _x
+            # padding = random.randint(0, max_padding)
+            # if padding > 0:
+            #     image = ImageOps.expand(image, border=padding)
+            #     image = image.resize((28, 28))
+            #     image_array = np.array(image)
+
+            if random.random() < 0.5:
+                image = ImageOps.expand(image, border=max_padding)
+                image = image.resize((28, 28))
+                image_array = np.array(image)
+                _g[i] = 1
+
+            _x[i] = image_array
+        return _x, _g
+    else:
+        return images, None
 
 
 class Dataset:
@@ -70,6 +81,28 @@ class Dataset:
         set_seed(args.dataset_seed)
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
+        # max_dict, min_dict = {}, {}
+        # for i in range(train_x.shape[0]):
+        #     x = train_x[i]
+        #     y = train_y[i]
+        #     l0 = max(np.where(x > 1e-8)[0].shape[0], 1)
+        #     max_dict[y] = max(max_dict.get(y, 0), l0)
+        #     min_dict[y] = min(min_dict.get(y, 28 * 28), l0)
+        # for i in range(test_x.shape[0]):
+        #     x = test_x[i]
+        #     y = test_y[i]
+        #     l0 = max(np.where(x > 1e-8)[0].shape[0], 1)
+        #     max_dict[y] = max(max_dict.get(y, 0), l0)
+        #     min_dict[y] = min(min_dict.get(y, 28 * 28), l0)
+        # print(max_dict)
+        # print(min_dict)
+
+        # for digit in range(10):
+        #     l0_max = max_dict.get(digit)
+        #     l0_min = min_dict.get(digit)
+        #     print(digit, l0_min / l0_max, l0_max, l0_min)
+        # input('')
+
         # train_valid_idx = train_y < 2
         # train_x = train_x[train_valid_idx, :]
         # train_y = train_y[train_valid_idx]
@@ -83,8 +116,8 @@ class Dataset:
         # input('')
 
         if args.dataset == 'mnist' or args.dataset == 'fashion':
-            train_x = _resize(train_x)
-            test_x = _resize(test_x)
+            train_x, train_g = _resize(train_x)
+            test_x, test_g = _resize(test_x)
 
         # flatten and normalize
         if args.dataset == 'mnist' or args.dataset == 'fashion':
@@ -92,9 +125,9 @@ class Dataset:
             test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
         elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
             train_x = 1.0 - train_x.reshape([-1, 32 * 32 * 3
-                                       ]).astype('float32') / 255.0
+                                             ]).astype('float32') / 255.0
             test_x = 1.0 - test_x.reshape([-1, 32 * 32 * 3
-                                     ]).astype('float32') / 255.0
+                                           ]).astype('float32') / 255.0
 
             train_y = train_y.reshape([-1])
             test_y = test_y.reshape([-1])
@@ -121,6 +154,12 @@ class Dataset:
         perm = np.random.permutation(test_x.shape[0])
         test_x = test_x[perm]
         test_y = test_y[perm]
+        test_g = test_g[perm]
+
+        self.dense_test_x = test_x[test_g == 0]
+        self.sparse_test_x = test_x[test_g == 1]
+        self.dense_test_y = test_y[test_g == 0]
+        self.sparse_test_y = test_y[test_g == 1]
 
         if args.dataset == 'mnist' or args.dataset == 'fashion':
             split_idx = test_x.shape[0] // 2

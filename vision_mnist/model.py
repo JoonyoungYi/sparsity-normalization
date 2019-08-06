@@ -35,14 +35,18 @@ def _init_weights(args, n_in, n_out):
 
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        # if (i == 0 and args.sparsity_normalization):
-        #     limit = math.sqrt(6 / args.K_prime)
-        # else:
-        # stddev =
+        GAUSSIAN_INITIALIZER = False
+        if GAUSSIAN_INITIALIZER:
+            weight_init = tf.truncated_normal(
+                [n_in, n_out], mean=0, stddev=math.sqrt(2 / n_in))
+        else:
+            if (i == 0 and args.sparsity_normalization):
+                limit = math.sqrt(6 / args.K_prime)
+            else:
+                limit = math.sqrt(6 / n_in)
+            weight_init = tf.random_uniform([n_in, n_out], -limit, limit)
 
-        weight = tf.Variable(
-            tf.truncated_normal(
-                [n_in, n_out], mean=0, stddev=math.sqrt(2 / n_in)))
+        weight = tf.Variable(weight_init)
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)

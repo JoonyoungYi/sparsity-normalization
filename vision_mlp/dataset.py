@@ -1,5 +1,6 @@
 import os
 import random
+import math
 
 import numpy as np
 
@@ -10,13 +11,55 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
-def _sparsity_normalization(x, K_prime):
+def __get_lp_norm(row, p):
+    return np.power(np.sum(np.power(np.abs(row), p)), 1 / p)
+
+
+def __get_norm(row, norm):
+    if norm == 'l0':
+        _norm = max(np.where(row > 1e-8)[0].shape[0], 1)
+    elif norm == 'l1/4':
+        _norm = __get_lp_norm(row, 0.25)
+    elif norm == 'l1/2':
+        _norm = __get_lp_norm(row, 0.5)
+    elif norm == 'l3/4':
+        _norm = __get_lp_norm(row, 0.75)
+    elif norm == 'l1':
+        _norm = np.sum(np.abs(row))
+    elif norm == 'l5/4':
+        _norm = __get_lp_norm(row, 1.25)
+    elif norm == 'l3/2':
+        _norm = __get_lp_norm(row, 1.5)
+    elif norm == 'l7/4':
+        _norm = __get_lp_norm(row, 1.75)
+    elif norm == 'l2':
+        _norm = np.sqrt(np.sum(np.square(row)))
+    else:
+        raise NotImplementedError()
+    return _norm
+
+
+def _sparsity_normalization(x, K_prime, norm='l2'):
+    if K_prime is None:
+        _norms = []
+        for i in range(x.shape[0]):
+            row = x[i]
+            _norm = __get_norm(row, norm)
+            _norms.append(_norm)
+        K_prime = sum(_norms) / len(_norms)
+        print('>> calculated K_prime:', K_prime)
+        # input('')
+
     for i in range(x.shape[0]):
         row = x[i]
-        count_nonzero = max(np.where(row > 1e-8)[0].shape[0], 1)
-        row *= K_prime
-        row /= count_nonzero
-    return x
+        _norm = __get_norm(row, norm)
+        row *= (K_prime / _norm)
+        # print(row)
+        assert not math.isnan(K_prime / _norm)
+        # print((K_prime / _norm))
+        x[i] = row
+    # input('')
+    return x, K_prime
 
 
 class Dataset:
@@ -65,8 +108,8 @@ class Dataset:
 
         # sparsity injection
         if args.sparsity_normalization:
-            train_x = _sparsity_normalization(train_x, args.K_prime)
-            test_x = _sparsity_normalization(test_x, args.K_prime)
+            train_x, K_prime = _sparsity_normalization(train_x, None)
+            test_x, _ = _sparsity_normalization(test_x, K_prime)
 
         # split
         train_perm = np.random.permutation(train_x.shape[0])

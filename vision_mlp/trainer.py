@@ -158,14 +158,14 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-2,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
         '--K_prime', type=float, default=1, help='K prime in the paper')

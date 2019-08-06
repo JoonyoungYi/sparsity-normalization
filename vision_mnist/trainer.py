@@ -24,6 +24,11 @@ from common.utils import save_results_to_file
 #             args.dataset, "before" if before else "after"), activations)
 
 
+def _get_statistics(outputs, ys):
+    return sum(outputs[i][ys[i]]
+               for i in range(outputs.shape[0])) / outputs.shape[0]
+
+
 def train(args, seed):
     startTime = time.time()
 
@@ -57,17 +62,25 @@ def train(args, seed):
     max_test_iter_idx = 0
 
     for iter_idx in range(args.max_epoch):
-        train_accs = []
-        for i in range(0, train_x.shape[0], 5000):
-            _, train_loss, train_acc = session.run(
-                [models['train_op'], models['loss'], models['accuracy']],
-                feed_dict={
-                    models['x']: train_x[i:i + 5000],
-                    models['y']: train_y[i:i + 5000],
-                    models['training']: True,
-                })
-            train_accs.append(train_acc)
-        train_acc = sum(train_accs) / len(train_accs)
+        # train_accs = []
+        # for i in range(0, train_x.shape[0], 5000):
+        #     _, train_loss, train_acc = session.run(
+        #         [models['train_op'], models['loss'], models['accuracy']],
+        #         feed_dict={
+        #             models['x']: train_x[i:i + 5000],
+        #             models['y']: train_y[i:i + 5000],
+        #             models['training']: True,
+        #         })
+        #     train_accs.append(train_acc)
+        # train_acc = sum(train_accs) / len(train_accs)
+
+        _, train_loss, train_acc = session.run(
+            [models['train_op'], models['loss'], models['accuracy']],
+            feed_dict={
+                models['x']: train_x,
+                models['y']: train_y,
+                models['training']: True,
+            })
 
         valid_acc = session.run(
             models['accuracy'],
@@ -84,19 +97,46 @@ def train(args, seed):
                 models['training']: False,
             })
 
+        sparse_test_acc, sparse_test_loss, sparse_outputs = session.run(
+            [models['accuracy'], models['loss'], models['layers'][-1]],
+            feed_dict={
+                models['x']: dataset.sparse_test_x,
+                models['y']: dataset.sparse_test_y,
+                models['training']: False,
+            })
+        sparse_output_mean = _get_statistics(sparse_outputs,
+                                             dataset.sparse_test_y)
+
+        dense_test_acc, dense_test_loss, dense_outputs = session.run(
+            [models['accuracy'], models['loss'], models['layers'][-1]],
+            feed_dict={
+                models['x']: dataset.dense_test_x,
+                models['y']: dataset.dense_test_y,
+                models['training']: False,
+            })
+        dense_output_mean = _get_statistics(dense_outputs,
+                                            dataset.dense_test_y)
+
         print('')
-        print('%6d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
-              '%.4f' % valid_acc, '%.4f' % test_acc)
-        print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_acc,
-              '%.4f' % final_test_acc)
-        print('%6d' % max_test_iter_idx, '%.4f' % max_test_acc)
+        print('%6d' % iter_idx, '%.2f' % train_loss, '%.8f' % train_acc,
+              '%.8f' % valid_acc, '%.8f' % test_acc)
+        print('%6d' % max_valid_iter_idx, '%.8f' % max_valid_acc,
+              '%.8f' % final_test_acc)
+        print('%6d' % max_test_iter_idx, '%.8f' % max_test_acc)
+        print('%6d' % 0, '%.8f' % sparse_test_acc, '%.8f' % dense_test_acc)
+        print('%6d' % 0, '%.8f' % sparse_test_loss, '%.8f' % dense_test_loss)
+        print('%6d' % 0, '%.8f' % sparse_output_mean,
+              '%.8f' % dense_output_mean)
 
         with open('vision_mnist/result-epochs-{}-{}.txt'.format(
                 args.sparsity_normalization, args.dataset).lower(), 'a') as f:
             f.write('\t'.join(
                 str(t)
-                for t in
-                [iter_idx, train_loss, train_acc, valid_acc, test_acc]) + '\n')
+                for t in [
+                    iter_idx, train_loss, train_acc, valid_acc, test_acc,
+                    sparse_test_acc, dense_test_acc, sparse_test_loss,
+                    dense_test_loss, sparse_output_mean, dense_output_mean
+                ]) + '\n')
 
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
@@ -117,6 +157,15 @@ def train(args, seed):
                     test_outputs)
             np.save('vision_mnist/result-yhats-{}-{}.npy'.format(
                 args.sparsity_normalization, args.dataset).lower(), test_yhats)
+
+            np.save('vision_mnist/result-dense-outputs-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(), dense_outputs)
+            np.save('vision_mnist/result-sparse-outputs-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(), sparse_outputs)
+            np.save('vision_mnist/result-dense-ys-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(), dataset.dense_test_y)
+            np.save('vision_mnist/result-sparse-ys-{}-{}.npy'.format(
+                args.sparsity_normalization, args.dataset).lower(), dataset.sparse_test_y)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
@@ -145,8 +194,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='mnist',
-        # default='fashion',
+        # default='mnist',
+        default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -166,7 +215,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=512,
+        default=5,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -186,7 +235,7 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-2,
         help='learning rate of optimizer')
 
     parser.add_argument(
@@ -196,7 +245,7 @@ def main():
         default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
-        '--K_prime', type=float, default=None, help='K prime in the paper')
+        '--K_prime', type=float, default=1, help='K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,
