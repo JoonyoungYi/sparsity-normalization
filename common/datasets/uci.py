@@ -11,13 +11,29 @@ from sklearn.datasets import load_wine
 from sklearn.datasets import load_breast_cancer
 
 
-def _normalize_feature(x):
-    # feature-wise normalization min-max=0-1
-    feature_min = np.min(x, axis=0)
-    feature_max = np.max(x, axis=0)
-    for j in range(x.shape[1]):
-        x[:, j] = (x[:, j] - feature_min[j]) / (
-            feature_max[j] - feature_min[j])
+def _normalize_feature(x, input_normalization):
+    if input_normalization == 'none':
+        pass
+    elif input_normalization == 'min-0-max-1':
+        # feature-wise normalization min-max=0-1
+        feature_min = np.min(x, axis=0)
+        feature_max = np.max(x, axis=0)
+        for j in range(x.shape[1]):
+            x[:, j] = (x[:, j] - feature_min[j]) / (
+                feature_max[j] - feature_min[j])
+    elif input_normalization == 'min--1-max-1':
+        feature_min = np.min(x, axis=0)
+        feature_max = np.max(x, axis=0)
+        for j in range(x.shape[1]):
+            x[:, j] = (x[:, j] - feature_min[j]) / (
+                feature_max[j] - feature_min[j]) * 2 - 1
+    elif input_normalization == 'standardization':
+        feature_mean = np.mean(x, axis=0)
+        feature_std = np.std(x, axis=0)
+        for j in range(x.shape[1]):
+            x[:, j] = (x[:, j] - feature_mean) / feature_std
+    else:
+        raise NotImplementedError()
     return x
 
 
@@ -43,13 +59,13 @@ def _inject_sparsity(x, args):
         ms[i][m] = 0
         # assert np.sum(row) > 1e-8
 
-        if args.kind == 'sparsity-normal':
+        if args.model == 'sparsity-normalization':
             divider = x.shape[1] - m[0].shape[0]
             assert divider >= 1
             row /= divider
         x[i] = row
 
-    if args.kind == 'impute-mean':
+    if args.model == 'mean-imputation':
         # compute and impute mean
         for j in range(x.shape[1]):
             count, total = 0, 0
@@ -63,9 +79,9 @@ def _inject_sparsity(x, args):
                 if ms[i][j] < 0.5:
                     x[i][j] = avg
         return x, g
-    elif args.kind == 'concat-pos':
+    elif args.model == 'positive-mask-concatenation':
         return np.concatenate([x, ms], axis=1), g
-    elif args.kind == 'concat-neg':
+    elif args.model == 'negative-mask-concatenation':
         return np.concatenate([x, 1 - ms], axis=1), g
     else:
         return x, g
@@ -163,8 +179,7 @@ class Dataset:
         x = dataset.data
         y = dataset.target
 
-        if args.normalize_feature:
-            x = _normalize_feature(x)
+        x = _normalize_input(x, args.input_normalization)
 
         # augment features
         print('>> x.shape:', x.shape)

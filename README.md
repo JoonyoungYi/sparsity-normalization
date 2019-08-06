@@ -1,4 +1,4 @@
-# SN-tensorflow
+# Sparsity Normalization
 
 * Official Codes for "Sparsity Normalization: Stabilizing the Expected Outputs of Deep Networks"
 * Sparsity Normalization에 관한 연구 실험.

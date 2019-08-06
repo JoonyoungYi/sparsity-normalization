@@ -11,6 +11,7 @@ from .datasets import cifar10 as datasets_cifar10
 from .datasets import cifar100 as datasets_cifar100
 
 
+<<<<<<< HEAD
 def __get_lp_norm(row, p):
     return np.power(np.sum(np.power(np.abs(row), p)), 1 / p)
 
@@ -49,6 +50,17 @@ def _sparsity_normalization(x, K_prime, norm='l2'):
         K_prime = sum(_norms) / len(_norms)
         print('>> calculated K_prime:', K_prime)
         # input('')
+=======
+def _sparsity_normalization(x, K_prime_opt, K_prime, n_in):
+    if K_prime_opt == 'n0':
+        K_prime = n_in
+    elif K_prime_opt == 'n1':
+        raise NotImplementedError()
+    elif K_prime_opt == 'custom':
+        K_prime = K_prime
+    else:
+        assert False, "Invalid K_prime option."
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
     for i in range(x.shape[0]):
         row = x[i]
@@ -108,24 +120,47 @@ class Dataset:
 
         # sparsity injection
         if args.sparsity_normalization:
+<<<<<<< HEAD
             train_x, K_prime = _sparsity_normalization(train_x, None)
             test_x, _ = _sparsity_normalization(test_x, K_prime)
+=======
+            train_x = _sparsity_normalization(train_x, args.K_prime_opt, args.K_prime, self.n_in)
+            test_x = _sparsity_normalization(test_x, args.K_prime_opt, args.K_prime, self.n_in)
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
         # split
         train_perm = np.random.permutation(train_x.shape[0])
         train_x = train_x[train_perm]
         train_y = train_y[train_perm]
 
+        test_perm = np.random.permutation(test_x.shape[0])
+        test_x = test_x[test_perm]
+        test_y = test_y[test_perm]
+
         if args.dataset == 'mnist' or args.dataset == 'fashion':
-            valid_x = train_x[50000:]
-            train_x = train_x[:50000]
-            valid_y = train_y[50000:]
-            train_y = train_y[:50000]
+            if args.valid_split == 'from_train':
+                valid_x = train_x[50000:]
+                train_x = train_x[:50000]
+                valid_y = train_y[50000:]
+                train_y = train_y[:50000]
+            elif args.valid_split == 'from_test':
+                valid_x = test_x[5000:]
+                test_x = test_x[:5000]
+                valid_y = test_y[5000:]
+                test_y = test_y[:5000]
+            else:
+                assert False, "Invalid split."
+
         elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
-            valid_x = train_x[40000:]
-            train_x = train_x[:40000]
-            valid_y = train_y[40000:]
-            train_y = train_y[:40000]
+            if args.valid_split == 'from_train':
+                valid_x = train_x[40000:]
+                train_x = train_x[:40000]
+                valid_y = train_y[40000:]
+                train_y = train_y[:40000]
+            elif args.valid_split == 'from_test':
+                raise NotImplementedError()
+            else:
+                assert False, "Invalid split."
         else:
             raise NotImplementedError()
 

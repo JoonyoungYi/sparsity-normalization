@@ -12,14 +12,13 @@ import torch.backends.cudnn as cudnn
 
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data.sampler import SubsetRandomSampler
 
 import os
 import argparse
 from common.utils import str2bool, integer_list
 
 from .vgg import *
-from .utils import progress_bar
+from .utils import progress_bar, print2file
 
 parser = argparse.ArgumentParser(description='VGG16')
 parser.add_argument('--lr',
@@ -28,7 +27,10 @@ parser.add_argument('--lr',
                     help='learning rate')
 parser.add_argument('--resume', '-r',
                     action='store_true',
-                    help='resume from checkpoint')
+                    help='resume from last')
+parser.add_argument('--resume_best',
+                    action='store_true',
+                    help='resume from best model')
 parser.add_argument('--seed',
                     default=1,
                     type=int)
@@ -53,8 +55,15 @@ parser.add_argument('--fan_in_K_prime',
                     default=False,
                     type=str2bool,
                     help='Set K_prime to fan_in (See Algorithm 1 in the paper)')
+parser.add_argument('--K_prime',
+                    default=1.0,
+                    type=float,
+                    help='Set K_prime (See Algorithm 1 in the paper)')
 parser.add_argument('--epochs',
                     default=3000,
+                    type=int)
+parser.add_argument('--batch_size',
+                    default=128,
                     type=int)
 args = parser.parse_args()
 
@@ -72,9 +81,12 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Setting seed for reproducing
 # fix seed for split dataset
-random.seed(1)
-torch.manual_seed(1)
-np.random.seed(1)
+random.seed(2019)
+os.environ['PYTHONHASHSEED'] = str(2019)
+np.random.seed(2019)
+torch.manual_seed(2019)
+torch.cuda.manual_seed(2019)
+torch.cuda.manual_seed_all(2019)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -90,60 +102,80 @@ transform_test = transforms.Compose([
 
 trainset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=True, download=True, transform=transform_train)
 # Load trainloader
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-validset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=False, download=True, transform=transform_test)
-testset = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=False, download=True, transform=transform_test)
+remain_set = torchvision.datasets.CIFAR10(root='vision_vgg/data', train=False, download=True, transform=transform_test)
 
-# Split validation set from test set
-num_test = len(testset)
-indices = list(range(num_test))
-split = int(np.floor(0.5 * num_test))
+# Split validation set from remain set
+num_remain = len(remain_set)
+indices = list(range(num_remain))
+split = int(np.floor(0.5 * num_remain))
 
 np.random.shuffle(indices)
 
 test_idx, valid_idx = indices[split:], indices[:split]
-test_sampler = SubsetRandomSampler(test_idx)
-valid_sampler = SubsetRandomSampler(valid_idx)
+
+validset = torch.utils.data.Subset(remain_set, valid_idx)
+testset = torch.utils.data.Subset(remain_set, test_idx)
 
 # Load testloader and validloader
 testloader = torch.utils.data.DataLoader(
-    testset, batch_size=100, sampler=test_sampler,
+    testset, batch_size=100, shuffle=False,
     num_workers=2,
 )
 validloader = torch.utils.data.DataLoader(
-    validset, batch_size=100, sampler=valid_sampler,
+    validset, batch_size=100, shuffle=False,
     num_workers=2,
 )
 
 # change seed for training
 random.seed(args.seed)
-torch.manual_seed(args.seed)
+os.environ['PYTHONHASHSEED'] = str(args.seed)
 np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model construction
 print('==> Building model..')
-net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, args.batch_norm, args.dropout, args.fan_in_K_prime)
+net = VGG('vgg16', args.sparsity_normalization, args.normalize_layer_indexes, args.batch_norm, args.dropout, args.fan_in_K_prime, args.K_prime)
 net = net.to(device)
 print(net)
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=args.lr)
 
-if args.resume:
+if args.resume_best:
     # Load checkpoint.
-    print('==> Resuming from checkpoint..')
+    print('==> Resuming from best checkpoint..')
     assert os.path.isdir('vision_vgg/checkpoint'), 'Error: no checkpoint directory found!'
     checkpoint = torch.load('vision_vgg/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
     net.load_state_dict(checkpoint['net'])
-    best_acc = checkpoint['acc']
+    optimizer.load_state_dict(checkpoint['optim'])
+    best_acc = checkpoint['best_acc']
+    best_epoch = checkpoint['best_epoch']
+    evaluated_acc = checkpoint['eval_acc']
+    test_best_acc = checkpoint['test_best_acc']
+    test_best_epoch = checkpoint['test_best_epoch']
     start_epoch = checkpoint['epoch']
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr)
+elif args.resume:
+    # Load checkpoint.
+    print('==> Resuming from last checkpoint..')
+    assert os.path.isdir('vision_vgg/checkpoint'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('vision_vgg/checkpoint/ckpt.last_{}_{}'.format(args.model, args.seed))
+    net.load_state_dict(checkpoint['net'])
+    optimizer.load_state_dict(checkpoint['optim'])
+    best_acc = checkpoint['best_acc']
+    best_epoch = checkpoint['best_epoch']
+    evaluated_acc = checkpoint['eval_acc']
+    test_best_acc = checkpoint['test_best_acc']
+    test_best_epoch = checkpoint['test_best_epoch']
+    start_epoch = checkpoint['epoch']+1
 
 # Training
 def train(epoch):
@@ -164,6 +196,9 @@ def train(epoch):
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
+
+        print2file('Epoch: {}'.format(epoch), args.model)
+        print2file('Train Accuracy: {:.4f}'.format(correct/total), args.model)
 
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
@@ -196,7 +231,8 @@ def valid(epoch):
             progress_bar(batch_idx, len(validloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (valid_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-    acc = 100.*correct/total
+    acc = correct/total
+    print2file('Valid Accuracy: {:.4f}'.format(acc), args.model)
 
     # calculate test accuracy 
     test_loss = 0
@@ -216,28 +252,35 @@ def valid(epoch):
             progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (test_loss/(batch_idx+1), 100.*test_correct/test_total, test_correct, test_total))
 
-    test_acc = 100.*test_correct/test_total
+    test_acc = test_correct/test_total
+    print2file('Test  Accuracy: {:.4f}\n'.format(test_acc), args.model)
+
+    # Tracking best test accuracy
+    if test_acc > (test_best_acc + 1e-4):
+        test_best_acc = test_acc
+        test_best_epoch = epoch
 
     # Save checkpoint.
-    if acc > best_acc:
-        print('Saving..')
-        state = {
-            'net': net.state_dict(),
-            'acc': acc,
-            'epoch': epoch,
-        }
-        if not os.path.isdir('vision_vgg/checkpoint'):
-            os.mkdir('vision_vgg/checkpoint')
-        torch.save(state, 'vision_vgg/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
+    if acc > (best_acc + 1e-4):
         best_acc = acc
         best_epoch = epoch
         # Tracking test accuracy of the best model
         evaluated_acc = test_acc
 
-    # Tracking best test accuracy
-    if test_acc > test_best_acc:
-        test_best_acc = test_acc
-        test_best_epoch = epoch
+        print('Saving..')
+        state = {
+            'net': net.state_dict(),
+            'optim': optimizer.state_dict(),
+            'best_acc': best_acc,
+            'best_epoch': best_epoch,
+            'eval_acc': evaluated_acc,
+            'test_best_acc': test_best_acc,
+            'test_best_epoch': test_best_epoch,
+            'epoch': epoch
+        }
+        if not os.path.isdir('vision_vgg/checkpoint'):
+            os.mkdir('vision_vgg/checkpoint')
+        torch.save(state, 'vision_vgg/checkpoint/ckpt.{}_{}'.format(args.model, args.seed))
 
     print("Best")
     print("valid acc: {}".format(best_acc))
@@ -245,6 +288,20 @@ def valid(epoch):
     print("evaluated acc: {}".format(evaluated_acc))
     print("test acc: {}".format(test_best_acc))
     print("test epoch: {}".format(test_best_epoch))
+
+    state = {
+        'net': net.state_dict(),
+        'optim': optimizer.state_dict(),
+        'best_acc': best_acc,
+        'best_epoch': best_epoch,
+        'eval_acc': evaluated_acc,
+        'test_best_acc': test_best_acc,
+        'test_best_epoch': test_best_epoch,
+        'epoch': epoch
+    }
+    if not os.path.isdir('vision_vgg/checkpoint'):
+        os.mkdir('vision_vgg/checkpoint')
+    torch.save(state, 'vision_vgg/checkpoint/ckpt.last_{}_{}'.format(args.model, args.seed))
 
 for epoch in range(start_epoch, start_epoch+args.epochs):
     train(epoch)

@@ -38,6 +38,13 @@ def _forward(x, weights, biases, training, args):
 def _init_weights(args, n_in, n_out):
     n_units = [n_in] + [args.n_hidden_unit] * args.n_hidden_layer + [n_out]
 
+    if args.K_prime_opt == 'n0': 
+        K_prime = n_in
+    elif args.K_prime_opt == 'n1':
+        raise NotImplementedError()
+    elif args.K_prime_opt == 'custom':
+        K_prime = args.K_prime
+
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         # if (i == 0 and args.sparsity_normalization):

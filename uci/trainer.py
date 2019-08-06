@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 from .model import init_models
-from .dataset import Dataset
+from common.datasets.uci import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
@@ -33,7 +33,8 @@ def _train(args):
     # print(test_x)
     # input('')
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     models = init_models(args, n_feature=train_x.shape[1], n_class=n_class)
@@ -115,7 +116,7 @@ def _train(args):
     #     -1], test_dense_activations[-1]
 
     results = []
-    results.append(args.kind)
+    results.append(args.model)
     results.append(args.seed)
     results.append(args.n_replication)
     results.append(final_test_error)
@@ -125,7 +126,7 @@ def _train(args):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='uci-dataset')
+    parser = argparse.ArgumentParser(description='uci')
     parser.add_argument(
         '--dataset',
         type=str,
@@ -161,7 +162,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=100,
+        default=10,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -171,18 +172,30 @@ def main():
         # default='sigmoid',
         choices=['relu', 'tanh', 'sigmoid'],
         help='the activation function')
+    parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
-        '--seed', type=int, default=1, help='the seed for dataset')
+        '--dataset_seed',
+        type=int,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--inject_sparsity',
         type=str2bool,
         default=True,
         # default=False,
-        help='Whether inject sparsity.')
+        help=
+        'Whether inject sparsity. 반절에는 20%의 sparsity를 주입(dense group), 나머지 반절은 80%의 sparsity를 주입(sparse group)합니다.'
+    )
     parser.add_argument(
-        '--n_replication', type=int, default=1, help='column multiplier')
+        '--n_replication',
+        type=int,
+        default=100,
+        help='column multiplier. 논문에서는 r로 사용하고 있습니다.')
     parser.add_argument(
-        '--drop_rate', type=float, default=0.0, help='drop rate.')
+        '--dropout_rate',
+        type=float,
+        default=0.0,
+        help='drop rate for dropout.')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -190,22 +203,34 @@ def main():
         help='learning rate of optimizer')
 
     parser.add_argument(
-        '--kind',
+        '--model',
         type=str,
         default='default',
         choices=[
-            'default', 'sparsity-normal', 'impute-mean', 'concat-pos',
-            'concat-neg'
+            'default',
+            'sparsity-normalization',  # sparsity normalization을 적용합니다.
+            'mean-imputation',  # mean imputation을 수행합니다.
+            'positive-mask-concatenation',  # 있으면 1 없으면 0인 mask vector를 concatenation 합니다.
+            'negative-mask-concatenation',  # 있으면 0 없으면 1인 mask vector를 concatenation 합니다.
         ],
         help='Whether normalize input layer by our method.')
     parser.add_argument(
-        '--normalize_feature',
-        type=str2bool,
-        default=True,
-        # default=False,
-        help='Whether normalize each features by min 0, max 1.')
+        '--input_normalization',
+        type=str,
+        default='min-0-max-1',
+        choices=[
+            'min-0-max-1',  # min을 0으로 만들고, max를 1로 만듭니다.
+            'min--1-max-1',  # min을 -1로 만들고, max를 1로 만듭니다.
+            'standardization',  # 표준화
+            'none',  # 아무것도 하지 않습니다.
+        ],
+        help='어떻게 input을 normalization할지 정합니다. ')
 
     args = parser.parse_args()
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
+
     _train(args)
 
 

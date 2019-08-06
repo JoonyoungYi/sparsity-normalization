@@ -2,16 +2,11 @@ import math
 
 import tensorflow as tf
 
+from common.utils import get_activation_fn
+
 
 def _forward(x, weights, biases, training, args):
-    if args.activation_fn == 'relu':
-        activation_fn = tf.nn.relu
-    elif args.activation_fn == 'tanh':
-        activation_fn = tf.nn.tanh
-    elif args.activation_fn == 'sigmoid':
-        activation_fn = tf.nn.sigmoid
-    else:
-        raise NotImplementedError()
+    activation_fn = get_activation_fn(args.activation_fn)
 
     layer = x
     layers = []
@@ -35,10 +30,7 @@ def _init_weights(args, n_feature, n_class):
 
     weights, biases = [], []
     for n_in, n_out in zip(n_units[:-1], n_units[1:]):
-        limit = math.sqrt(6 / n_in)
-        # limit = 1.0
-
-        weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
+        weight = tf.Variable(tf.random.truncated_normal([n_in, n_out], mean=0, stddev=math.sqrt(1 / n_in)))
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)
@@ -74,7 +66,7 @@ def init_models(args, n_feature, n_class=None):
         loss = tf.reduce_sum(_costs)
         error = 1.0 - _get_accuracy(_y_hot, y_hat)
     else:
-        _y_hat= tf.reshape(y_hat, [-1])
+        _y_hat = tf.reshape(y_hat, [-1])
         loss = tf.reduce_sum(tf.square(y - _y_hat))
         error = _get_rmse(y, _y_hat)
 

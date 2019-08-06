@@ -25,7 +25,7 @@ def _save_activations(args, session, models, dataset, before):
             args.dataset, "before" if before else "after"), activations)
 
 
-def train(args, seed):
+def train(args, seed, dataset_seed):
     startTime = time.time()
 
     dataset = Dataset(args)
@@ -36,6 +36,8 @@ def train(args, seed):
     valid_y = dataset.valid_y
     test_x = dataset.test_x
     test_y = dataset.test_y
+
+    set_seed(seed)
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -103,7 +105,10 @@ def train(args, seed):
     results = []
     results.append(args.seed)
     results.append(args.n_hidden_layer)
+    results.append(args.activation_fn)
     results.append(args.sparsity_normalization)
+    results.append(args.K_prime_opt)
+    results.append(args.K_prime)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
@@ -123,6 +128,12 @@ def main():
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
+    parser.add_argument(
+        '--valid_split',
+        type=str,
+        default='from_train',
+        choices=['from_train', 'from_test'],
+        help='split validation set from train or test set')
     parser.add_argument(
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
@@ -151,10 +162,12 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
-        '--dataset_seed',
-        type=int,
-        default=1,
-        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+        '--dataset_seed', type=int, default=1, help='the seed for split dataset. the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    parser.add_argument(
+        '--dropconnect_rate',
+        type=float,
+        default=0.0,
+        help='drop rate for dropconnect.')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -169,6 +182,8 @@ def main():
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
         '--K_prime', type=float, default=1, help='K prime in the paper')
+    parser.add_argument(
+        '--K_prime_opt', type=str, default='custom', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
     parser.add_argument(
         '--plot_activations',
         type=str2bool,

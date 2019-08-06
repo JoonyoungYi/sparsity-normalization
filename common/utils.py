@@ -62,3 +62,14 @@ def save_results_to_file(code_name, dataset_name, results):
         f.close()
         return True
     return False
+
+
+def get_activation_fn(activation_fn):
+    if activation_fn == 'relu':
+        return tf.nn.relu
+    elif activation_fn == 'tanh':
+        return tf.nn.tanh
+    elif activation_fn == 'sigmoid':
+        return tf.nn.sigmoid
+    else:
+        raise NotImplementedError()
