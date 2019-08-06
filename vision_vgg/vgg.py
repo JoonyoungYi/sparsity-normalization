@@ -10,7 +10,7 @@ cfg = {
 
 class Conv2d_sparsity_normal(nn.Module):
     """Convolutional layer for sparsity normalization. (See Algorithm 2 in the paper)"""
-    def __init__(self, in_channels, out_channels, kernel_size, padding, fan_in_K_prime):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, fan_in_K_prime, K_prime):
         super(Conv2d_sparsity_normal, self).__init__()
 
         self.in_channels = in_channels
@@ -18,6 +18,7 @@ class Conv2d_sparsity_normal(nn.Module):
         self.kernel_size = kernel_size
         self.padding = padding
         self.fan_in_K_prime = fan_in_K_prime
+        self.K_prime = K_prime
 
         # Remove bias from a convolution layer. (See Algorithm 2 in the paper)
         self.conv = nn.Conv2d(self.in_channels,
@@ -41,8 +42,11 @@ class Conv2d_sparsity_normal(nn.Module):
         self.bias = nn.Parameter(torch.zeros(self.out_channels))
 
         self.fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.conv.weight)
+
+        # init weights with normal (for low variance)
         bound = 1 / sqrt(self.fan_in)
-        nn.init.uniform_(self.bias, -bound, bound)
+        nn.init.kaiming_normal_(self.conv.weight, a=1)
+        nn.init.normal_(self.bias, std=bound)
 
     def forward(self, x):
         # These procedure follows Algorithm 2 of the paper.
@@ -55,6 +59,8 @@ class Conv2d_sparsity_normal(nn.Module):
 
         if self.fan_in_K_prime:
             x *= self.fan_in
+        else:
+            x *= self.K_prime
         x = torch.div(x, divider)
 
         x = x + self.bias.unsqueeze(1).unsqueeze(1)
@@ -113,13 +119,14 @@ class Conv2d_hidden_normal(nn.Module):
 
 class VGG(nn.Module):
     """VGG architecture"""
-    def __init__(self, vgg_name, sparsity_normalization, normalize_layer_indexes, batch_norm, dropout, fan_in_K_prime):
+    def __init__(self, vgg_name, sparsity_normalization, normalize_layer_indexes, batch_norm, dropout, fan_in_K_prime, K_prime):
         super(VGG, self).__init__()
         self.sparsity_normalization = sparsity_normalization
         self.normalize_layer_indexes = normalize_layer_indexes
         self.batch_norm = batch_norm
         self.dropout = dropout
         self.fan_in_K_prime = fan_in_K_prime
+        self.K_prime = K_prime
 
         self.features = self._make_layers(cfg[vgg_name])
         self.classifier = nn.Linear(512, 10)
@@ -150,7 +157,7 @@ class VGG(nn.Module):
                     layers.pop() # There is a relu activation inside the Conv2d_hidden_normal
                     layers += [Conv2d_hidden_normal(in_channels, out_channels, kernel_size=3, padding=1, fan_in_K_prime=self.fan_in_K_prime)]
                 elif layer_idx == 0 and self.sparsity_normalization:
-                    layers += [Conv2d_sparsity_normal(in_channels, out_channels, kernel_size=3, padding=1, fan_in_K_prime=self.fan_in_K_prime)]
+                    layers += [Conv2d_sparsity_normal(in_channels, out_channels, kernel_size=3, padding=1, fan_in_K_prime=self.fan_in_K_prime, K_prime=self.K_prime)]
                 else:
                     layers += [nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)]
 
