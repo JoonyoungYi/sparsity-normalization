@@ -6,10 +6,16 @@ import tensorflow as tf
 def _forward(x, weights, biases, training, args):
     if args.activation_fn == 'relu':
         activation_fn = tf.nn.relu
+    elif args.activation_fn == 'leaky_relu':
+        activation_fn = tf.nn.leaky_relu
     elif args.activation_fn == 'tanh':
         activation_fn = tf.nn.tanh
     elif args.activation_fn == 'sigmoid':
         activation_fn = tf.nn.sigmoid
+    elif args.activation_fn == 'softplus':
+        activation_fn = tf.nn.softplus
+    elif args.activation_fn == 'elu':
+        activation_fn = tf.nn.elu
     else:
         raise NotImplementedError()
 
@@ -18,10 +24,8 @@ def _forward(x, weights, biases, training, args):
     assert len(weights) == len(biases)
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
-        if args.dropconnect_rate > 1e-8:
-            raise NotImplementedError()
-            
-        layer = tf.matmul(layer, weight) + bias
+        layer = tf.matmul(layer, weight)
+        layer = tf.add(layer, bias)
 
         if i < n_layer - 1:
             layer = activation_fn(layer)
@@ -44,7 +48,7 @@ def _init_weights(args, n_in, n_out):
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         if (i == 0 and args.sparsity_normalization):
-            limit = math.sqrt(6 / 1)
+            limit = math.sqrt(6 / args.K_prime)
         else:
             limit = math.sqrt(6 / n_in)
 

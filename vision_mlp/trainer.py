@@ -28,9 +28,8 @@ def _save_activations(args, session, models, dataset, before):
 def train(args, seed, dataset_seed):
     startTime = time.time()
 
-    set_seed(dataset_seed)
-
     dataset = Dataset(args)
+    set_seed(seed)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -123,8 +122,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='mnist',
-        # default='fashion',
+        # default='mnist',
+        default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -150,7 +149,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=512,
+        default=5,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -158,12 +157,12 @@ def main():
         # default='tanh',
         default='relu',
         # default='sigmoid',
-        choices=['relu', 'tanh', 'sigmoid'],
+        choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'softplus', 'elu'],
         help='the activation function')
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
-        '--dataset_seed', type=int, default=1, help='the seed for split dataset')
+        '--dataset_seed', type=int, default=1, help='the seed for split dataset. the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--dropconnect_rate',
         type=float,
@@ -192,7 +191,11 @@ def main():
         help='Whether plot raw activations')
 
     args = parser.parse_args()
-    train(args, args.seed, args.dataset_seed)
+
+    if args.dataset_seed is None:
+        args.dataset_seed = args.seed
+
+    train(args, args.seed)
 
 
 if __name__ == '__main__':

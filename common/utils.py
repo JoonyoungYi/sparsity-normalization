@@ -2,7 +2,10 @@ import os
 import random
 import argparse
 
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except:
+    print('Error to import tensorflow')
 import numpy as np
 
 
@@ -29,7 +32,10 @@ def set_seed(seed):
     # set seed
     random.seed(seed)
     np.random.seed(seed=seed)
-    tf.random.set_random_seed(seed)
+    try:
+        tf.random.set_random_seed(seed)
+    except:
+        print('Error to import tensorflow')
 
 
 def _make_folder_if_not_exist(path):

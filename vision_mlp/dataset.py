@@ -2,6 +2,8 @@ import os
 import random
 
 import numpy as np
+
+from common.utils import set_seed
 from .datasets import mnist as datasets_mnist
 from .datasets import fashion as datasets_fashion
 from .datasets import cifar10 as datasets_cifar10
@@ -41,6 +43,7 @@ class Dataset:
             raise NotImplementedError()
         assert dataset
 
+        set_seed(args.dataset_seed)
         (train_x, train_y), (test_x, test_y) = dataset.load_data()
 
         # flatten and normalize

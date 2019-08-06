@@ -131,3 +131,4 @@ results/
 .movielens/
 .datasets/
 text8.zip
+vision_mnist/result*
