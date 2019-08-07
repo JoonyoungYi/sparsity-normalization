@@ -10,6 +10,7 @@ from .visions import fashion as datasets_fashion
 from .visions import cifar10 as datasets_cifar10
 from .visions import cifar100 as datasets_cifar100
 
+# TODO: ciFAIR https://cvjena.github.io/cifair/?fbclid=IwAR2x5yhfab53CXjECieqPTjdQR4x13p4L8B-6c1yMryLreVpVa8l-7LX4XU
 
 def __get_lp_norm(row, p):
     return np.power(np.sum(np.power(np.abs(row), p)), 1 / p)
