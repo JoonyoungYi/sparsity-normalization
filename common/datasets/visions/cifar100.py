@@ -3,7 +3,7 @@ import os
 import numpy as np
 from tensorflow.python.keras.datasets.cifar import load_batch
 
-from common.dataset_utils import get_file_path
+from ..utils import get_file_path
 
 
 def load_data(label_mode='fine'):

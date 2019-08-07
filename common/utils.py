@@ -1,6 +1,7 @@
 import os
 import random
 import argparse
+from datetime import datetime
 
 try:
     import tensorflow as tf
@@ -57,11 +58,27 @@ def save_results_to_file(code_name, dataset_name, results):
     filepath = '.results/{code_name}/{dataset_name}.txt'.format(
         code_name=code_name, dataset_name=dataset_name)
     with open(os.open(filepath, os.O_CREAT | os.O_WRONLY, 0o777), 'a') as f:
-        line = '\t'.join([str(r) for r in results]) + '\n'
+        line = '\t'.join([str(datetime.now())] + [str(r)
+                                                  for r in results]) + '\n'
         f.write(line)
         f.close()
         return True
     return False
+
+
+def save_numpy_results(code_name, dataset_name, file_name, np_array):
+    # make results folder if not exists.
+    _make_folder_if_not_exist('.results')
+
+    # make code_name folder if not exists.
+    _make_folder_if_not_exist('.results/{}'.format(code_name))
+
+    # make dataset_name folder if not exists.
+    _make_folder_if_not_exist('.results/{}/{}'.format(code_name, dataset_name))
+
+    filepath = '.results/{code_name}/{dataset_name}/{file_name}.npy'.format(
+        code_name=code_name, dataset_name=dataset_name, file_name=file_name)
+    np.save(filepath, np_array)
 
 
 def get_activation_fn(activation_fn):
