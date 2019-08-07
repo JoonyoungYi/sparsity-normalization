@@ -62,6 +62,35 @@ def _sparsity_normalization(x, K_prime, norm='l2'):
     return x, K_prime
 
 
+def _inject_sparsity(images, max_padding=28):
+    assert max_padding >= 0
+
+    if max_padding > 0.5:
+        _x = np.zeros(images.shape)
+        _g = np.zeros(images.shape[0])
+        print('>> image resizing...')
+        for i in tqdm(range(images.shape[0])):
+            image_array = images[i]
+            image = Image.fromarray(image_array)
+
+            # padding = random.randint(0, max_padding)
+            # if padding > 0:
+            #     image = ImageOps.expand(image, border=padding)
+            #     image = image.resize((28, 28))
+            #     image_array = np.array(image)
+
+            if random.random() < 0.5:
+                image = ImageOps.expand(image, border=max_padding)
+                image = image.resize((28, 28))
+                image_array = np.array(image)
+                _g[i] = 1
+
+            _x[i] = image_array
+        return _x, _g
+    else:
+        return images, None
+
+
 class Dataset:
     def __init__(self, args):
         # load data
@@ -106,11 +135,6 @@ class Dataset:
         self.n_in = n_in
         self.n_out = n_out
 
-        # sparsity injection
-        if args.sparsity_normalization:
-            train_x, K_prime = _sparsity_normalization(train_x, args.K_prime)
-            test_x, _ = _sparsity_normalization(test_x, K_prime)
-
         # split
         train_perm = np.random.permutation(train_x.shape[0])
         train_x = train_x[train_perm]
@@ -133,6 +157,19 @@ class Dataset:
         else:
             raise Exception("n_valid must not be zero.")
 
+        # sparsity injection
+        if args.sparsity_injection and (args.dataset == 'mnist' or
+                                        args.dataset == 'fashion'):
+            train_x, train_g = _inject_sparsity(train_x)
+            valid_x, valid_g = _inject_sparsity(valid_x)
+            test_x, test_g = _inject_sparsity(test_x)
+
+        # sparsity normalization
+        if args.sparsity_normalization:
+            train_x, K_prime = _sparsity_normalization(train_x, args.K_prime)
+            valid_x, _ = _sparsity_normalization(valid_x, K_prime)
+            test_x, _ = _sparsity_normalization(test_x, K_prime)
+
         self.train_x = train_x
         self.train_y = train_y
         self.valid_x = valid_x
@@ -140,5 +177,20 @@ class Dataset:
         self.test_x = test_x
         self.test_y = test_y
 
-        self.total_x = np.concatenate((train_x, valid_x, test_x))
-        self.total_y = np.concatenate((train_y, valid_y, test_y))
+        if args.log_training:
+            self.total_x = np.concatenate((train_x, valid_x, test_x))
+            self.total_y = np.concatenate((train_y, valid_y, test_y))
+        else:
+            self.total_x = None
+            self.total_y = None
+
+        if args.sparsity_injection:
+            self.dense_test_x = test_x[test_g == 0]
+            self.sparse_test_x = test_x[test_g == 1]
+            self.dense_test_y = test_y[test_g == 0]
+            self.sparse_test_y = test_y[test_g == 1]
+        else:
+            self.dense_test_x = None
+            self.sparse_test_x = None
+            self.dense_test_y = None
+            self.sparse_test_y = None

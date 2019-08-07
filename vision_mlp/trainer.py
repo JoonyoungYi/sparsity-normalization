@@ -11,21 +11,66 @@ from common.utils import set_seed
 from common.utils import save_results_to_file
 from common.utils import save_numpy_results
 
+CODE_NAME = 'vision_mlp'
 
-def _save_activations(args, session, models, dataset, epoch_idx,
-                      max_valid_epoch_idx):
-    if args.save_activations:
-        activations = session.run(
-            models['layers'],
+
+def __get_output_mean(activations, ys):
+    # TODO: acitvation output에 exp 취하는 코드 추가.
+    raise NotImplementedError()
+    return sum(activations[i][-1][ys[i]]
+               for i in range(activations.shape[0])) / activations.shape[0]
+
+
+def _save_total_activations(args, session, models, dataset, file_name):
+    total_activations = session.run(
+        models['layers'],
+        feed_dict={
+            models['x']: dataset.total_x,
+            models['y']: dataset.total_y,
+            models['training']: False,
+        })
+    save_numpy_results(CODE_NAME, args.dataset, 'activations', file_name,
+                       activations)
+
+
+def _log_training(args, session, models, dataset, results):
+    if not args.log_training:
+        return
+
+    _save_total_activations(args, session, models, dataset, 'total-after')
+
+    if args.sparsity_injection:
+        sparse_test_accuracy, sparse_test_activations = session.run(
+            [models['accuracy'], models['layers']],
             feed_dict={
-                models['x']: dataset.total_x,
-                models['y']: dataset.total_y,
+                models['x']: dataset.sparse_test_x,
+                models['y']: dataset.sparse_test_y,
                 models['training']: False,
             })
-        activations = np.array(activations[:args.n_hidden_layer])
-        save_numpy_results('vision_mlp', args.dataset,
-                           'activations', '{}.{}'.format(
-                               epoch_idx, max_valid_epoch_idx), activations)
+        sparse_test_output_mean = __get_output_mean(sparse_test_activations,
+                                                    dataset.sparse_test_y)
+
+        dense_test_accuracy, dense_test_activations = session.run(
+            [models['accuracy'], models['layers']],
+            feed_dict={
+                models['x']: dataset.dense_test_x,
+                models['y']: dataset.dense_test_y,
+                models['training']: False,
+            })
+        dense_test_output_mean = _get_statistics(dense_test_activations,
+                                                 dataset.dense_test_y)
+        results.extend([
+            sparse_test_accuracy, sparse_test_output_mean, dense_test_accuracy,
+            dense_test_output_mean
+        ])
+
+        save_numpy_results(CODE_NAME, args.dataset, 'activations',
+                           'sparse_test', sparse_test_activations)
+        save_numpy_results(CODE_NAME, args.dataset, 'activations',
+                           'dense_test', dense_test_activations)
+
+    append_text_results(CODE_NAME, args.dataset, 'epochs', 'default',
+                        '\t'.join(str(t) for t in results))
 
 
 def train(args):
@@ -46,7 +91,10 @@ def train(args):
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
-    _save_activations(args, session, models, dataset, -1, -1)
+    if args.log_training:
+        save_numpy_results('vision_mlp', args.dataset, 'test_ys',
+                           arg.dataset_seed, test_y)
+        _save_total_activations(args, session, models, dataset, 'total-before')
 
     max_valid_acc = 0.0
     max_valid_epoch_idx = 0
@@ -57,6 +105,18 @@ def train(args):
 
     startTime = time.time()
     for epoch_idx in range(args.max_epoch):
+        # train_accs = []
+        # for i in range(0, train_x.shape[0], 5000):
+        #     _, train_loss, train_acc = session.run(
+        #         [models['train_op'], models['loss'], models['accuracy']],
+        #         feed_dict={
+        #             models['x']: train_x[i:i + 5000],
+        #             models['y']: train_y[i:i + 5000],
+        #             models['training']: True,
+        #         })
+        #     train_accs.append(train_acc)
+        # train_acc = sum(train_accs) / len(train_accs)
+
         _, train_loss, train_acc = session.run(
             [models['train_op'], models['loss'], models['accuracy']],
             feed_dict={
@@ -84,13 +144,16 @@ def train(args):
             max_valid_acc = valid_acc
             max_valid_epoch_idx = epoch_idx
             final_test_acc = test_acc
-            _save_activations(args, session, models, dataset, epoch_idx,
-                              max_valid_epoch_idx)
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
             max_test_epoch_idx = epoch_idx
 
+        _log_training(args, session, models, dataset, [
+            epoch_idx, train_loss, train_acc, valid_acc, test_acc,
+            max_test_acc, max_test_epoch_idx, max_valid_acc,
+            max_valid_epoch_idx, final_test_acc
+        ])
         print('')
         print('%6d' % epoch_idx, '%.2f' % train_loss, '%.4f' % train_acc,
               '%.4f' % valid_acc, '%.4f' % test_acc)
@@ -113,7 +176,7 @@ def train(args):
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
-    save_results_to_file('vision_mlp', args.dataset, results)
+    save_results_to_file(CODE_NAME, args.dataset, results)
 
 
 def main():
@@ -180,17 +243,23 @@ def main():
         # default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
+        '--sparsity_injection',
+        type=str2bool,
+        # default=True,
+        default=False,
+        help='Whether to inject sparsity')
+    parser.add_argument(
         '--K_prime',
         type=float,
         default=1,
         help='K prime in the paper. '
         'K_prime이 None으로 입력되면, 자동으로 K_prime을 선정합니다.')
     parser.add_argument(
-        '--save_activations',
+        '--log_training',
         type=str2bool,
         # default=True,
         default=False,
-        help='Whether save activations')
+        help='Whether log training')
     parser.add_argument(
         '--n_valid',
         type=int,
