@@ -19,7 +19,9 @@ class Dataset:
         print(valid_images.shape)
         print(test_images.shape)
 
-        np.random.choice(args.n_train_class, args.n_way, replace=False)
+
+        for task_idx in range(args.n_batch_task):
+            np.random.choice(args.n_train_class, args.n_way, replace=False)
 
 
         self.train_images = train_images
