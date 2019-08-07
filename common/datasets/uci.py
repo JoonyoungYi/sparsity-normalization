@@ -11,7 +11,7 @@ from sklearn.datasets import load_wine
 from sklearn.datasets import load_breast_cancer
 
 
-def _normalize_feature(x, input_normalization):
+def _normalize_input(x, input_normalization):
     if input_normalization == 'none':
         pass
     elif input_normalization == 'min-0-max-1':
@@ -29,9 +29,12 @@ def _normalize_feature(x, input_normalization):
                 feature_max[j] - feature_min[j]) * 2 - 1
     elif input_normalization == 'standardization':
         feature_mean = np.mean(x, axis=0)
+        # print(feature_mean.shape)
         feature_std = np.std(x, axis=0)
+        # print(feature_std.shape)
+        # input('')
         for j in range(x.shape[1]):
-            x[:, j] = (x[:, j] - feature_mean) / feature_std
+            x[:, j] = (x[:, j] - feature_mean[j]) / feature_std[j]
     else:
         raise NotImplementedError()
     return x
@@ -62,7 +65,7 @@ def _inject_sparsity(x, args):
         if args.model == 'sparsity-normalization':
             divider = x.shape[1] - m[0].shape[0]
             assert divider >= 1
-            row /= divider
+            row = row * args.K_prime / divider
         x[i] = row
 
     if args.model == 'mean-imputation':
@@ -216,6 +219,8 @@ class Dataset:
 
         sparse_test_x, dense_test_x = _split_sparse_and_dense_group(
             test_x, test_g)
+        sparse_test_y, dense_test_y = _split_sparse_and_dense_group(
+            test_y, test_g)
 
         self.train_x = train_x
         self.train_y = train_y
@@ -227,3 +232,5 @@ class Dataset:
 
         self.sparse_test_x = sparse_test_x
         self.dense_test_x = dense_test_x
+        self.sparse_test_y = sparse_test_y
+        self.dense_test_y = dense_test_y

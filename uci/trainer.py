@@ -25,13 +25,15 @@ def _train(args):
     test_y = dataset.test_y
     n_class = dataset.n_class
     sparse_test_x = dataset.sparse_test_x
+    sparse_test_y = dataset.sparse_test_y
     dense_test_x = dataset.dense_test_x
+    dense_test_y = dataset.dense_test_y
 
-    # print(train_x.shape)
-    # print(valid_x.shape)
-    # print(test_x.shape)
+    print(train_x.shape)
+    print(valid_x.shape)
+    print(test_x.shape)
     # print(test_x)
-    # input('')
+    input('!!!')
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -71,41 +73,61 @@ def _train(args):
                 models['training']: False,
             })
 
-        print('')
-        print('%6d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_error,
-              '%.4f' % valid_error, '%.4f' % test_error)
-        print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_error,
-              '%.4f' % final_test_error)
-
         if max_valid_error - 1e-5 > valid_error:
             max_valid_error = valid_error
             max_valid_iter_idx = iter_idx
             final_test_error = test_error
 
-            test_activations = session.run(
-                models['activations'],
+            test_y_hat = session.run(
+                models['y_hat'],
                 feed_dict={
                     models['x']: test_x,
                     models['training']: False,
                 })
-            test_sparse_activations = session.run(
-                models['activations'],
+            test_sparse_y_hat, test_sparse_error = session.run(
+                [models['y_hat'], models['error']],
                 feed_dict={
                     models['x']: sparse_test_x,
+                    models['y']: sparse_test_y,
                     models['training']: False,
                 })
-            test_dense_activations = session.run(
-                models['activations'],
+            test_dense_y_hat, test_dense_error = session.run(
+                [models['y_hat'], models['error']],
                 feed_dict={
                     models['x']: dense_test_x,
+                    models['y']: dense_test_y,
                     models['training']: False,
                 })
+
+            if n_class is None:
+                test_activation = np.mean(test_y_hat)
+                test_sparse_activation = np.mean(test_sparse_y_hat)
+                test_dense_activation = np.mean(test_dense_y_hat)
+            else:
+                test_activation = np.mean(test_y_hat[:, test_y])
+                test_sparse_activation = np.mean(
+                    test_sparse_y_hat[:, sparse_test_y])
+                test_dense_activation = np.mean(
+                    test_dense_y_hat[:, dense_test_y])
+
+                test_sparse_activation /= test_activation
+                test_dense_activation /= test_activation
+                test_activation = 1.0
 
         # input('')
 
         if max_test_error - 1e-5 > test_error:
             max_test_error = test_error
             max_test_iter_idx = iter_idx
+
+        print('')
+        print('%6d' % iter_idx, '%.2f' % train_loss, '%.8f' % train_error,
+              '%.8f' % valid_error, '%.8f' % test_error)
+        print('%6d' % max_valid_iter_idx, '%.8f' % max_valid_error,
+              '%.8f' % final_test_error)
+        print('%.8f' % test_sparse_activation, '%.8f' % test_activation,
+              '%.8f' % test_dense_activation)
+        print('%.8f' % test_sparse_error, '%.8f' % test_dense_error)
 
         if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
             break
@@ -134,8 +156,8 @@ def main():
         # default='diabetes',
         # default='california',
         # default='iris',
-        # default='wine',
         # default='cancer',
+        # default='wine',
         # default='congress',
         choices=[
             'boston',
@@ -152,7 +174,7 @@ def main():
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=100,
+        default=1000,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -162,7 +184,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=10,
+        default=32,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -201,11 +223,18 @@ def main():
         type=float,
         default=1e-3,
         help='learning rate of optimizer')
+    parser.add_argument(
+        '--K_prime',
+        type=float,
+        # default=None,
+        default=32,
+        help='K_prime이 None이면 자동으로 정합니다.')
 
     parser.add_argument(
         '--model',
         type=str,
-        default='default',
+        # default='default',
+        default='sparsity-normalization',
         choices=[
             'default',
             'sparsity-normalization',  # sparsity normalization을 적용합니다.
@@ -217,7 +246,10 @@ def main():
     parser.add_argument(
         '--input_normalization',
         type=str,
-        default='min-0-max-1',
+        # default='min-0-max-1',
+        # default='min--1-max-1',
+        default='standardization',
+        # default='none',
         choices=[
             'min-0-max-1',  # min을 0으로 만들고, max를 1로 만듭니다.
             'min--1-max-1',  # min을 -1로 만들고, max를 1로 만듭니다.
