@@ -1,6 +1,7 @@
 import os
 import random
 import argparse
+import pickle
 from datetime import datetime
 
 try:
@@ -52,8 +53,8 @@ def save_results_to_file(code_name, dataset_name, results):
                                line)
 
 
-def save_numpy_results(code_name, dataset_name, folder_name, file_name,
-                       np_array):
+def save_results_to_pickle(code_name, dataset_name, folder_name, file_name,
+                           object):
     # make results folder if not exists.
     _make_folder_if_not_exist('.results')
 
@@ -67,12 +68,13 @@ def save_numpy_results(code_name, dataset_name, folder_name, file_name,
     _make_folder_if_not_exist(
         '.results/{}/{}/{}'.format(code_name, dataset_name, folder_name))
 
-    filepath = '.results/{code_name}/{dataset_name}/{folder_name}/{file_name}.npy'.format(
+    filepath = '.results/{code_name}/{dataset_name}/{folder_name}/{file_name}.pickle'.format(
         code_name=code_name,
         dataset_name=dataset_name,
         folder_name=folder_name,
         file_name=file_name)
-    np.save(filepath, np_array)
+    with open(filepath, 'wb') as f:
+        pickle.dump(object, f)
 
 
 def append_text_results(code_name, dataset_name, folder_name, file_name, line):

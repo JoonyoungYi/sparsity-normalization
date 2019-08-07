@@ -9,14 +9,15 @@ from common.datasets.vision import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
-from common.utils import save_numpy_results
+from common.utils import save_results_to_pickle
+from common.utils import append_text_results
 
 CODE_NAME = 'vision_mlp'
 
 
 def __get_output_mean(activations, ys):
     # TODO: acitvation output에 exp 취하는 코드 추가.
-    raise NotImplementedError()
+    # raise NotImplementedError()
     return sum(activations[i][-1][ys[i]]
                for i in range(activations.shape[0])) / activations.shape[0]
 
@@ -29,15 +30,15 @@ def _save_total_activations(args, session, models, dataset, file_name):
             models['y']: dataset.total_y,
             models['training']: False,
         })
-    save_numpy_results(CODE_NAME, args.dataset, 'activations', file_name,
-                       activations)
+    save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                           'total_' + file_name, total_activations)
 
 
 def _log_training(args, session, models, dataset, results):
     if not args.log_training:
         return
 
-    _save_total_activations(args, session, models, dataset, 'total-after')
+    _save_total_activations(args, session, models, dataset, 'after')
 
     if args.sparsity_injection:
         sparse_test_accuracy, sparse_test_activations = session.run(
@@ -64,10 +65,10 @@ def _log_training(args, session, models, dataset, results):
             dense_test_output_mean
         ])
 
-        save_numpy_results(CODE_NAME, args.dataset, 'activations',
-                           'sparse_test', sparse_test_activations)
-        save_numpy_results(CODE_NAME, args.dataset, 'activations',
-                           'dense_test', dense_test_activations)
+        save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                               'sparse_test', sparse_test_activations)
+        save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                               'dense_test', dense_test_activations)
 
     append_text_results(CODE_NAME, args.dataset, 'epochs', 'default',
                         '\t'.join(str(t) for t in results))
@@ -92,9 +93,9 @@ def train(args):
     session.run(tf.global_variables_initializer())
 
     if args.log_training:
-        save_numpy_results('vision_mlp', args.dataset, 'test_ys',
-                           arg.dataset_seed, test_y)
-        _save_total_activations(args, session, models, dataset, 'total-before')
+        save_results_to_pickle('vision_mlp', args.dataset, 'test_ys',
+                               str(args.dataset_seed), test_y)
+        _save_total_activations(args, session, models, dataset, 'before')
 
     max_valid_acc = 0.0
     max_valid_epoch_idx = 0
@@ -257,8 +258,8 @@ def main():
     parser.add_argument(
         '--log_training',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether log training')
     parser.add_argument(
         '--n_valid',
