@@ -2,7 +2,7 @@ import gzip
 
 import numpy as np
 
-from common.dataset_utils import get_file_path
+from ..utils import get_file_path
 
 
 def load_data():

@@ -4,11 +4,11 @@ import math
 
 import numpy as np
 
-from common.utils import set_seed
-from .datasets import mnist as datasets_mnist
-from .datasets import fashion as datasets_fashion
-from .datasets import cifar10 as datasets_cifar10
-from .datasets import cifar100 as datasets_cifar100
+from ..utils import set_seed
+from .visions import mnist as datasets_mnist
+from .visions import fashion as datasets_fashion
+from .visions import cifar10 as datasets_cifar10
+from .visions import cifar100 as datasets_cifar100
 
 
 def __get_lp_norm(row, p):

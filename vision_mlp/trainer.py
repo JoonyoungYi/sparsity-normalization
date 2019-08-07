@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 from .model import init_models
-from .dataset import Dataset
+from common.datasets.vision import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
 from common.utils import save_results_to_file
