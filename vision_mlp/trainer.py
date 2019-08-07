@@ -23,8 +23,8 @@ def _save_activations(args, session, models, dataset, epoch_idx,
                 models['training']: False,
             })
         activations = np.array(activations[:args.n_hidden_layer])
-        save_numpy_results('vision_mlp',
-                           args.dataset, 'activations.{}.{}'.format(
+        save_numpy_results('vision_mlp', args.dataset,
+                           'activations', '{}.{}'.format(
                                epoch_idx, max_valid_epoch_idx), activations)
 
 
@@ -46,7 +46,7 @@ def train(args):
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
-    _save_activation(args, session, models, dataset, -1, -1)
+    _save_activations(args, session, models, dataset, -1, -1)
 
     max_valid_acc = 0.0
     max_valid_epoch_idx = 0
@@ -188,6 +188,7 @@ def main():
     parser.add_argument(
         '--save_activations',
         type=str2bool,
+        # default=True,
         default=False,
         help='Whether save activations')
     parser.add_argument(

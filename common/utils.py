@@ -66,7 +66,8 @@ def save_results_to_file(code_name, dataset_name, results):
     return False
 
 
-def save_numpy_results(code_name, dataset_name, file_name, np_array):
+def save_numpy_results(code_name, dataset_name, folder_name, file_name,
+                       np_array):
     # make results folder if not exists.
     _make_folder_if_not_exist('.results')
 
@@ -76,17 +77,30 @@ def save_numpy_results(code_name, dataset_name, file_name, np_array):
     # make dataset_name folder if not exists.
     _make_folder_if_not_exist('.results/{}/{}'.format(code_name, dataset_name))
 
-    filepath = '.results/{code_name}/{dataset_name}/{file_name}.npy'.format(
-        code_name=code_name, dataset_name=dataset_name, file_name=file_name)
+    # make folder_name folder if not exists.
+    _make_folder_if_not_exist(
+        '.results/{}/{}/{}'.format(code_name, dataset_name, folder_name))
+
+    filepath = '.results/{code_name}/{dataset_name}/{folder_name}/{file_name}.npy'.format(
+        code_name=code_name,
+        dataset_name=dataset_name,
+        folder_name=folder_name,
+        file_name=file_name)
     np.save(filepath, np_array)
 
 
 def get_activation_fn(activation_fn):
     if activation_fn == 'relu':
         return tf.nn.relu
+    elif args.activation_fn == 'leaky_relu':
+        return tf.nn.leaky_relu
     elif activation_fn == 'tanh':
         return tf.nn.tanh
     elif activation_fn == 'sigmoid':
         return tf.nn.sigmoid
+    elif args.activation_fn == 'softplus':
+        return tf.nn.softplus
+    elif args.activation_fn == 'elu':
+        return tf.nn.elu
     else:
         raise NotImplementedError()
