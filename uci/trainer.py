@@ -138,7 +138,11 @@ def _train(args):
     #     -1], test_dense_activations[-1]
 
     results = []
+<<<<<<< HEAD
     results.append(args.model)
+=======
+    results.append(args.kind)
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     results.append(args.seed)
     results.append(args.n_replication)
     results.append(final_test_error)
@@ -157,7 +161,10 @@ def main():
         # default='california',
         # default='iris',
         # default='cancer',
+<<<<<<< HEAD
         # default='wine',
+=======
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         # default='congress',
         choices=[
             'boston',
@@ -196,10 +203,14 @@ def main():
         help='the activation function')
     parser.add_argument('--seed', type=int, default=1, help='the seed')
     parser.add_argument(
+<<<<<<< HEAD
         '--dataset_seed',
         type=int,
         default=1,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+=======
+        '--seed', type=int, default=1, help='the seed for dataset')
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     parser.add_argument(
         '--inject_sparsity',
         type=str2bool,
@@ -209,10 +220,14 @@ def main():
         'Whether inject sparsity. 반절에는 20%의 sparsity를 주입(dense group), 나머지 반절은 80%의 sparsity를 주입(sparse group)합니다.'
     )
     parser.add_argument(
+<<<<<<< HEAD
         '--n_replication',
         type=int,
         default=100,
         help='column multiplier. 논문에서는 r로 사용하고 있습니다.')
+=======
+        '--n_replication', type=int, default=1, help='column multiplier')
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     parser.add_argument(
         '--dropout_rate',
         type=float,
@@ -231,6 +246,7 @@ def main():
         help='K_prime이 None이면 자동으로 정합니다.')
 
     parser.add_argument(
+<<<<<<< HEAD
         '--model',
         type=str,
         # default='default',
@@ -241,6 +257,14 @@ def main():
             'mean-imputation',  # mean imputation을 수행합니다.
             'positive-mask-concatenation',  # 있으면 1 없으면 0인 mask vector를 concatenation 합니다.
             'negative-mask-concatenation',  # 있으면 0 없으면 1인 mask vector를 concatenation 합니다.
+=======
+        '--kind',
+        type=str,
+        default='default',
+        choices=[
+            'default', 'sparsity-normal', 'impute-mean', 'concat-pos',
+            'concat-neg'
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         ],
         help='Whether normalize input layer by our method.')
     parser.add_argument(
@@ -259,10 +283,13 @@ def main():
         help='어떻게 input을 normalization할지 정합니다. ')
 
     args = parser.parse_args()
+<<<<<<< HEAD
 
     if args.dataset_seed is None:
         args.dataset_seed = args.seed
 
+=======
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     _train(args)
 
 

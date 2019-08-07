@@ -13,10 +13,20 @@ def _forward(x, weights, biases, training, args):
         layer = tf.matmul(layer, weight) + bias
         if i < len(biases) - 1:
             layer = activation_fn(layer)
+<<<<<<< HEAD
             if args.dropout_rate > 1e-8:
                 layer = tf.layers.dropout(
                     layer, rate=args.dropout_rate, training=training)
     return layer
+=======
+            layers.append(layer)
+            layer = tf.layers.dropout(
+                layer, rate=args.drop_rate, training=training)
+        else:
+            layers.append(layer)
+
+    return layers
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
 
 def _init_weights(args, n_feature, n_class):
@@ -67,7 +77,11 @@ def init_models(args, n_feature, n_class=None):
         y_hat = tf.exp(y_hat)
         # y_hat = tf.nn.softmax(y_hat)
     else:
+<<<<<<< HEAD
         _y_hat = tf.reshape(y_hat, [-1])
+=======
+        _y_hat= tf.reshape(y_hat, [-1])
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         loss = tf.reduce_sum(tf.square(y - _y_hat))
         error = _get_rmse(y, _y_hat)
 

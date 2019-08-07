@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Sparsity Normalization
+=======
+# SN-tensorflow
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
 * Official Codes for "Sparsity Normalization: Stabilizing the Expected Outputs of Deep Networks"
 * Sparsity Normalization에 관한 연구 실험.

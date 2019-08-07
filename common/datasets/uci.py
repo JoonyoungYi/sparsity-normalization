@@ -62,6 +62,7 @@ def _inject_sparsity(x, args):
         ms[i][m] = 0
         # assert np.sum(row) > 1e-8
 
+<<<<<<< HEAD:common/datasets/uci.py
         if args.model == 'sparsity-normalization':
             divider = x.shape[1] - m[0].shape[0]
             assert divider >= 1
@@ -69,6 +70,15 @@ def _inject_sparsity(x, args):
         x[i] = row
 
     if args.model == 'mean-imputation':
+=======
+        if args.kind == 'sparsity-normal':
+            divider = x.shape[1] - m[0].shape[0]
+            assert divider >= 1
+            row /= divider
+        x[i] = row
+
+    if args.kind == 'impute-mean':
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415:uci/dataset.py
         # compute and impute mean
         for j in range(x.shape[1]):
             count, total = 0, 0
@@ -82,9 +92,15 @@ def _inject_sparsity(x, args):
                 if ms[i][j] < 0.5:
                     x[i][j] = avg
         return x, g
+<<<<<<< HEAD:common/datasets/uci.py
     elif args.model == 'positive-mask-concatenation':
         return np.concatenate([x, ms], axis=1), g
     elif args.model == 'negative-mask-concatenation':
+=======
+    elif args.kind == 'concat-pos':
+        return np.concatenate([x, ms], axis=1), g
+    elif args.kind == 'concat-neg':
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415:uci/dataset.py
         return np.concatenate([x, 1 - ms], axis=1), g
     else:
         return x, g

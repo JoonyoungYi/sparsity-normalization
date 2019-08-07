@@ -8,11 +8,19 @@ def main():
         main module
 
         ex.
+<<<<<<< HEAD
         python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --model=sparsity-normal
         python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --model=default
         python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --model=impute-mean
         python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --model=concat-neg
         python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --model=concat-pos
+=======
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=sparsity-normal
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=default
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=impute-mean
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=concat-neg
+        python3 -m uci.train ---n_replications=100 ---seeds=1,2,3,4,5 --dataset=iris --kind=concat-pos
+>>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     """
     args = []
     exp = None
