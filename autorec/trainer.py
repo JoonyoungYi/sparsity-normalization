@@ -138,10 +138,7 @@ def _train(args):
     results.append(args.seed)
     results.append(args.n_hidden_unit)
     results.append(args.dataset_seed)
-<<<<<<< HEAD
     results.append(args.dropout_rate)
-=======
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     results.append(final_test_rmse)
     results.append(min_test_rmse)
 

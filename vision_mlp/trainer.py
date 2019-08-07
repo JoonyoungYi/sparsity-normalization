@@ -5,7 +5,6 @@ import tensorflow as tf
 import numpy as np
 
 from .model import init_models
-<<<<<<< HEAD
 from common.datasets.vision import Dataset
 from common.utils import str2bool, integer_list
 from common.utils import set_seed
@@ -77,33 +76,6 @@ def _log_training(args, session, models, dataset, results):
 
 def train(args):
     dataset = Dataset(args)
-=======
-from .dataset import Dataset
-from common.utils import str2bool, integer_list
-from common.utils import set_seed
-from common.utils import save_results_to_file
-
-
-def _save_activations(args, session, models, dataset, before):
-    if args.plot_activations:
-        activations = session.run(
-            models['layers'],
-            feed_dict={
-                models['x']: dataset.total_x,
-                models['y']: dataset.total_y,
-                models['training']: False,
-            })
-        activations = np.array(activations[:args.n_hidden_layer])
-        np.save('.results/mnist/{}_activations_{}_training'.format(
-            args.dataset, "before" if before else "after"), activations)
-
-
-def train(args, seed, dataset_seed):
-    startTime = time.time()
-
-    dataset = Dataset(args)
-    set_seed(seed)
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -111,11 +83,7 @@ def train(args, seed, dataset_seed):
     test_x = dataset.test_x
     test_y = dataset.test_y
 
-<<<<<<< HEAD
     set_seed(args.seed)
-=======
-    set_seed(seed)
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -124,7 +92,6 @@ def train(args, seed, dataset_seed):
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
 
-<<<<<<< HEAD
     if args.log_training:
         save_results_to_pickle('vision_mlp', args.dataset, 'test_ys',
                                str(args.dataset_seed), test_y)
@@ -151,18 +118,6 @@ def train(args, seed, dataset_seed):
         #     train_accs.append(train_acc)
         # train_acc = sum(train_accs) / len(train_accs)
 
-=======
-    _save_activations(args, session, models, dataset, before=True)
-
-    max_valid_acc = 0.0
-    max_valid_iter_idx = 0
-    final_test_acc = 0.0
-
-    max_test_acc = 0.0
-    max_test_iter_idx = 0
-
-    for iter_idx in range(args.max_epoch):
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         _, train_loss, train_acc = session.run(
             [models['train_op'], models['loss'], models['accuracy']],
             feed_dict={
@@ -186,7 +141,6 @@ def train(args, seed, dataset_seed):
                 models['training']: False,
             })
 
-<<<<<<< HEAD
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
             max_valid_epoch_idx = epoch_idx
@@ -209,26 +163,6 @@ def train(args, seed, dataset_seed):
         print('%6d' % max_test_epoch_idx, '%.4f' % max_test_acc)
 
         if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
-=======
-        print('')
-        print('%6d' % iter_idx, '%.2f' % train_loss, '%.4f' % train_acc,
-              '%.4f' % valid_acc, '%.4f' % test_acc)
-        print('%6d' % max_valid_iter_idx, '%.4f' % max_valid_acc,
-              '%.4f' % final_test_acc)
-        print('%6d' % max_test_iter_idx, '%.4f' % max_test_acc)
-
-        if max_valid_acc + 1e-5 < valid_acc:
-            max_valid_acc = valid_acc
-            max_valid_iter_idx = iter_idx
-            final_test_acc = test_acc
-            _save_activations(args, session, models, dataset, before=False)
-
-        if max_test_acc + 1e-5 < test_acc:
-            max_test_acc = test_acc
-            max_test_iter_idx = iter_idx
-
-        if iter_idx > max_valid_iter_idx + args.epoch_early_stop:
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
             break
 
     endTime = time.time() - startTime
@@ -239,19 +173,11 @@ def train(args, seed, dataset_seed):
     results.append(args.n_hidden_layer)
     results.append(args.activation_fn)
     results.append(args.sparsity_normalization)
-<<<<<<< HEAD
-=======
-    results.append(args.K_prime_opt)
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     results.append(args.K_prime)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
-<<<<<<< HEAD
     save_results_to_file(CODE_NAME, args.dataset, results)
-=======
-    save_results_to_file('mnist', args.dataset, results)
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
 
 def main():
@@ -268,15 +194,6 @@ def main():
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
-<<<<<<< HEAD
-=======
-        '--valid_split',
-        type=str,
-        default='from_train',
-        choices=['from_train', 'from_test'],
-        help='split validation set from train or test set')
-    parser.add_argument(
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         '--max_epoch', type=int, default=1000000, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
@@ -304,15 +221,11 @@ def main():
     parser.add_argument(
         '--seed', type=int, default=1, help='the seed for training')
     parser.add_argument(
-<<<<<<< HEAD
         '--dataset_seed',
         type=int,
         default=1,
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
-=======
-        '--dataset_seed', type=int, default=1, help='the seed for split dataset. the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     parser.add_argument(
         '--dropconnect_rate',
         type=float,
@@ -321,17 +234,12 @@ def main():
     parser.add_argument(
         '--learning_rate',
         type=float,
-<<<<<<< HEAD
         default=1e-3,
-=======
-        default=1e-2,
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
         help='learning rate of optimizer')
 
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,
-<<<<<<< HEAD
         default=True,
         # default=False,
         help='Whether to apply sparsity normalization to input layer')
@@ -361,31 +269,13 @@ def main():
         '양수로 입력되면 test set에서 n_valid 갯수만큼 뗍니다. '
         'NeurIPS 2019에 제출했던 버전에서는 -10000을 사용하였고, '
         '리뷰탈 때는 +5000을 일부 실험에서 사용하였습니다.')
-=======
-        # default=True,
-        default=False,
-        help='Whether to apply sparsity normalization to input layer')
-    parser.add_argument(
-        '--K_prime', type=float, default=1, help='K prime in the paper')
-    parser.add_argument(
-        '--K_prime_opt', type=str, default='custom', choices=['n0', 'n1', 'custom'], help='how to set K prime in the paper')
-    parser.add_argument(
-        '--plot_activations',
-        type=str2bool,
-        default=False,
-        help='Whether plot raw activations')
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
     args = parser.parse_args()
 
     if args.dataset_seed is None:
         args.dataset_seed = args.seed
 
-<<<<<<< HEAD
     train(args)
-=======
-    train(args, args.seed)
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
 
 
 if __name__ == '__main__':

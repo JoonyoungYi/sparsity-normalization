@@ -13,7 +13,6 @@ def main():
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=100,200,300,400,500 ---seeds=2,3,4,5 --filename=user-default --normalize_input=False
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=user-normal-explore --normalize_input=True
         python3 -m autorec.train --use_user_vector=True --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=400,500,600,700,800 ---seeds=2,3,4,5 --filename=item-normal --normalize_input=True
-<<<<<<< HEAD
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1150,1250 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1160,1240 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1170,1230 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
@@ -32,9 +31,6 @@ def main():
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1243 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1244 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --n_batch=0 ---lambdas=1245 ---seeds=1,2,3,4,5 --filename=best-item-normal --normalize_input=True --n_hidden_unit=1000 --K_denominator=1000
-=======
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
-
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=300,400,500,600,700 ---seeds=2,3,4,5 --filename=item-default --normalize_input=False
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=0,1,4,7,10,40,70,100,400,700,1000 ---seeds=1 --filename=item-normal-explore --normalize_input=True
         python3 -m autorec.train --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --n_batch=0 ---lambdas=200,300,500,600,800,900 ---seeds=1 --filename=item-normal-explore --normalize_input=True

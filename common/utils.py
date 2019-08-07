@@ -48,7 +48,6 @@ def _make_folder_if_not_exist(path):
 
 
 def save_results_to_file(code_name, dataset_name, results):
-<<<<<<< HEAD
     line = '\t'.join([str(datetime.now())] + [str(r) for r in results]) + '\n'
     return append_text_results(code_name, dataset_name, 'results', 'default',
                                line)
@@ -56,15 +55,12 @@ def save_results_to_file(code_name, dataset_name, results):
 
 def save_results_to_pickle(code_name, dataset_name, folder_name, file_name,
                            object):
-=======
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
     # make results folder if not exists.
     _make_folder_if_not_exist('.results')
 
     # make code_name folder if not exists.
     _make_folder_if_not_exist('.results/{}'.format(code_name))
 
-<<<<<<< HEAD
     # make dataset_name folder if not exists.
     _make_folder_if_not_exist('.results/{}/{}'.format(code_name, dataset_name))
 
@@ -123,15 +119,3 @@ def get_activation_fn(activation_fn):
         return tf.nn.elu
     else:
         raise NotImplementedError()
-=======
-    # save results
-    os.umask(0)
-    filepath = '.results/{code_name}/{dataset_name}.txt'.format(
-        code_name=code_name, dataset_name=dataset_name)
-    with open(os.open(filepath, os.O_CREAT | os.O_WRONLY, 0o777), 'a') as f:
-        line = '\t'.join([str(r) for r in results]) + '\n'
-        f.write(line)
-        f.close()
-        return True
-    return False
->>>>>>> 8b11627036ac569e926c43e9ae35604f2a49f415
