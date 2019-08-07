@@ -258,8 +258,8 @@ def main():
     parser.add_argument(
         '--log_training',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether log training')
     parser.add_argument(
         '--n_valid',
