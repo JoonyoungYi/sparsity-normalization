@@ -2,22 +2,11 @@ import math
 
 import tensorflow as tf
 
+from common.utils import get_activation_fn
+
 
 def _forward(x, weights, biases, training, args):
-    if args.activation_fn == 'relu':
-        activation_fn = tf.nn.relu
-    elif args.activation_fn == 'leaky_relu':
-        activation_fn = tf.nn.leaky_relu
-    elif args.activation_fn == 'tanh':
-        activation_fn = tf.nn.tanh
-    elif args.activation_fn == 'sigmoid':
-        activation_fn = tf.nn.sigmoid
-    elif args.activation_fn == 'softplus':
-        activation_fn = tf.nn.softplus
-    elif args.activation_fn == 'elu':
-        activation_fn = tf.nn.elu
-    else:
-        raise NotImplementedError()
+    activation_fn = get_activation_fn(args.activation_fn)
 
     layer = x
     layers = []
@@ -38,21 +27,11 @@ def _forward(x, weights, biases, training, args):
 def _init_weights(args, n_in, n_out):
     n_units = [n_in] + [args.n_hidden_unit] * args.n_hidden_layer + [n_out]
 
-    if args.K_prime_opt == 'n0': 
-        K_prime = n_in
-    elif args.K_prime_opt == 'n1':
-        raise NotImplementedError()
-    elif args.K_prime_opt == 'custom':
-        K_prime = args.K_prime
-
     weights, biases = [], []
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
-        if (i == 0 and args.sparsity_normalization):
-            limit = math.sqrt(6 / args.K_prime)
-        else:
-            limit = math.sqrt(6 / n_in)
-
-        weight = tf.Variable(tf.random_uniform([n_in, n_out], -limit, limit))
+        weight = tf.Variable(
+            tf.truncated_normal(
+                [n_in, n_out], mean=0, stddev=math.sqrt(3 / n_in)))
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)
