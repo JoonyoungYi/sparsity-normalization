@@ -75,5 +75,5 @@ def load_data(pixel=28):
     return x
 
 
-if __name__ == '__main__':
-    load_data()
+# if __name__ == '__main__':
+    # load_data()
