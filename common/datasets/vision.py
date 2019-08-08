@@ -12,6 +12,7 @@ from .visions import cifar100 as datasets_cifar100
 
 # TODO: ciFAIR https://cvjena.github.io/cifair/?fbclid=IwAR2x5yhfab53CXjECieqPTjdQR4x13p4L8B-6c1yMryLreVpVa8l-7LX4XU
 
+
 def __get_lp_norm(row, p):
     return np.power(np.sum(np.power(np.abs(row), p)), 1 / p)
 
@@ -40,7 +41,7 @@ def __get_norm(row, norm):
     return _norm
 
 
-def _sparsity_normalization(x, K_prime, norm='l2'):
+def _sparsity_normalization(x, K_prime, norm='l0'):
     if K_prime is None:
         _norms = []
         for i in range(x.shape[0]):
@@ -93,28 +94,34 @@ def _inject_sparsity(images, max_padding=28):
 
 
 class Dataset:
-    def __init__(self, args):
+    def __init__(self,
+                 dataset,
+                 dataset_seed=1,
+                 n_valid=-1000,
+                 sparsity_injection=False,
+                 sparsity_normalization=False,
+                 K_prime=None):
         # load data
-        if args.dataset == 'mnist':
-            dataset = datasets_mnist
-        elif args.dataset == 'fashion':
-            dataset = datasets_fashion
-        elif args.dataset == 'cifar10':
-            dataset = datasets_cifar10
-        elif args.dataset == 'cifar100':
-            dataset = datasets_cifar100
+        if dataset == 'mnist':
+            datasets = datasets_mnist
+        elif dataset == 'fashion':
+            datasets = datasets_fashion
+        elif dataset == 'cifar10':
+            datasets = datasets_cifar10
+        elif dataset == 'cifar100':
+            datasets = datasets_cifar100
         else:
             raise NotImplementedError()
         assert dataset
 
-        set_seed(args.dataset_seed)
-        (train_x, train_y), (test_x, test_y) = dataset.load_data()
+        set_seed(dataset_seed)
+        (train_x, train_y), (test_x, test_y) = datasets.load_data()
 
         # flatten and normalize
-        if args.dataset == 'mnist' or args.dataset == 'fashion':
+        if dataset == 'mnist' or dataset == 'fashion':
             train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
             test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-        elif args.dataset == 'cifar10' or args.dataset == 'cifar100':
+        elif dataset == 'cifar10' or dataset == 'cifar100':
             train_x = train_x.reshape([-1, 32 * 32 * 3
                                        ]).astype('float32') / 255.0
             test_x = test_x.reshape([-1, 32 * 32 * 3
@@ -125,11 +132,11 @@ class Dataset:
         else:
             raise NotImplementedError()
 
-        if args.dataset == "mnist" or args.dataset == "fashion":
+        if dataset == "mnist" or dataset == "fashion":
             n_in, n_out = 784, 10
-        elif args.dataset == 'cifar10':
+        elif dataset == 'cifar10':
             n_in, n_out = 32 * 32 * 3, 10
-        elif args.dataset == 'cifar100':
+        elif dataset == 'cifar100':
             n_in, n_out = 32 * 32 * 3, 100
         else:
             raise NotImplementedError()
@@ -145,29 +152,28 @@ class Dataset:
         test_x = test_x[test_perm]
         test_y = test_y[test_perm]
 
-        if args.n_valid > 0:
-            valid_x = test_x[:args.n_valid]
-            test_x = test_x[args.n_valid:]
-            valid_y = test_y[:args.n_valid]
-            test_y = test_y[args.n_valid:]
-        elif args.n_valid < 0:
-            valid_x = train_x[args.n_valid:]
-            train_x = train_x[:args.n_valid]
-            valid_y = train_y[args.n_valid:]
-            train_y = train_y[:args.n_valid]
+        if n_valid > 0:
+            valid_x = test_x[:n_valid]
+            test_x = test_x[n_valid:]
+            valid_y = test_y[:n_valid]
+            test_y = test_y[n_valid:]
+        elif n_valid < 0:
+            valid_x = train_x[n_valid:]
+            train_x = train_x[:n_valid]
+            valid_y = train_y[n_valid:]
+            train_y = train_y[:n_valid]
         else:
             raise Exception("n_valid must not be zero.")
 
         # sparsity injection
-        if args.sparsity_injection and (args.dataset == 'mnist' or
-                                        args.dataset == 'fashion'):
+        if sparsity_injection and (dataset == 'mnist' or dataset == 'fashion'):
             train_x, train_g = _inject_sparsity(train_x)
             valid_x, valid_g = _inject_sparsity(valid_x)
             test_x, test_g = _inject_sparsity(test_x)
 
         # sparsity normalization
-        if args.sparsity_normalization:
-            train_x, K_prime = _sparsity_normalization(train_x, args.K_prime)
+        if sparsity_normalization:
+            train_x, K_prime = _sparsity_normalization(train_x, K_prime)
             valid_x, _ = _sparsity_normalization(valid_x, K_prime)
             test_x, _ = _sparsity_normalization(test_x, K_prime)
 
@@ -178,14 +184,10 @@ class Dataset:
         self.test_x = test_x
         self.test_y = test_y
 
-        if args.log_training:
-            self.total_x = np.concatenate((train_x, valid_x, test_x))
-            self.total_y = np.concatenate((train_y, valid_y, test_y))
-        else:
-            self.total_x = None
-            self.total_y = None
+        self.total_x = np.concatenate((train_x, valid_x, test_x))
+        self.total_y = np.concatenate((train_y, valid_y, test_y))
 
-        if args.sparsity_injection:
+        if sparsity_injection:
             self.dense_test_x = test_x[test_g == 0]
             self.sparse_test_x = test_x[test_g == 1]
             self.dense_test_y = test_y[test_g == 0]

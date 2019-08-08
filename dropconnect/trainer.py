@@ -16,7 +16,8 @@ CODE_NAME = 'dropconnect'
 
 
 def train(args):
-    dataset = Dataset(args)
+    dataset = Dataset(
+        args.dataset)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -54,12 +55,20 @@ def train(args):
         #     train_accs.append(train_acc)
         # train_acc = sum(train_accs) / len(train_accs)
 
-        _, train_loss, train_acc = session.run(
-            [models['train_op'], models['loss'], models['accuracy']],
+        _, train_loss = session.run(
+            [models['train_op'], models['loss']],
             feed_dict={
                 models['x']: train_x,
                 models['y']: train_y,
                 models['training']: True,
+            })
+
+        train_acc = session.run(
+            models['accuracy'],
+            feed_dict={
+                models['x']: train_x,
+                models['y']: train_y,
+                models['training']: False,
             })
 
         valid_acc = session.run(
@@ -118,8 +127,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default='mnist',
-        # default='fashion',
+        # default='mnist',
+        default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -161,7 +170,7 @@ def main():
     parser.add_argument(
         '--dropconnect_rate',
         type=float,
-        default=0.0,
+        default=0.5,
         help='drop rate for dropconnect.')
     parser.add_argument(
         '--learning_rate',

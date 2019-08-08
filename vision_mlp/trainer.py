@@ -75,7 +75,12 @@ def _log_training(args, session, models, dataset, results):
 
 
 def train(args):
-    dataset = Dataset(args)
+    dataset = Dataset(args.dataset,
+    dataset_seed=args.dataset_seed,
+    n_valid=args.n_valid,
+    sparsity_injection=args.sparsity_injection,
+    sparsity_normalization=args.sparsity_normalization,
+    K_prime=args.K_prime)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
