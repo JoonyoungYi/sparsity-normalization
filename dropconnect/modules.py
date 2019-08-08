@@ -26,7 +26,7 @@ class DropConnect:
         train_layer = activation_fn(
             tf.matmul(layer, train_weight) + train_bias)
 
-        test_layer = train_layer
+        test_layer = activation_fn(tf.matmul(layer, weight) + bias)
         return tf.cond(training, lambda: train_layer, lambda: test_layer)
 
 

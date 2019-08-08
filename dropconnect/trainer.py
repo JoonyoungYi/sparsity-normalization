@@ -16,8 +16,7 @@ CODE_NAME = 'dropconnect'
 
 
 def train(args):
-    dataset = Dataset(
-        args.dataset)
+    dataset = Dataset(args.dataset)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -55,16 +54,16 @@ def train(args):
         #     train_accs.append(train_acc)
         # train_acc = sum(train_accs) / len(train_accs)
 
-        _, train_loss = session.run(
-            [models['train_op'], models['loss']],
+        session.run(
+            models['train_op'],
             feed_dict={
                 models['x']: train_x,
                 models['y']: train_y,
                 models['training']: True,
             })
 
-        train_acc = session.run(
-            models['accuracy'],
+        train_loss, train_acc = session.run(
+            [models['loss'], models['accuracy']],
             feed_dict={
                 models['x']: train_x,
                 models['y']: train_y,
