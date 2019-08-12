@@ -107,15 +107,15 @@ def append_text_results(code_name, dataset_name, folder_name, file_name, line):
 def get_activation_fn(activation_fn):
     if activation_fn == 'relu':
         return tf.nn.relu
-    elif args.activation_fn == 'leaky_relu':
+    elif activation_fn == 'leaky_relu':
         return tf.nn.leaky_relu
     elif activation_fn == 'tanh':
         return tf.nn.tanh
     elif activation_fn == 'sigmoid':
         return tf.nn.sigmoid
-    elif args.activation_fn == 'softplus':
+    elif activation_fn == 'softplus':
         return tf.nn.softplus
-    elif args.activation_fn == 'elu':
+    elif activation_fn == 'elu':
         return tf.nn.elu
     else:
         raise NotImplementedError()

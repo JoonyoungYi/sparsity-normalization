@@ -28,17 +28,22 @@ def _plot_1():
     fig.set_figwidth(1.8)
     fig.set_figheight(1.2)
 
-    red = "#FF4841"
-    red_blur = '#BF3530'
+    # red = "#FF4841"
+    # red_blur = '#BF3530'
+    # blue = "#0099FE"
+    # blue_blur = '#0073BF'
+
+    red = "#FFB82B"
+    red_blur = '#FF4841'
     blue = "#0099FE"
-    blue_blur = '#0073BF'
+    blue_blur = '#5C2DAE'
 
     axs = [axs]
 
     axs[0].plot(
         result_without_sn[:, 0],
         result_without_sn[:, 2],
-        color=red_blur,
+        color=blue_blur,
         label='train acc. w/o SN')
     axs[0].plot(
         result_without_sn[:, 0],

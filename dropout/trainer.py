@@ -16,15 +16,20 @@ from common.utils import append_text_results
 CODE_NAME = 'dropout'
 
 
-def _run(session, models, targets, x, y, training, n_batch=100):
+def _run(session, models, targets, x, y, training, n_batch=1000):
     results = [0.0 for _ in targets]
-    for i in tqdm(range(0, x.shape[0], n_batch)):
+    i_list = list(range(0, x.shape[0], n_batch))
+    if len(i_list) > 1:
+        _tqdm = tqdm
+    else:
+        _tqdm = lambda x: x
+    for i in _tqdm(i_list):
         _results = session.run(
             [models[t] for t in targets],
             feed_dict={
                 models['x']: x[i:i + n_batch],
                 models['y']: y[i:i + n_batch],
-                models['training']: False,
+                models['training']: training,
             })
         # print(np.std(_results[1]))
         # print(np.mean(_results[1]))
@@ -37,7 +42,8 @@ def _run(session, models, targets, x, y, training, n_batch=100):
 
 
 def train(args):
-    dataset = Dataset(args.dataset, n_valid=args.n_valid)
+    dataset = Dataset(
+        args.dataset, dataset_seed=args.dataset_seed, n_valid=args.n_valid)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -159,7 +165,7 @@ def main():
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=10000,
+        default=1000,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -174,13 +180,15 @@ def main():
     parser.add_argument(
         '--n_batch',
         type=int,
-        default=500,
+        # default=100000,
+        default=1000,
         help='the number of mini batch size.')
     parser.add_argument(
         '--activation_fn',
         type=str,
         # default='tanh',
-        default='relu',
+        # default='relu',
+        default='leaky_relu',
         # default='sigmoid',
         choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'softplus', 'elu'],
         help='the activation function')
@@ -193,14 +201,20 @@ def main():
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
 
-    parser.add_argument('--drop_rate', type=float, default=0.5, help='')
+    parser.add_argument(
+        '--drop_rate',
+        type=float,
+        # default=0.0,
+        default=0.5,
+        help='')
     parser.add_argument(
         '--mode',
         type=str,
-        default='default',
+        default='none',  # no dropout
+        # default='default',
         # default='expectation',
         # default='exact',
-        choices=['default', 'expectation', 'exact'],
+        choices=['none', 'default', 'expectation', 'exact'],
         help='')
     parser.add_argument(
         '--learning_rate',

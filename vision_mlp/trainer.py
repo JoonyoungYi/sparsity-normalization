@@ -188,7 +188,7 @@ def train(args):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='MNIST')
+    parser = argparse.ArgumentParser(description='Vision MLP')
     parser.add_argument(
         '--dataset',
         type=str,
@@ -231,22 +231,22 @@ def main():
         default=1,
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
-    parser.add_argument(
-        '--dropconnect_rate',
-        type=float,
-        default=0.0,
-        help='drop rate for dropconnect.')
+    # parser.add_argument(
+    #     '--dropconnect_rate',
+    #     type=float,
+    #     default=0.0,
+    #     help='drop rate for dropconnect.')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-3,
+        default=1e-2,
         help='learning rate of optimizer')
 
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
         '--sparsity_injection',

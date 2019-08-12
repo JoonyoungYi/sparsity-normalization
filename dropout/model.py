@@ -12,34 +12,31 @@ def _forward(x, weights, biases, training, args):
     assert len(weights) == len(biases)
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
+        layer = tf.matmul(layer, weight) + bias
         if i < n_layer - 1:
-            layer = tf.matmul(layer, weight) + bias
-            if args.drop_rate > 1e-8:
-                if args.mode == 'default':
-                    layer = tf.layers.dropout(
-                        layer, args.drop_rate, training=training)
-                elif args.mode == 'expectation':
-                    r = tf.random.uniform(
-                        tf.shape(layer), minval=0., maxval=1.)
-                    m = tf.where(r < args.drop_rate,
-                                 tf.zeros_like(layer), tf.ones_like(layer))
-                    train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
-                    layer = tf.cond(training, lambda: train_layer,
-                                    lambda: layer)
-                elif args.mode == 'exact':
-                    r = tf.random.uniform(
-                        tf.shape(layer), minval=0., maxval=1.)
-                    m = tf.where(r < args.drop_rate,
-                                 tf.zeros_like(layer), tf.ones_like(layer))
-                    train_layer = tf.multiply(layer, m) * tf.cast(
-                        tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
-                            m, axis=1, keepdims=True)
-                    layer = tf.cond(training, lambda: train_layer,
-                                    lambda: layer)
-                else:
-                    raise NotImplementedError()
-        else:
-            layer = tf.matmul(layer, weight) + bias
+            layer = activation_fn(layer)
+
+            if args.mode == 'none':
+                pass
+            elif args.mode == 'default':
+                layer = tf.layers.dropout(
+                    layer, args.drop_rate, training=training)
+            elif args.mode == 'expectation':
+                r = tf.random.uniform(
+                    (1, tf.shape(layer)[1]), minval=0., maxval=1.)
+                m = tf.where(r < args.drop_rate, tf.zeros_like(r), tf.ones_like(r))
+                train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
+                layer = tf.cond(training, lambda: train_layer, lambda: layer)
+            elif args.mode == 'exact':
+                r = tf.random.uniform(
+                    (1, tf.shape(layer)[1]), minval=0., maxval=1.)
+                m = tf.where(r < args.drop_rate, tf.zeros_like(r), tf.ones_like(r))
+                train_layer = tf.multiply(layer, m) * tf.cast(
+                    tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
+                        m, keepdims=True)
+                layer = tf.cond(training, lambda: train_layer, lambda: layer)
+            else:
+                raise NotImplementedError()
     return layer
 
 
