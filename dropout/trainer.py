@@ -13,7 +13,7 @@ from common.utils import save_results_to_file
 from common.utils import save_results_to_pickle
 from common.utils import append_text_results
 
-CODE_NAME = 'dropconnect'
+CODE_NAME = 'dropout'
 
 
 def _run(session, models, targets, x, y, training, n_batch=100):
@@ -132,7 +132,7 @@ def train(args):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='MNIST')
+    parser = argparse.ArgumentParser(description='Dropout')
     parser.add_argument(
         '--dataset',
         type=str,
@@ -161,7 +161,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=200,
+        default=800,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--n_batch',
@@ -185,25 +185,15 @@ def main():
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
 
-    parser.add_argument('--dropout_rate', type=float, default=0.0, help='')
+    parser.add_argument('--drop_rate', type=float, default=0.5, help='')
     parser.add_argument(
-        '--dropconnect_rate',
-        type=float,
-        default=0.5,
-        help='drop rate for dropconnect.')
-    parser.add_argument(
-        '--dropconnect_mode',
+        '--mode',
         type=str,
-        # default='default',
-        default='like-dropout',
-        # default='sparsity-normalization',
-        choices=['default', 'like-dropout', 'sparsity-normalization'],
+        default='default',
+        # default='expectation',
+        # default='exact',
+        choices=['default', 'expectation', 'exact'],
         help='')
-    parser.add_argument(
-        '--Z',
-        type=int,
-        default=1000,
-        help='the number of sample on inference phase.')
     parser.add_argument(
         '--learning_rate',
         type=float,

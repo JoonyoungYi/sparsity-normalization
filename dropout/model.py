@@ -2,7 +2,6 @@ import math
 
 import tensorflow as tf
 
-from .modules import DropConnect
 from common.utils import get_activation_fn
 
 
@@ -14,23 +13,34 @@ def _forward(x, weights, biases, training, args):
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         if i < n_layer - 1:
-            if i == 0:
-                layer = tf.matmul(layer, weight) + bias
-            else:
-                drop_connect = DropConnect(
-                    drop_rate=args.dropconnect_rate,
-                    activation_fn=activation_fn,
-                    Z=args.Z,
-                    mode=args.dropconnect_mode)
-                layer = drop_connect(layer, weight, bias, training=training)
-                # weight_m_number = drop_connect.weight_m_number
-
-            if args.dropout_rate > 1e-8:
-                layer = tf.layers.dropout(
-                    layer, args.dropout_rate, training=training)
+            layer = tf.matmul(layer, weight) + bias
+            if args.drop_rate > 1e-8:
+                if args.mode == 'default':
+                    layer = tf.layers.dropout(
+                        layer, args.drop_rate, training=training)
+                elif args.mode == 'expectation':
+                    r = tf.random.uniform(
+                        tf.shape(layer), minval=0., maxval=1.)
+                    m = tf.where(r < args.drop_rate,
+                                 tf.zeros_like(layer), tf.ones_like(layer))
+                    train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
+                    layer = tf.cond(training, lambda: train_layer,
+                                    lambda: layer)
+                elif args.mode == 'exact':
+                    r = tf.random.uniform(
+                        tf.shape(layer), minval=0., maxval=1.)
+                    m = tf.where(r < args.drop_rate,
+                                 tf.zeros_like(layer), tf.ones_like(layer))
+                    train_layer = tf.multiply(layer, m) * tf.cast(
+                        tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
+                            m, axis=1, keepdims=True)
+                    layer = tf.cond(training, lambda: train_layer,
+                                    lambda: layer)
+                else:
+                    raise NotImplementedError()
         else:
             layer = tf.matmul(layer, weight) + bias
-    return layer  # , weight_m_number
+    return layer
 
 
 def _init_weights(args, n_in, n_out):
@@ -61,7 +71,6 @@ def init_models(args, n_in, n_out):
     y_hot = tf.one_hot(y, n_out)
     weights, biases = _init_weights(args, n_in, n_out)
 
-    # y_hat, weight_m_number = _forward(x, weights, biases, training, args)
     y_hat = _forward(x, weights, biases, training, args)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -79,5 +88,4 @@ def init_models(args, n_in, n_out):
         'loss': loss,
         'accuracy': accuracy,
         'train_op': train_op,
-        # 'weight_m_number': weight_m_number,
     }
