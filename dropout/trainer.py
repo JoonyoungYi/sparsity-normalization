@@ -113,6 +113,14 @@ def train(args):
               '%.4f' % final_test_acc)
         print('%6d' % max_test_epoch_idx, '%.4f' % max_test_acc)
 
+        append_text_results(CODE_NAME, args.dataset, 'epochs', args.mode,
+                            '\t'.join(
+                                str(t)
+                                for t in [
+                                    epoch_idx, train_loss, valid_loss,
+                                    test_loss, train_acc, valid_acc, test_acc
+                                ]))
+
         if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
             break
 
@@ -145,13 +153,13 @@ def main():
     parser.add_argument(
         '--max_epoch',
         type=int,
-        default=10,
-        # default=1000000,
+        # default=10,
+        default=1000000,
         help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=1000,
+        default=10000,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
