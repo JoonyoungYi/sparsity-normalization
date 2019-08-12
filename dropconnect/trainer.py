@@ -3,6 +3,7 @@ import time
 
 import tensorflow as tf
 import numpy as np
+from tqdm import tqdm
 
 from .model import init_models
 from common.datasets.vision import Dataset
@@ -15,8 +16,28 @@ from common.utils import append_text_results
 CODE_NAME = 'dropconnect'
 
 
+def _run(session, models, targets, x, y, training, n_batch=100):
+    results = [0.0 for _ in targets]
+    for i in tqdm(range(0, x.shape[0], n_batch)):
+        _results = session.run(
+            [models[t] for t in targets],
+            feed_dict={
+                models['x']: x[i:i + n_batch],
+                models['y']: y[i:i + n_batch],
+                models['training']: False,
+            })
+        # print(np.std(_results[1]))
+        # print(np.mean(_results[1]))
+        # input('')
+        results = [
+            a + b * x[i:i + n_batch].shape[0] if b is not None else a
+            for a, b in zip(results, _results)
+        ]
+    return [r / x.shape[0] for r in results]
+
+
 def train(args):
-    dataset = Dataset(args.dataset)
+    dataset = Dataset(args.dataset, n_valid=args.n_valid)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -42,48 +63,39 @@ def train(args):
 
     startTime = time.time()
     for epoch_idx in range(args.max_epoch):
-        # train_accs = []
-        # for i in range(0, train_x.shape[0], 5000):
-        #     _, train_loss, train_acc = session.run(
-        #         [models['train_op'], models['loss'], models['accuracy']],
-        #         feed_dict={
-        #             models['x']: train_x[i:i + 5000],
-        #             models['y']: train_y[i:i + 5000],
-        #             models['training']: True,
-        #         })
-        #     train_accs.append(train_acc)
-        # train_acc = sum(train_accs) / len(train_accs)
+        _run(
+            session,
+            models,
+            ['train_op'],
+            # ['train_op', 'weight_m_number'],
+            train_x,
+            train_y,
+            True,
+            n_batch=args.n_batch)
 
-        session.run(
-            models['train_op'],
-            feed_dict={
-                models['x']: train_x,
-                models['y']: train_y,
-                models['training']: True,
-            })
+        train_loss, train_acc = _run(
+            session,
+            models, ['loss', 'accuracy'],
+            train_x,
+            train_y,
+            False,
+            n_batch=args.n_batch)
 
-        train_loss, train_acc = session.run(
-            [models['loss'], models['accuracy']],
-            feed_dict={
-                models['x']: train_x,
-                models['y']: train_y,
-                models['training']: False,
-            })
+        valid_loss, valid_acc = _run(
+            session,
+            models, ['loss', 'accuracy'],
+            valid_x,
+            valid_y,
+            False,
+            n_batch=args.n_batch)
 
-        valid_acc = session.run(
-            models['accuracy'],
-            feed_dict={
-                models['x']: valid_x,
-                models['y']: valid_y,
-                models['training']: False,
-            })
-        test_acc = session.run(
-            models['accuracy'],
-            feed_dict={
-                models['x']: test_x,
-                models['y']: test_y,
-                models['training']: False,
-            })
+        test_loss, test_acc = _run(
+            session,
+            models, ['loss', 'accuracy'],
+            test_x,
+            test_y,
+            False,
+            n_batch=args.n_batch)
 
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
@@ -111,8 +123,6 @@ def train(args):
     results.append(args.seed)
     results.append(args.n_hidden_layer)
     results.append(args.activation_fn)
-    results.append(args.sparsity_normalization)
-    results.append(args.K_prime)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
@@ -133,7 +143,11 @@ def main():
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
     parser.add_argument(
-        '--max_epoch', type=int, default=1000000, help='Max epoch')
+        '--max_epoch',
+        type=int,
+        default=10,
+        # default=1000000,
+        help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
@@ -144,12 +158,16 @@ def main():
         type=int,
         default=2,
         help='the number of hidden layers.')
-    parser.add_argument('--drop_rate', type=float, default=0.5, help='')
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=800,
+        default=200,
         help='the number of hidden unit of each layer.')
+    parser.add_argument(
+        '--n_batch',
+        type=int,
+        default=500,
+        help='the number of mini batch size.')
     parser.add_argument(
         '--activation_fn',
         type=str,
@@ -166,41 +184,32 @@ def main():
         default=1,
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
+
+    parser.add_argument('--dropout_rate', type=float, default=0.0, help='')
     parser.add_argument(
         '--dropconnect_rate',
         type=float,
         default=0.5,
         help='drop rate for dropconnect.')
     parser.add_argument(
+        '--dropconnect_mode',
+        type=str,
+        # default='default',
+        default='like-dropout',
+        # default='sparsity-normalization',
+        choices=['default', 'like-dropout', 'sparsity-normalization'],
+        help='')
+    parser.add_argument(
+        '--Z',
+        type=int,
+        default=1000,
+        help='the number of sample on inference phase.')
+    parser.add_argument(
         '--learning_rate',
         type=float,
         default=1e-3,
         help='learning rate of optimizer')
 
-    parser.add_argument(
-        '--sparsity_normalization',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether to apply sparsity normalization to input layer')
-    parser.add_argument(
-        '--sparsity_injection',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether to inject sparsity')
-    parser.add_argument(
-        '--K_prime',
-        type=float,
-        default=1,
-        help='K prime in the paper. '
-        'K_prime이 None으로 입력되면, 자동으로 K_prime을 선정합니다.')
-    parser.add_argument(
-        '--log_training',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether log training')
     parser.add_argument(
         '--n_valid',
         type=int,

@@ -14,12 +14,23 @@ def _forward(x, weights, biases, training, args):
     n_layer = len(weights)
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         if i < n_layer - 1:
-            layer = DropConnect(
-                drop_rate=args.drop_rate, activation_fn=activation_fn)(
-                    layer, weight, bias, training=training)
+            if i == 0:
+                layer = tf.matmul(layer, weight) + bias
+            else:
+                drop_connect = DropConnect(
+                    drop_rate=args.dropconnect_rate,
+                    activation_fn=activation_fn,
+                    Z=args.Z,
+                    mode=args.dropconnect_mode)
+                layer = drop_connect(layer, weight, bias, training=training)
+                # weight_m_number = drop_connect.weight_m_number
+
+            if args.dropout_rate > 1e-8:
+                layer = tf.layers.dropout(
+                    layer, args.dropout_rate, training=training)
         else:
             layer = tf.matmul(layer, weight) + bias
-    return layer
+    return layer  # , weight_m_number
 
 
 def _init_weights(args, n_in, n_out):
@@ -50,6 +61,7 @@ def init_models(args, n_in, n_out):
     y_hot = tf.one_hot(y, n_out)
     weights, biases = _init_weights(args, n_in, n_out)
 
+    # y_hat, weight_m_number = _forward(x, weights, biases, training, args)
     y_hat = _forward(x, weights, biases, training, args)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -67,4 +79,5 @@ def init_models(args, n_in, n_out):
         'loss': loss,
         'accuracy': accuracy,
         'train_op': train_op,
+        # 'weight_m_number': weight_m_number,
     }
