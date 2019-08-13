@@ -123,6 +123,19 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# mahalanobis_detector
+mahalanobis_detector/*.pyc
+mahalanobis_detector/lib/__pycache__
+mahalanobis_detector/data/*
+mahalanobis_detector/output/*
+mahalanobis_detector/pre_trained/*
+mahalanobis_detector/adv_output/*
+mahalanobis_detector/libs/__pycache__
+mahalanobis_detector/libs/transformations/__pycache__
+mahalanobis_detector/*.ipynb_checkpoints
+mahalanobis_detector/__pycache__
+mahalanobis_detector/models/__pycache__
+
 # custom
 configs/local.py
 results/
