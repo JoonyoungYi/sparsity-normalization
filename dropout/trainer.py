@@ -41,9 +41,35 @@ def _run(session, models, targets, x, y, training, n_batch=1000):
     return [r / x.shape[0] for r in results]
 
 
+def _get_confidence(session, models, test_x, test_y, args):
+    """
+        Reference: https://arxiv.org/pdf/1703.00410.pdf
+    """
+    y_probs = []
+    for t in tqdm(range(50)):
+        y_prob = session.run(
+            models['y_prob'],
+            feed_dict={
+                models['x']: test_x,
+                models['y']: test_y,
+                models['training']: True,
+            })
+        y_probs.append(y_prob)
+    y_probs = np.stack(y_probs, axis=2)
+
+    left = np.mean(np.sum(np.square(y_probs), axis=1), axis=1)
+    right = np.sum(np.square(np.mean(y_probs, axis=2)), axis=1)
+    confidences = left - right
+    return np.mean(confidences), np.std(confidences)
+
+
 def train(args):
     dataset = Dataset(
-        args.dataset, dataset_seed=args.dataset_seed, n_valid=args.n_valid)
+        args.dataset,
+        dataset_seed=args.dataset_seed,
+        n_valid=args.n_valid,
+        sparsity_normalization=True
+        if args.mode == 'default-with-sn' else False)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -103,6 +129,9 @@ def train(args):
             False,
             n_batch=args.n_batch)
 
+        test_confidence_mean, test_confidence_std = _get_confidence(
+            session, models, test_x, test_y, args)
+
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
             max_valid_epoch_idx = epoch_idx
@@ -113,8 +142,14 @@ def train(args):
             max_test_epoch_idx = epoch_idx
 
         print('')
-        print('%6d' % epoch_idx, '%.2f' % train_loss, '%.4f' % train_acc,
-              '%.4f' % valid_acc, '%.4f' % test_acc)
+        print(
+            '%6d' % epoch_idx,
+            '%.2f' % train_loss,
+            '%.4f' % train_acc,
+            '%.4f' % valid_acc,
+            '%.4f' % test_acc,
+            '%.6f' % test_confidence_mean,
+            '%.6f' % test_confidence_std, )
         print('%6d' % max_valid_epoch_idx, '%.4f' % max_valid_acc,
               '%.4f' % final_test_acc)
         print('%6d' % max_test_epoch_idx, '%.4f' % max_test_acc)
@@ -123,8 +158,15 @@ def train(args):
                             '\t'.join(
                                 str(t)
                                 for t in [
-                                    epoch_idx, train_loss, valid_loss,
-                                    test_loss, train_acc, valid_acc, test_acc
+                                    epoch_idx,
+                                    train_loss,
+                                    valid_loss,
+                                    test_loss,
+                                    train_acc,
+                                    valid_acc,
+                                    test_acc,
+                                    test_confidence_mean,
+                                    test_confidence_std,
                                 ]))
 
         if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
@@ -150,8 +192,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        # default='mnist',
-        default='fashion',
+        default='mnist',
+        # default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -210,11 +252,18 @@ def main():
     parser.add_argument(
         '--mode',
         type=str,
-        default='none',  # no dropout
+        # default='none',
         # default='default',
+        default='default-with-sn',
         # default='expectation',
         # default='exact',
-        choices=['none', 'default', 'expectation', 'exact'],
+        choices=[
+            'none',  # no dropout
+            'default',
+            'default-with-sn',
+            'expectation',
+            'exact',
+        ],
         help='')
     parser.add_argument(
         '--learning_rate',

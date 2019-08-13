@@ -3,7 +3,7 @@ import numpy as np
 
 
 def _load_data(mode):
-    f = open('.results/dropout/fashion/epochs/{}.txt'.format(mode), 'r')
+    f = open('.results/dropout/mnist/epochs/{}.txt'.format(mode), 'r')
     rows = []
     for line in f:
         cols = [float(v) for v in line.strip().split('\t')]
@@ -13,7 +13,8 @@ def _load_data(mode):
 
 def main():
     default_result = _load_data('default')
-    none_result = _load_data('none')
+    # none_result = _load_data('none')
+    default_with_sn_result = _load_data('default-with-sn')
     expectation_result = _load_data('expectation')
     exact_result = _load_data('exact')
 
@@ -24,13 +25,13 @@ def main():
     green = '#44FF44'
     orange = '#FFAA00'
 
-    target_idx = 3
+    target_idx = 7
     ax = axs
     ax.plot(
-        none_result[:, 0],
-        none_result[:, target_idx],
+        default_with_sn_result[:, 0],
+        default_with_sn_result[:, target_idx],
         color=green,
-        label='none')
+        label='default-with-sn')
 
     ax.plot(
         default_result[:, 0],
@@ -38,17 +39,17 @@ def main():
         color=orange,
         label='default')
 
-    ax.plot(
-        expectation_result[:, 0],
-        expectation_result[:, target_idx],
-        color=red,
-        label='expectation')
-
-    ax.plot(
-        exact_result[:, 0],
-        exact_result[:, target_idx],
-        color=blue,
-        label='exact')
+    # ax.plot(
+    #     expectation_result[:, 0],
+    #     expectation_result[:, target_idx],
+    #     color=red,
+    #     label='expectation')
+    #
+    # ax.plot(
+    #     exact_result[:, 0],
+    #     exact_result[:, target_idx],
+    #     color=blue,
+    #     label='exact')
     # ax.set_ylim([0.88, 0.91])
     # ax.set_ylim([0.8, 0.91])
 

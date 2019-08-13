@@ -18,19 +18,21 @@ def _forward(x, weights, biases, training, args):
 
             if args.mode == 'none':
                 pass
-            elif args.mode == 'default':
+            elif args.mode == 'default' or args.mode == 'default-with-sn':
                 layer = tf.layers.dropout(
                     layer, args.drop_rate, training=training)
             elif args.mode == 'expectation':
                 r = tf.random.uniform(
                     (1, tf.shape(layer)[1]), minval=0., maxval=1.)
-                m = tf.where(r < args.drop_rate, tf.zeros_like(r), tf.ones_like(r))
+                m = tf.where(r < args.drop_rate,
+                             tf.zeros_like(r), tf.ones_like(r))
                 train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
                 layer = tf.cond(training, lambda: train_layer, lambda: layer)
             elif args.mode == 'exact':
                 r = tf.random.uniform(
                     (1, tf.shape(layer)[1]), minval=0., maxval=1.)
-                m = tf.where(r < args.drop_rate, tf.zeros_like(r), tf.ones_like(r))
+                m = tf.where(r < args.drop_rate,
+                             tf.zeros_like(r), tf.ones_like(r))
                 train_layer = tf.multiply(layer, m) * tf.cast(
                     tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
                         m, keepdims=True)
@@ -69,6 +71,7 @@ def init_models(args, n_in, n_out):
     weights, biases = _init_weights(args, n_in, n_out)
 
     y_hat = _forward(x, weights, biases, training, args)
+    y_prob = tf.nn.softmax(y_hat)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -81,6 +84,7 @@ def init_models(args, n_in, n_out):
     return {
         'x': x,
         'y': y,
+        'y_prob': y_prob,
         'training': training,
         'loss': loss,
         'accuracy': accuracy,
