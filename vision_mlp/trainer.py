@@ -16,10 +16,9 @@ CODE_NAME = 'vision_mlp'
 
 
 def __get_output_mean(activations, ys):
-    # TODO: acitvation output에 exp 취하는 코드 추가.
-    # raise NotImplementedError()
-    return sum(activations[i][-1][ys[i]]
-               for i in range(activations.shape[0])) / activations.shape[0]
+    activation = np.exp(activations[-1])
+    return sum(activation[i][ys[i]]
+               for i in range(activation.shape[0])) / activation.shape[0]
 
 
 def _save_total_activations(args, session, models, dataset, file_name):
@@ -58,14 +57,14 @@ def _log_training(args, session, models, dataset, results):
                 models['y']: dataset.dense_test_y,
                 models['training']: False,
             })
-        dense_test_output_mean = _get_statistics(dense_test_activations,
-                                                 dataset.dense_test_y)
+        dense_test_output_mean = __get_output_mean(dense_test_activations,
+                                                   dataset.dense_test_y)
         results.extend([
             sparse_test_accuracy, sparse_test_output_mean, dense_test_accuracy,
             dense_test_output_mean
         ])
 
-        label = 'w/sn' if args.sparsity_normalization else 'wo/sn'
+        label = 'w-sn' if args.sparsity_normalization else 'wo-sn'
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
                                'sparse_test_' + label, sparse_test_activations)
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',

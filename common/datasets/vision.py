@@ -4,6 +4,7 @@ import math
 
 import numpy as np
 from tqdm import tqdm
+from PIL import Image, ImageOps
 
 from ..utils import set_seed
 from .visions import mnist as datasets_mnist
@@ -74,6 +75,7 @@ def _inject_sparsity(images, max_padding=28):
         print('>> image resizing...')
         for i in tqdm(range(images.shape[0])):
             image_array = images[i]
+            # print(image_array)
             image = Image.fromarray(image_array)
 
             # padding = random.randint(0, max_padding)
@@ -118,21 +120,6 @@ class Dataset:
         set_seed(dataset_seed)
         (train_x, train_y), (test_x, test_y) = datasets.load_data()
 
-        # flatten and normalize
-        if dataset == 'mnist' or dataset == 'fashion':
-            train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-            test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
-        elif dataset == 'cifar10' or dataset == 'cifar100':
-            train_x = train_x.reshape([-1, 32 * 32 * 3
-                                       ]).astype('float32') / 255.0
-            test_x = test_x.reshape([-1, 32 * 32 * 3
-                                     ]).astype('float32') / 255.0
-
-            train_y = train_y.reshape([-1])
-            test_y = test_y.reshape([-1])
-        else:
-            raise NotImplementedError()
-
         if dataset == "mnist" or dataset == "fashion":
             n_in, n_out = 784, 10
         elif dataset == 'cifar10':
@@ -171,6 +158,24 @@ class Dataset:
             train_x, train_g = _inject_sparsity(train_x)
             valid_x, valid_g = _inject_sparsity(valid_x)
             test_x, test_g = _inject_sparsity(test_x)
+
+        # flatten and normalize
+        if dataset == 'mnist' or dataset == 'fashion':
+            train_x = train_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+            valid_x = valid_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+            test_x = test_x.reshape([-1, 28 * 28]).astype('float32') / 255.0
+        elif dataset == 'cifar10' or dataset == 'cifar100':
+            train_x = train_x.reshape([-1, 32 * 32 * 3
+                                       ]).astype('float32') / 255.0
+            valid_x = valid_x.reshape([-1, 32 * 32 * 3
+                                       ]).astype('float32') / 255.0
+            test_x = test_x.reshape([-1, 32 * 32 * 3
+                                     ]).astype('float32') / 255.0
+
+            train_y = train_y.reshape([-1])
+            test_y = test_y.reshape([-1])
+        else:
+            raise NotImplementedError()
 
         # sparsity normalization
         if sparsity_normalization:
