@@ -31,7 +31,7 @@ def _get_image_dict():
 def load_data(pixel=28):
     assert 28 <= pixel <= 105
 
-    filepath = '.datasets/omniglot/x.npy'
+    filepath = '.datasets/omniglot/few_shot_x.npy'
     if os.path.exists(filepath):
         x = np.load(filepath)
     else:

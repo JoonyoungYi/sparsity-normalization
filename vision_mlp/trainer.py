@@ -65,22 +65,24 @@ def _log_training(args, session, models, dataset, results):
             dense_test_output_mean
         ])
 
+        label = 'w/sn' if args.sparsity_normalization else 'wo/sn'
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
-                               'sparse_test', sparse_test_activations)
+                               'sparse_test_' + label, sparse_test_activations)
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
-                               'dense_test', dense_test_activations)
+                               'dense_test_' + label, dense_test_activations)
 
     append_text_results(CODE_NAME, args.dataset, 'epochs', 'default',
                         '\t'.join(str(t) for t in results))
 
 
 def train(args):
-    dataset = Dataset(args.dataset,
-    dataset_seed=args.dataset_seed,
-    n_valid=args.n_valid,
-    sparsity_injection=args.sparsity_injection,
-    sparsity_normalization=args.sparsity_normalization,
-    K_prime=args.K_prime)
+    dataset = Dataset(
+        args.dataset,
+        dataset_seed=args.dataset_seed,
+        n_valid=args.n_valid,
+        sparsity_injection=args.sparsity_injection,
+        sparsity_normalization=args.sparsity_normalization,
+        K_prime=args.K_prime)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
@@ -192,8 +194,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        # default='mnist',
-        default='fashion',
+        default='mnist',
+        # default='fashion',
         # default='cifar10',
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
@@ -213,7 +215,7 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=5,
+        default=800,
         help='the number of hidden unit of each layer.')
     parser.add_argument(
         '--activation_fn',
@@ -251,20 +253,20 @@ def main():
     parser.add_argument(
         '--sparsity_injection',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether to inject sparsity')
     parser.add_argument(
         '--K_prime',
         type=float,
-        default=1,
+        default=None,
         help='K prime in the paper. '
         'K_prime이 None으로 입력되면, 자동으로 K_prime을 선정합니다.')
     parser.add_argument(
         '--log_training',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether log training')
     parser.add_argument(
         '--n_valid',

@@ -12,9 +12,9 @@ def _load_data(mode):
 
 
 def main():
-    default_result = _load_data('default')
+    # default_result = _load_data('default')
     # none_result = _load_data('none')
-    default_with_sn_result = _load_data('default-with-sn')
+    # default_with_sn_result = _load_data('default-with-sn')
     expectation_result = _load_data('expectation')
     exact_result = _load_data('exact')
 
@@ -25,31 +25,29 @@ def main():
     green = '#44FF44'
     orange = '#FFAA00'
 
-    target_idx = 7
+    # target_idx = 7
     ax = axs
-    ax.plot(
-        default_with_sn_result[:, 0],
-        default_with_sn_result[:, target_idx],
-        color=green,
-        label='default-with-sn')
-
-    ax.plot(
-        default_result[:, 0],
-        default_result[:, target_idx],
-        color=orange,
-        label='default')
 
     # ax.plot(
-    #     expectation_result[:, 0],
-    #     expectation_result[:, target_idx],
-    #     color=red,
-    #     label='expectation')
+    #     default_with_sn_result[:, 0],
+    #     default_with_sn_result[:, target_idx],
+    #     color=green,
+    #     label='default-with-sn')
     #
     # ax.plot(
-    #     exact_result[:, 0],
-    #     exact_result[:, target_idx],
-    #     color=blue,
-    #     label='exact')
+    #     default_result[:, 0],
+    #     default_result[:, target_idx],
+    #     color=orange,
+    #     label='default')
+
+    ax.plot(expectation_result[:, 0],
+            expectation_result[:, 7] + 1.96 * expectation_result[:, 8])
+    ax.plot(exact_result[:, 0], exact_result[:, 7] + 1.96 * exact_result[:, 8])
+    ax.plot(expectation_result[:, 0],
+            expectation_result[:, 9] - 1.96 * expectation_result[:, 10])
+    ax.plot(exact_result[:, 0],
+            exact_result[:, 9] - 1.96 * exact_result[:, 10])
+    # ax.legend()
     # ax.set_ylim([0.88, 0.91])
     # ax.set_ylim([0.8, 0.91])
 

@@ -11,6 +11,7 @@ def _forward(x, weights, biases, training, args):
     layer = x
     assert len(weights) == len(biases)
     n_layer = len(weights)
+    layers = []
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight) + bias
         if i < n_layer - 1:
@@ -18,28 +19,30 @@ def _forward(x, weights, biases, training, args):
 
             if args.mode == 'none':
                 pass
-            elif args.mode == 'default' or args.mode == 'default-with-sn':
+            elif args.mode == 'default':
                 layer = tf.layers.dropout(
                     layer, args.drop_rate, training=training)
-            elif args.mode == 'expectation':
-                r = tf.random.uniform(
-                    (1, tf.shape(layer)[1]), minval=0., maxval=1.)
-                m = tf.where(r < args.drop_rate,
-                             tf.zeros_like(r), tf.ones_like(r))
-                train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
-                layer = tf.cond(training, lambda: train_layer, lambda: layer)
-            elif args.mode == 'exact':
-                r = tf.random.uniform(
-                    (1, tf.shape(layer)[1]), minval=0., maxval=1.)
-                m = tf.where(r < args.drop_rate,
-                             tf.zeros_like(r), tf.ones_like(r))
-                train_layer = tf.multiply(layer, m) * tf.cast(
-                    tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
-                        m, keepdims=True)
-                layer = tf.cond(training, lambda: train_layer, lambda: layer)
+            # elif args.mode == 'expectation':
+            #     r = tf.random.uniform(
+            #         (1, tf.shape(layer)[1]), minval=0., maxval=1.)
+            #     m = tf.where(r < args.drop_rate,
+            #                  tf.zeros_like(r), tf.ones_like(r))
+            #     train_layer = tf.multiply(layer, m) / (1 - args.drop_rate)
+            #     layer = tf.cond(training, lambda: train_layer, lambda: layer)
+            # elif args.mode == 'exact':
+            #     r = tf.random.uniform(
+            #         (1, tf.shape(layer)[1]), minval=0., maxval=1.)
+            #     m = tf.where(r < args.drop_rate,
+            #                  tf.zeros_like(r), tf.ones_like(r))
+            #     train_layer = tf.multiply(layer, m) * tf.cast(
+            #         tf.shape(layer)[1], tf.float32) / tf.reduce_sum(
+            #             m, keepdims=True)
+            #     layer = tf.cond(training, lambda: train_layer, lambda: layer)
             else:
                 raise NotImplementedError()
-    return layer
+
+        layers.append(layer)
+    return layers
 
 
 def _init_weights(args, n_in, n_out):
@@ -70,8 +73,11 @@ def init_models(args, n_in, n_out):
     y_hot = tf.one_hot(y, n_out)
     weights, biases = _init_weights(args, n_in, n_out)
 
-    y_hat = _forward(x, weights, biases, training, args)
+    layers = _forward(x, weights, biases, training, args)
+    y_hat = layers[-1]
     y_prob = tf.nn.softmax(y_hat)
+    layers.append(y_prob)
+    feature = tf.concat(layers, axis=1)
 
     costs = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=y_hot, logits=y_hat)
@@ -85,6 +91,7 @@ def init_models(args, n_in, n_out):
         'x': x,
         'y': y,
         'y_prob': y_prob,
+        'feature': feature,
         'training': training,
         'loss': loss,
         'accuracy': accuracy,

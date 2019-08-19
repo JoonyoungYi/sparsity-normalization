@@ -3,6 +3,7 @@ import random
 import math
 
 import numpy as np
+from tqdm import tqdm
 
 from ..utils import set_seed
 from .visions import mnist as datasets_mnist

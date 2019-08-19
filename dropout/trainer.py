@@ -1,3 +1,4 @@
+import os
 import random
 import time
 
@@ -45,37 +46,44 @@ def _get_confidence(session, models, test_x, test_y, args):
     """
         Reference: https://arxiv.org/pdf/1703.00410.pdf
     """
-    y_probs = []
+    features = []
     for t in tqdm(range(50)):
-        y_prob = session.run(
-            models['y_prob'],
+        feature = session.run(
+            models['feature'],
             feed_dict={
                 models['x']: test_x,
                 models['y']: test_y,
                 models['training']: True,
             })
-        y_probs.append(y_prob)
-    y_probs = np.stack(y_probs, axis=2)
+        features.append(feature)
+    features = np.stack(features, axis=2)
 
-    left = np.mean(np.sum(np.square(y_probs), axis=1), axis=1)
-    right = np.sum(np.square(np.mean(y_probs, axis=2)), axis=1)
+    left = np.mean(np.sum(np.square(features), axis=1), axis=1)
+    right = np.sum(np.square(np.mean(features, axis=2)), axis=1)
     confidences = left - right
     return np.mean(confidences), np.std(confidences)
 
 
 def train(args):
+    out_dataset = Dataset(
+        "fashion",
+        dataset_seed=args.dataset_seed,
+        n_valid=args.n_valid,
+        sparsity_normalization=args.sparsity_normalization)
     dataset = Dataset(
         args.dataset,
         dataset_seed=args.dataset_seed,
         n_valid=args.n_valid,
-        sparsity_normalization=True
-        if args.mode == 'default-with-sn' else False)
+        sparsity_normalization=args.sparsity_normalization)
     train_x = dataset.train_x
     train_y = dataset.train_y
     valid_x = dataset.valid_x
     valid_y = dataset.valid_y
     test_x = dataset.test_x
     test_y = dataset.test_y
+
+    out_test_x = out_dataset.test_x
+    out_test_y = out_dataset.test_y
 
     set_seed(args.seed)
 
@@ -85,6 +93,11 @@ def train(args):
 
     models = init_models(args, dataset.n_in, dataset.n_out)
     session.run(tf.global_variables_initializer())
+
+    file_path = '.results/{}/{}/epochs/{}.txt'.format(CODE_NAME, args.dataset,
+                                                      args.mode)
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
     max_valid_acc = 0.0
     max_valid_epoch_idx = 0
@@ -132,6 +145,9 @@ def train(args):
         test_confidence_mean, test_confidence_std = _get_confidence(
             session, models, test_x, test_y, args)
 
+        out_test_confidence_mean, out_test_confidence_std = _get_confidence(
+            session, models, out_test_x, out_test_y, args)
+
         if max_valid_acc + 1e-5 < valid_acc:
             max_valid_acc = valid_acc
             max_valid_epoch_idx = epoch_idx
@@ -147,12 +163,15 @@ def train(args):
             '%.2f' % train_loss,
             '%.4f' % train_acc,
             '%.4f' % valid_acc,
-            '%.4f' % test_acc,
-            '%.6f' % test_confidence_mean,
-            '%.6f' % test_confidence_std, )
+            '%.4f' % test_acc, )
         print('%6d' % max_valid_epoch_idx, '%.4f' % max_valid_acc,
               '%.4f' % final_test_acc)
         print('%6d' % max_test_epoch_idx, '%.4f' % max_test_acc)
+        print(
+            '%.6f' % test_confidence_mean,
+            '%.6f' % test_confidence_std,
+            '%.6f' % out_test_confidence_mean,
+            '%.6f' % out_test_confidence_std, )
 
         append_text_results(CODE_NAME, args.dataset, 'epochs', args.mode,
                             '\t'.join(
@@ -167,6 +186,8 @@ def train(args):
                                     test_acc,
                                     test_confidence_mean,
                                     test_confidence_std,
+                                    out_test_confidence_mean,
+                                    out_test_confidence_std,
                                 ]))
 
         if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
@@ -225,6 +246,12 @@ def main():
         # default=100000,
         default=1000,
         help='the number of mini batch size.')
+    parser.add_argument(
+        '--sparsity_normalization',
+        type=str2bool,
+        # default=True,
+        default=False,
+        help='Whether to apply sparsity normalization to input layer')
     parser.add_argument(
         '--activation_fn',
         type=str,
