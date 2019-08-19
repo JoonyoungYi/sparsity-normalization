@@ -39,6 +39,18 @@ def _log_training(args, session, models, dataset, results):
 
     _save_total_activations(args, session, models, dataset, 'after')
 
+    test_accuracy, test_activations = session.run(
+        [models['accuracy'], models['layers']],
+        feed_dict={
+            models['x']: dataset.test_x,
+            models['y']: dataset.test_y,
+            models['training']: False,
+        })
+
+    label = 'w-sn' if args.sparsity_normalization else 'wo-sn'
+    save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                           'test_' + label, test_activations)
+
     if args.sparsity_injection:
         sparse_test_accuracy, sparse_test_activations = session.run(
             [models['accuracy'], models['layers']],
@@ -64,7 +76,6 @@ def _log_training(args, session, models, dataset, results):
             dense_test_output_mean
         ])
 
-        label = 'w-sn' if args.sparsity_normalization else 'wo-sn'
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
                                'sparse_test_' + label, sparse_test_activations)
         save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
@@ -99,8 +110,17 @@ def train(args):
     session.run(tf.global_variables_initializer())
 
     if args.log_training:
+        save_results_to_pickle('vision_mlp', args.dataset, 'test_xs',
+                               str(args.dataset_seed), test_x)
         save_results_to_pickle('vision_mlp', args.dataset, 'test_ys',
                                str(args.dataset_seed), test_y)
+        if args.sparsity_injection:
+            save_results_to_pickle('vision_mlp', args.dataset, 'dense_test_ys',
+                                   str(args.dataset_seed),
+                                   dataset.dense_test_y)
+            save_results_to_pickle(
+                'vision_mlp', args.dataset, 'sparse_test_ys',
+                str(args.dataset_seed), dataset.sparse_test_y)
         _save_total_activations(args, session, models, dataset, 'before')
 
     max_valid_acc = 0.0
@@ -152,15 +172,16 @@ def train(args):
             max_valid_epoch_idx = epoch_idx
             final_test_acc = test_acc
 
+            _log_training(args, session, models, dataset, [
+                epoch_idx, train_loss, train_acc, valid_acc, test_acc,
+                max_test_acc, max_test_epoch_idx, max_valid_acc,
+                max_valid_epoch_idx, final_test_acc
+            ])
+
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
             max_test_epoch_idx = epoch_idx
 
-        _log_training(args, session, models, dataset, [
-            epoch_idx, train_loss, train_acc, valid_acc, test_acc,
-            max_test_acc, max_test_epoch_idx, max_valid_acc,
-            max_valid_epoch_idx, final_test_acc
-        ])
         print('')
         print('%6d' % epoch_idx, '%.2f' % train_loss, '%.4f' % train_acc,
               '%.4f' % valid_acc, '%.4f' % test_acc)
@@ -252,8 +273,8 @@ def main():
     parser.add_argument(
         '--sparsity_injection',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether to inject sparsity')
     parser.add_argument(
         '--K_prime',
@@ -270,7 +291,7 @@ def main():
     parser.add_argument(
         '--n_valid',
         type=int,
-        default=-10000,
+        default=-5000,
         help='음수로 입력되면, train set에서 validation을 떼고, '
         '양수로 입력되면 test set에서 n_valid 갯수만큼 뗍니다. '
         'NeurIPS 2019에 제출했던 버전에서는 -10000을 사용하였고, '

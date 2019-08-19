@@ -173,6 +173,7 @@ class Dataset:
                                      ]).astype('float32') / 255.0
 
             train_y = train_y.reshape([-1])
+            valid_y = valid_y.reshape([-1])
             test_y = test_y.reshape([-1])
         else:
             raise NotImplementedError()
