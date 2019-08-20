@@ -3,6 +3,7 @@ import time
 
 import tensorflow as tf
 import numpy as np
+from tqdm import tqdm
 
 from .model import init_models
 from common.datasets.vision import Dataset
@@ -132,25 +133,24 @@ def train(args):
 
     startTime = time.time()
     for epoch_idx in range(args.max_epoch):
-        # train_accs = []
-        # for i in range(0, train_x.shape[0], 5000):
-        #     _, train_loss, train_acc = session.run(
-        #         [models['train_op'], models['loss'], models['accuracy']],
-        #         feed_dict={
-        #             models['x']: train_x[i:i + 5000],
-        #             models['y']: train_y[i:i + 5000],
-        #             models['training']: True,
-        #         })
-        #     train_accs.append(train_acc)
-        # train_acc = sum(train_accs) / len(train_accs)
+        train_perm = np.random.permutation(train_x.shape[0])
+        train_x = train_x[train_perm]
+        train_y = train_y[train_perm]
 
-        _, train_loss, train_acc = session.run(
-            [models['train_op'], models['loss'], models['accuracy']],
-            feed_dict={
-                models['x']: train_x,
-                models['y']: train_y,
-                models['training']: True,
-            })
+        train_accs = []
+        train_losses = []
+        for i in tqdm(range(0, train_x.shape[0], args.n_batch)):
+            _, train_loss, train_acc = session.run(
+                [models['train_op'], models['loss'], models['accuracy']],
+                feed_dict={
+                    models['x']: train_x[i:i + args.n_batch],
+                    models['y']: train_y[i:i + args.n_batch],
+                    models['training']: True,
+                })
+            train_accs.append(train_acc)
+            train_losses.append(train_loss)
+        train_acc = sum(train_accs) / len(train_accs)
+        train_loss = sum(train_losses) / len(train_losses)
 
         valid_acc = session.run(
             models['accuracy'],
@@ -201,6 +201,8 @@ def train(args):
     results.append(args.activation_fn)
     results.append(args.sparsity_normalization)
     results.append(args.K_prime)
+    results.append(args.dropout_rate)
+    results.append(args.n_batch)
     results.append(args.n_hidden_unit)
     results.append(final_test_acc)
     results.append(endTime)
@@ -220,12 +222,11 @@ def main():
         # default='cifar100',
         choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
         help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
-    parser.add_argument(
-        '--max_epoch', type=int, default=1000000, help='Max epoch')
+    parser.add_argument('--max_epoch', type=int, default=200, help='Max epoch')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
-        default=1000,
+        default=20,
         help='the number of epochation for early stop.')
     parser.add_argument(
         '--n_hidden_layer',
@@ -235,8 +236,9 @@ def main():
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
-        default=800,
+        default=512,
         help='the number of hidden unit of each layer.')
+    parser.add_argument('--n_batch', type=int, default=1024, help='')
     parser.add_argument(
         '--activation_fn',
         type=str,
@@ -253,15 +255,15 @@ def main():
         default=1,
         help='the seed for split dataset. the seed for dataset.'
         'None 일 때는 seed 값을 따라갑니다.')
-    # parser.add_argument(
-    #     '--dropconnect_rate',
-    #     type=float,
-    #     default=0.0,
-    #     help='drop rate for dropconnect.')
+    parser.add_argument(
+        '--dropout_rate',
+        type=float,
+        default=0.2,
+        help='drop rate for dropout.')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-2,
+        default=1e-3,
         help='learning rate of optimizer')
 
     parser.add_argument(
@@ -307,3 +309,13 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# python3 -m vision_mlp.trainer --dataset=mnist --sparsity_normalization=False
+# [tf-1] python3 -m vision_mlp.trainer --dataset=fashion --sparsity_normalization=False
+# [tf-2] python3 -m vision_mlp.trainer --dataset=cifar10 --sparsity_normalization=False
+# [tf-3] python3 -m vision_mlp.trainer --dataset=cifar100 --sparsity_normalization=False
+# python3 -m vision_mlp.trainer --dataset=mnist --sparsity_normalization=True
+# [tf-6] python3 -m vision_mlp.trainer --dataset=fashion --sparsity_normalization=True
+# [tf-7] python3 -m vision_mlp.trainer --dataset=cifar10 --sparsity_normalization=True
+# [tf-8] python3 -m vision_mlp.trainer --dataset=cifar100 --sparsity_normalization=True
+# python3 -m vision_mlp.tester 

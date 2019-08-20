@@ -19,6 +19,9 @@ def _forward(x, weights, biases, training, args):
         if i < n_layer - 1:
             layer = activation_fn(layer)
             layers.append(layer)
+            if args.dropout_rate > 1e-8:
+                layer = tf.layers.dropout(
+                    layer, args.dropout_rate, training=training)
         else:
             layers.append(layer)
     return layers
@@ -31,7 +34,7 @@ def _init_weights(args, n_in, n_out):
     for i, (n_in, n_out) in enumerate(zip(n_units[:-1], n_units[1:])):
         weight = tf.Variable(
             tf.truncated_normal(
-                [n_in, n_out], mean=0, stddev=math.sqrt(3 / n_in)))
+                [n_in, n_out], mean=0, stddev=math.sqrt(2 / n_in)))
         bias = tf.Variable(tf.zeros([n_out]))
         weights.append(weight)
         biases.append(bias)
