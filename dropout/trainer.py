@@ -76,12 +76,12 @@ def main():
 
 if __name__ == '__main__':
     # arguement passing
-    parser = argparse.ArgumentParser(description='boston')
+    parser = argparse.ArgumentParser(description='dropout')
     parser.add_argument(
         '--input_normalization',
         type=str,
-        choices=['none', 'min-0-max-1', 'min--1-max-1', 'standardization'],
-        default='min-0-max-1')
+        default='min-0-max-1',
+        choices=['none', 'min-0-max-1', 'min--1-max-1', 'standardization'])
     #default='standardization')
     parser.add_argument('--split_ratio', type=float, default=0.8)
 
