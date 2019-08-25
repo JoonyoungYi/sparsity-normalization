@@ -4,10 +4,6 @@ import argparse
 import pickle
 from datetime import datetime
 
-try:
-    import tensorflow as tf
-except:
-    print('Error to import tensorflow')
 import numpy as np
 
 
@@ -30,14 +26,32 @@ def integer_list(values):
     return []
 
 
-def set_seed(seed):
+def set_seed(seed, tensorflow=True, torch=False):
     # set seed
     random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed=seed)
-    try:
-        tf.random.set_random_seed(seed)
-    except:
-        print('Error to import tensorflow')
+    if tensorflow:
+        import tensorflow as tf
+        try:
+            tf.random.set_random_seed(seed)
+        except:
+            print('Error to import tensorflow')
+
+    if torch:
+        import torch
+        try:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        except:
+            print('Error to import tensorflow')
+
+
+def set_torch_seed(seed):
+    set_seed(seed, tensorflow=False, torch=True)
 
 
 def _make_folder_if_not_exist(path):
@@ -105,6 +119,7 @@ def append_text_results(code_name, dataset_name, folder_name, file_name, line):
 
 
 def get_activation_fn(activation_fn):
+    import tensorflow as tf
     if activation_fn == 'relu':
         return tf.nn.relu
     elif activation_fn == 'leaky_relu':

@@ -10,9 +10,13 @@ import torch
 from .dataset import init_boston
 from .model import MLP
 from .utils import dict2tsv
+from common.utils import set_torch_seed
 
 
-def main():
+def main(args):
+    # Setting seed for reproducing
+    set_torch_seed(args.seed)
+
     # get boston dataset
     train_x, train_y, test_x, test_y = init_boston(args.input_normalization,
                                                    args.split_ratio)
@@ -62,7 +66,7 @@ def main():
             #     args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
             #     args.dropout_option))
 
-    # plot correlation of sparsity and expected activation
+        # plot correlation of sparsity and expected activation
     with torch.no_grad():
         model.train()
 
@@ -100,16 +104,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--testing', action='store_true')
     parser.add_argument('--seed', type=int, default=1)
+
     args = parser.parse_args()
-
-    # Setting seed for reproducing
-    random.seed(args.seed)
-    os.environ['PYTHONHASHSEED'] = str(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    main()
+    main(args)
