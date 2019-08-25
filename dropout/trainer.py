@@ -2,13 +2,14 @@ import os
 import random
 import argparse
 import collections
-from utils import dict2tsv
 from tqdm import tqdm
 
 import numpy as np
 import torch
-from dataset import init_boston
-from model import MLP
+
+from .dataset import init_boston
+from .model import MLP
+from .utils import dict2tsv
 
 
 def main():
