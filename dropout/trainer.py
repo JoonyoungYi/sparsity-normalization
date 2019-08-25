@@ -9,8 +9,22 @@ import torch
 
 from .dataset import load_data
 from .model import MLP
-from .utils import dict2tsv
 from common.utils import set_torch_seed
+from common.utils import append_text_results
+
+
+def _save_results(args, epoch_idx, train_rmse, test_rmse):
+    file_name = 'seed{seed}_in{input_normalization}_n-hunit{n_hidden_unit}_n-hlayer{n_hidden_layer}_dropout-rate{dropout_rate}_dropout-mode{dropout_mode}_lr{learning_rate}_max-epoch{max_epoch}'.format(
+        seed=args.seed,
+        input_normalization=args.input_normalization,
+        n_hidden_unit=args.n_hidden_unit,
+        n_hidden_layer=args.n_hidden_layer,
+        dropout_rate=args.dropout_rate,
+        dropout_mode=args.dropout_mode,
+        learning_rate=args.learning_rate,
+        max_epoch=args.max_epoch, )
+    append_text_results('dropout', args.dataset, 'epoch', file_name,
+                        "\t".join([epoch_idx, train_rmse, test_rmse]))
 
 
 def main(args):
@@ -35,11 +49,12 @@ def main(args):
     optimizer = torch.optim.Adam(
         params=model.parameters(), lr=args.learning_rate)
 
-    for epoch in tqdm(range(1, args.max_epoch + 1)):
+    for epoch_idx in tqdm(range(1, args.max_epoch + 1)):
         # training
         model.train()
         train_y_pred = model(train_x)
         train_loss = criterion(train_y_pred, train_y)
+        train_rmse = np.sqrt(train_loss.item())
 
         # backprop
         optimizer.zero_grad()
@@ -51,34 +66,26 @@ def main(args):
             model.eval()
             test_y_pred = model(test_x)
             test_loss = criterion(test_y_pred, test_y)
+            test_rmse = np.sqrt(test_loss.item())
 
-        if not args.testing:
-            # save results
-            res = collections.OrderedDict()
-            res['epoch'] = epoch
-            res['train_loss'] = np.sqrt(train_loss.item())
-            res['test_loss'] = np.sqrt(test_loss.item())
-            # dict2tsv(res, 'results/{}_{}_{}_{}_{}.txt'.format(
-            #     args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
-            #     args.dropout_option))
+        # save results
+        _save_results(args, epoch_idx, train_rmse, test_rmse)
 
     with torch.no_grad():
         # plot relation of sparsity and expected activation
         model.eval()
 
-        expected_act = []
         for rate in [i * 0.1 for i in range(1, 10)]:
             test_y_pred = model(test_x, test_dropout_rate=rate)
-            print(rate, test_y_pred.mean().item())
-            expected_act.append(test_y_pred.mean().item())
-
-        print('correlation of sparsity and expected activation:')
-        print('\t'.join(str(f) for f in expected_act))
+            test_y_pred_mean = test_y_pred.mean().item()
+            print(rate, test_y_pred_mean)
 
 
 if __name__ == '__main__':
     # arguement passing
     parser = argparse.ArgumentParser(description='dropout')
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--dataset', type=str, default='boston')
     parser.add_argument(
         '--input_normalization',
         type=str,
@@ -97,11 +104,9 @@ if __name__ == '__main__':
         choices=['default', 'sparsity-normalization'])
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--max_epoch', type=int, default=1000)
-
     parser.add_argument('--split_ratio', type=float, default=0.8)
 
-    parser.add_argument('--testing', action='store_true')
-    parser.add_argument('--seed', type=int, default=1)
-
     args = parser.parse_args()
+    assert args.dataset == 'boston'
+
     main(args)
