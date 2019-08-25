@@ -58,9 +58,9 @@ def main():
             res['epoch'] = epoch
             res['train_loss'] = np.sqrt(train_loss.item())
             res['test_loss'] = np.sqrt(test_loss.item())
-            dict2tsv(res, 'results/{}_{}_{}_{}_{}.txt'.format(
-                args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
-                args.dropout_option))
+            # dict2tsv(res, 'results/{}_{}_{}_{}_{}.txt'.format(
+            #     args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
+            #     args.dropout_option))
 
     # plot correlation of sparsity and expected activation
     with torch.no_grad():
