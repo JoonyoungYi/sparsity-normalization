@@ -24,7 +24,7 @@ def _normalize_input(x, input_normalization):
     return x
 
 
-def init_boston(input_normalization, split_ratio):
+def load_data(input_normalization, split_ratio):
     # get boston dataset from sklearn
     boston = load_boston()
 
