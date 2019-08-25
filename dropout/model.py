@@ -29,7 +29,7 @@ class MLP(nn.Module):
         n_hidden_unit = self.n_hidden_unit
         dropout_mode = self.dropout_mode
         if test_dropout_rate > 1e-20:
-            # assert not training
+            assert not training
             training = True
             dropout_rate = test_dropout_rate
 
@@ -39,25 +39,26 @@ class MLP(nn.Module):
 
         for linear in linears[:-1]:
             x = linear(x)
-            x = F.dropout(x, p=dropout_rate, training=training)
+            if training:
+                x = F.dropout(x, p=dropout_rate)
 
-            if dropout_mode == 'default':
-                if test_dropout_rate > 1e-20:
-                    # 예외적 self 사용
-                    multiplier = (1 - dropout_rate) / (1 - self.dropout_rate)
+                if dropout_mode == 'default':
+                    if test_dropout_rate > 1e-20:
+                        # 예외적 self 사용
+                        multiplier = (1 - dropout_rate) / (
+                            1 - self.dropout_rate)
+                    else:
+                        multiplier = 1.0
+                elif dropout_mode == 'sparsity-normalization':
+                    multiplier = 1 - dropout_rate
+                    l0 = (torch.abs(x).detach() > 1e-20).sum(
+                        dim=1).type(torch.FloatTensor)
+                    l0 = torch.max(l0, torch.ones_like(l0))
+                    multiplier *= (n_hidden_unit / l0).unsqueeze(1)
+                    multiplier = multiplier.cuda()
                 else:
-                    multiplier = 1.0
-            elif dropout_mode == 'sparsity-normalization':
-                l0 = (torch.abs(x).detach() > 1e-20).sum(
-                    dim=1).type(torch.FloatTensor)
-
-                l0 = torch.max(l0, torch.ones_like(l0))
-                multiplier = (1 - dropout_rate) * (
-                    n_hidden_unit / l0).unsqueeze(1)
-                multiplier = multiplier.cuda()
-            else:
-                raise NotImplementedError()
-            x = x * multiplier
+                    raise NotImplementedError()
+                x = x * multiplier
 
             x = activation_function(x)
 
