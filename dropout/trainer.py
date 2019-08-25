@@ -80,9 +80,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input_normalization',
         type=str,
-        default='min-0-max-1',
-        choices=['none', 'min-0-max-1', 'min--1-max-1', 'standardization'])
-    #default='standardization')
+        # default='min-max',
+        default='standardization',
+        choices=['none', 'min-max', 'standardization'])
     parser.add_argument('--split_ratio', type=float, default=0.8)
 
     parser.add_argument('--hidden_unit', type=int, default=1024)
