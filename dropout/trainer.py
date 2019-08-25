@@ -2,8 +2,8 @@ import os
 import random
 import argparse
 import collections
-from tqdm import tqdm
 
+from tqdm import tqdm
 import numpy as np
 import torch
 
