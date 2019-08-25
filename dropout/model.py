@@ -4,59 +4,58 @@ import torch.nn.functional as F
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_unit, layer_num, dropout_rate,
-                 dropout_option):
+    def __init__(self, n_input_unit, n_hidden_unit, n_hidden_layer,
+                 dropout_rate, dropout_mode):
         super().__init__()
-        self.input_dim = input_dim
-        self.hidden_unit = hidden_unit
-        self.layer_num = layer_num
+
+        linears = [nn.Linear(n_input_unit, n_hidden_unit)]
+        for _ in range(n_hidden_layer):
+            linears.append(nn.Linear(n_hidden_unit, n_hidden_unit))
+        linears.append(nn.Linear(n_hidden_unit, 1))
+
+        self.n_input_unit = n_input_unit
+        self.n_hidden_unit = n_hidden_unit
+        self.n_hidden_layer = n_hidden_layer
         self.dropout_rate = dropout_rate
-        self.dropout_option = dropout_option
+        self.dropout_mode = dropout_mode
+        self.activation_function = F.relu
+        self.linears = nn.ModuleList(linears)
 
-        self.linears = [nn.Linear(self.input_dim, self.hidden_unit)]
-        for i in range(self.layer_num - 1):
-            self.linears.append(nn.Linear(self.hidden_unit, self.hidden_unit))
-        self.linears = nn.ModuleList(self.linears)
+    def forward(self, x, test_dropout_rate=0.0):
+        linears = self.linears
+        activation_function = self.activation_function
+        training = self.training
+        dropout_rate = self.dropout_rate
+        multiplier = 1.0
+        dropout_mode = self.dropout_mode
+        if test_dropout_rate > 1e-20:
+            assert not training
+            training = True
+            dropout_rate = test_dropout_rate
 
-        self.out = nn.Linear(self.hidden_unit, 1)
+        if activation_function not in [F.relu, F.leaky_relu]:
+            print("relu와 leaky relu가 아닐 경우 dropout 메커니즘을 바꿔야 합니다.")
+            raise NotImplementedError()
 
-    def forward(self, x, dropout_new=None):
-        for linear in self.linears:
+        for linear in linears[:-1]:
             x = linear(x)
+            x = F.dropout(x, p=dropout_rate, training=training)
 
-            # control sparsity for ablation study
-            if dropout_new is not None:
-                x = F.dropout(x, p=dropout_new, training=self.training)
-                if self.training:
-                    x = x * (1 - dropout_new)
-
-            # normal forward pass
+            if dropout_mode == 'default':
+                if test_dropout_rate > 1e-20:
+                    multiplier = (1 - test_dropout_rate) / (
+                        1 - self.dropout_rate)  # 예외적 self 사용
+            elif dropout_mode == 'sparsity-normalization':
+                n_unit = x.shape[1]
+                l0 = (torch.abs(x).detach() > 1e-20).sum(
+                    dim=1).type(torch.FloatTensor)
+                l0 = torch.max(l0, torch.ones_like(l0))
+                multiplier = (n_unit / l0).unsqueeze(1).cuda()
             else:
-                x = F.dropout(x, p=self.dropout_rate, training=self.training)
-                if self.training:
-                    x = x * (1 - self.dropout_rate)
+                raise NotImplementedError()
+            x = x * multiplier
 
-            if self.training:
-                if self.dropout_option == 'sn':
-                    l0 = (torch.abs(x).detach() > 1e-20).sum(
-                        dim=1).type(torch.FloatTensor)
-                    l0 = torch.max(l0, torch.ones_like(l0))
-                    multiplier = (self.hidden_unit / l0).unsqueeze(1)
-                    x = x * multiplier.cuda()
-                elif self.dropout_option == 'default_train':
-                    x = x * 1 / (1 - self.dropout_rate)
-                elif self.dropout_option == 'default_test':
-                    pass
-                elif self.dropout_option == 'none':
-                    pass
-                else:
-                    raise NotImplementedError()
-            else:
-                if self.dropout_option == 'default_test':
-                    x = x * (1 - self.dropout_rate)
+            x = activation_function(x)
 
-            x = F.relu(x)
-
-        y_pred = self.out(x)
-
+        y_pred = linears[-1](x)
         return y_pred
