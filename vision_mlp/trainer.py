@@ -38,7 +38,7 @@ def _log_training(args, session, models, dataset, results):
     if not args.log_training:
         return
 
-    _save_total_activations(args, session, models, dataset, 'after')
+    # _save_total_activations(args, session, models, dataset, 'after')
 
     test_accuracy, test_activations = session.run(
         [models['accuracy'], models['layers']],
@@ -48,42 +48,48 @@ def _log_training(args, session, models, dataset, results):
             models['training']: False,
         })
 
-    label = 'w-sn' if args.sparsity_normalization else 'wo-sn'
-    save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
-                           'test_' + label, test_activations)
+    train_accuracy, train_activations = session.run(
+        [models['accuracy'], models['layers']],
+        feed_dict={
+            models['x']: dataset.train_x,
+            models['y']: dataset.train_y,
+            models['training']: False,
+        })
 
-    if args.sparsity_injection:
-        sparse_test_accuracy, sparse_test_activations = session.run(
-            [models['accuracy'], models['layers']],
-            feed_dict={
-                models['x']: dataset.sparse_test_x,
-                models['y']: dataset.sparse_test_y,
-                models['training']: False,
-            })
-        sparse_test_output_mean = __get_output_mean(sparse_test_activations,
-                                                    dataset.sparse_test_y)
+    return train_activations, test_activations
 
-        dense_test_accuracy, dense_test_activations = session.run(
-            [models['accuracy'], models['layers']],
-            feed_dict={
-                models['x']: dataset.dense_test_x,
-                models['y']: dataset.dense_test_y,
-                models['training']: False,
-            })
-        dense_test_output_mean = __get_output_mean(dense_test_activations,
-                                                   dataset.dense_test_y)
-        results.extend([
-            sparse_test_accuracy, sparse_test_output_mean, dense_test_accuracy,
-            dense_test_output_mean
-        ])
-
-        save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
-                               'sparse_test_' + label, sparse_test_activations)
-        save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
-                               'dense_test_' + label, dense_test_activations)
-
-    append_text_results(CODE_NAME, args.dataset, 'epochs', 'default',
-                        '\t'.join(str(t) for t in results))
+    # if args.sparsity_injection:
+    #     sparse_test_accuracy, sparse_test_activations = session.run(
+    #         [models['accuracy'], models['layers']],
+    #         feed_dict={
+    #             models['x']: dataset.sparse_test_x,
+    #             models['y']: dataset.sparse_test_y,
+    #             models['training']: False,
+    #         })
+    #     sparse_test_output_mean = __get_output_mean(sparse_test_activations,
+    #                                                 dataset.sparse_test_y)
+    #
+    #     dense_test_accuracy, dense_test_activations = session.run(
+    #         [models['accuracy'], models['layers']],
+    #         feed_dict={
+    #             models['x']: dataset.dense_test_x,
+    #             models['y']: dataset.dense_test_y,
+    #             models['training']: False,
+    #         })
+    #     dense_test_output_mean = __get_output_mean(dense_test_activations,
+    #                                                dataset.dense_test_y)
+    #     results.extend([
+    #         sparse_test_accuracy, sparse_test_output_mean, dense_test_accuracy,
+    #         dense_test_output_mean
+    #     ])
+    #
+    #     save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+    #                            'sparse_test_' + label, sparse_test_activations)
+    #     save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+    #                            'dense_test_' + label, dense_test_activations)
+    #
+    # append_text_results(CODE_NAME, args.dataset, 'epochs', 'default',
+    #                     '\t'.join(str(t) for t in results))
 
 
 def train(args):
@@ -111,6 +117,10 @@ def train(args):
     session.run(tf.global_variables_initializer())
 
     if args.log_training:
+        save_results_to_pickle('vision_mlp', args.dataset, 'train_xs',
+                               str(args.dataset_seed), train_x)
+        save_results_to_pickle('vision_mlp', args.dataset, 'train_ys',
+                               str(args.dataset_seed), train_y)
         save_results_to_pickle('vision_mlp', args.dataset, 'test_xs',
                                str(args.dataset_seed), test_x)
         save_results_to_pickle('vision_mlp', args.dataset, 'test_ys',
@@ -172,11 +182,12 @@ def train(args):
             max_valid_epoch_idx = epoch_idx
             final_test_acc = test_acc
 
-            _log_training(args, session, models, dataset, [
-                epoch_idx, train_loss, train_acc, valid_acc, test_acc,
-                max_test_acc, max_test_epoch_idx, max_valid_acc,
-                max_valid_epoch_idx, final_test_acc
-            ])
+            train_activations, test_activations = _log_training(
+                args, session, models, dataset, [
+                    epoch_idx, train_loss, train_acc, valid_acc, test_acc,
+                    max_test_acc, max_test_epoch_idx, max_valid_acc,
+                    max_valid_epoch_idx, final_test_acc
+                ])
 
         if max_test_acc + 1e-5 < test_acc:
             max_test_acc = test_acc
@@ -191,6 +202,12 @@ def train(args):
 
         if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
             break
+
+    label = 'w-sn' if args.sparsity_normalization else 'wo-sn'
+    save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                           'test_' + label, test_activations)
+    save_results_to_pickle(CODE_NAME, args.dataset, 'activations',
+                           'train_' + label, train_activations)
 
     endTime = time.time() - startTime
     endTime = int(endTime / 60)
@@ -238,12 +255,13 @@ def main():
         type=int,
         default=512,
         help='the number of hidden unit of each layer.')
-    parser.add_argument('--n_batch', type=int, default=1024, help='')
+    parser.add_argument('--n_batch', type=int, default=512, help='')
     parser.add_argument(
         '--activation_fn',
         type=str,
         # default='tanh',
         default='relu',
+        # default='leaky_relu',
         # default='sigmoid',
         choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'softplus', 'elu'],
         help='the activation function')
@@ -258,7 +276,7 @@ def main():
     parser.add_argument(
         '--dropout_rate',
         type=float,
-        default=0.2,
+        default=0.0,
         help='drop rate for dropout.')
     parser.add_argument(
         '--learning_rate',
@@ -318,4 +336,4 @@ if __name__ == '__main__':
 # [tf-6] python3 -m vision_mlp.trainer --dataset=fashion --sparsity_normalization=True
 # [tf-7] python3 -m vision_mlp.trainer --dataset=cifar10 --sparsity_normalization=True
 # [tf-8] python3 -m vision_mlp.trainer --dataset=cifar100 --sparsity_normalization=True
-# python3 -m vision_mlp.tester 
+# python3 -m vision_mlp.tester
