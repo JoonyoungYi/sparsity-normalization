@@ -72,11 +72,12 @@ def main(args):
 
         # plot correlation of sparsity and expected activation
     with torch.no_grad():
-        model.eval()
+        model.train()
 
         expected_act = []
         for rate in [i * 0.1 for i in range(1, 10)]:
             pred_y = model(test_x, test_dropout_rate=rate)
+            print(rate, pred_y.mean().item())
             expected_act.append(pred_y.mean().item())
 
         print('correlation of sparsity and expected activation:')
@@ -98,7 +99,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dropout_mode',
         type=str,
-        default='default',
+        # default='default',
+        default='sparsity-normalization',
         choices=['default', 'sparsity-normalization'])
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--max_epoch', type=int, default=1000)

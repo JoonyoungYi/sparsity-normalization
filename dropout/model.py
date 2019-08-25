@@ -26,10 +26,10 @@ class MLP(nn.Module):
         activation_function = self.activation_function
         training = self.training
         dropout_rate = self.dropout_rate
-        multiplier = 1.0
+        n_hidden_unit = self.n_hidden_unit
         dropout_mode = self.dropout_mode
         if test_dropout_rate > 1e-20:
-            assert not training
+            # assert not training
             training = True
             dropout_rate = test_dropout_rate
 
@@ -43,14 +43,18 @@ class MLP(nn.Module):
 
             if dropout_mode == 'default':
                 if test_dropout_rate > 1e-20:
-                    multiplier = (1 - test_dropout_rate) / (
-                        1 - self.dropout_rate)  # 예외적 self 사용
+                    # 예외적 self 사용
+                    multiplier = (1 - dropout_rate) / (1 - self.dropout_rate)
+                else:
+                    multiplier = 1.0
             elif dropout_mode == 'sparsity-normalization':
-                n_unit = x.shape[1]
                 l0 = (torch.abs(x).detach() > 1e-20).sum(
                     dim=1).type(torch.FloatTensor)
+
                 l0 = torch.max(l0, torch.ones_like(l0))
-                multiplier = (n_unit / l0).unsqueeze(1).cuda()
+                multiplier = (1 - dropout_rate) * (
+                    n_hidden_unit / l0).unsqueeze(1)
+                multiplier = multiplier.cuda()
             else:
                 raise NotImplementedError()
             x = x * multiplier
