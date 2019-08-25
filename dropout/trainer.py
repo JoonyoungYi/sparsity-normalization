@@ -13,8 +13,8 @@ from common.utils import set_torch_seed
 from common.utils import append_text_results
 
 
-def _save_results(args, epoch_idx, train_rmse, test_rmse):
-    file_name = 'seed{seed}_in{input_normalization}_n-hunit{n_hidden_unit}_n-hlayer{n_hidden_layer}_dropout-rate{dropout_rate}_dropout-mode{dropout_mode}_lr{learning_rate}_max-epoch{max_epoch}'.format(
+def __get_file_name(args):
+    return 'seed{seed}_in{input_normalization}_n-hunit{n_hidden_unit}_n-hlayer{n_hidden_layer}_dropout-rate{dropout_rate}_dropout-mode{dropout_mode}_lr{learning_rate}_max-epoch{max_epoch}'.format(
         seed=args.seed,
         input_normalization=args.input_normalization,
         n_hidden_unit=args.n_hidden_unit,
@@ -23,8 +23,19 @@ def _save_results(args, epoch_idx, train_rmse, test_rmse):
         dropout_mode=args.dropout_mode,
         learning_rate=args.learning_rate,
         max_epoch=args.max_epoch, )
-    append_text_results('dropout', args.dataset, 'epoch', file_name,
-                        "\t".join([epoch_idx, train_rmse, test_rmse]))
+
+
+def _save_epoch_results(args, epoch_idx, train_rmse, test_rmse, min_test_rmse):
+    file_name = __get_file_name(args)
+    append_text_results('dropout', args.dataset, 'epoch', file_name, "\t".join(
+        str(r) for r in [epoch_idx, train_rmse, test_rmse, min_test_rmse]))
+
+
+def _save_test_results(args, rate, test_y_pred_mean):
+    file_name = __get_file_name(args)
+    append_text_results('dropout', args.dataset, 'test-drop', file_name,
+                        "\t".join(
+                            str(r) for r in [epoch_idx, test_y_pred_mean]))
 
 
 def main(args):
@@ -47,7 +58,9 @@ def main(args):
     # define criterion and optimizer
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(
-        params=model.parameters(), lr=args.learning_rate)
+        params=model.parameters(), lr=args.learning_rate, eps=1e-7)
+
+    min_test_rmse = float('inf')
 
     for epoch_idx in tqdm(range(1, args.max_epoch + 1)):
         # training
@@ -68,17 +81,24 @@ def main(args):
             test_loss = criterion(test_y_pred, test_y)
             test_rmse = np.sqrt(test_loss.item())
 
+        if min_test_rmse > test_rmse:
+            min_test_rmse = test_rmse
+
         # save results
-        _save_results(args, epoch_idx, train_rmse, test_rmse)
+        _save_epoch_results(args, epoch_idx, train_rmse, test_rmse,
+                            min_test_rmse)
+
+    print('MIN Test RMSE:', min_test_rmse)
 
     with torch.no_grad():
         # plot relation of sparsity and expected activation
         model.eval()
 
-        for rate in [i * 0.1 for i in range(1, 10)]:
+        for rate in [i * 0.01 for i in range(1, 100)]:
             test_y_pred = model(test_x, test_dropout_rate=rate)
             test_y_pred_mean = test_y_pred.mean().item()
             print(rate, test_y_pred_mean)
+            _save_test_results(args, rate, test_y_pred_mean)
 
 
 if __name__ == '__main__':
@@ -95,7 +115,7 @@ if __name__ == '__main__':
         choices=['none', 'min-max', 'standardization'])
     parser.add_argument('--n_hidden_unit', type=int, default=1024)
     parser.add_argument('--n_hidden_layer', type=int, default=4)
-    parser.add_argument('--dropout_rate', type=float, default=0.5)
+    parser.add_argument('--dropout_rate', type=float, default=0.1)
     parser.add_argument(
         '--dropout_mode',
         type=str,
