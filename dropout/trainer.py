@@ -30,9 +30,12 @@ def main(args):
         torch.FloatTensor).unsqueeze(1).cuda()
 
     # construct model
-    input_dim = train_x.shape[1]
-    model = MLP(input_dim, args.n_hidden_unit, args.n_hidden_layer,
-                args.dropout_rate, args.dropout_mode)
+    model = MLP(
+        n_input_unit=train_x.shape[1],
+        n_hidden_unit=args.n_hidden_unit,
+        n_hidden_layer=args.n_hidden_layer,
+        dropout_rate=args.dropout_rate,
+        dropout_mode=args.dropout_mode)
     model = model.cuda()
 
     # define criterion and optimizer
