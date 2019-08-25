@@ -7,7 +7,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 
-from .dataset import init_boston
+from .dataset import load_data
 from .model import MLP
 from .utils import dict2tsv
 from common.utils import set_torch_seed
@@ -18,16 +18,8 @@ def main(args):
     set_torch_seed(args.seed)
 
     # get boston dataset
-    train_x, train_y, test_x, test_y = init_boston(args.input_normalization,
-                                                   args.split_ratio)
-
-    # numpy to torch tensor
-    train_x = torch.from_numpy(train_x).type(torch.FloatTensor).cuda()
-    train_y = torch.from_numpy(train_y).type(
-        torch.FloatTensor).unsqueeze(1).cuda()
-    test_x = torch.from_numpy(test_x).type(torch.FloatTensor).cuda()
-    test_y = torch.from_numpy(test_y).type(
-        torch.FloatTensor).unsqueeze(1).cuda()
+    train_x, train_y, test_x, test_y = load_data(args.input_normalization,
+                                                 args.split_ratio)
 
     # construct model
     model = MLP(
@@ -70,7 +62,7 @@ def main(args):
             #     args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
             #     args.dropout_option))
 
-        # plot correlation of sparsity and expected activation
+    # plot relation of sparsity and expected activation
     with torch.no_grad():
         model.eval()
 
@@ -90,6 +82,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input_normalization',
         type=str,
+        # default='none',
         # default='min-max',
         default='standardization',
         choices=['none', 'min-max', 'standardization'])
