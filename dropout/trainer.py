@@ -1,319 +1,114 @@
 import os
 import random
-import time
-
-import tensorflow as tf
-import numpy as np
+import argparse
+import collections
+from utils import dict2tsv
 from tqdm import tqdm
 
-from .model import init_models
-from common.datasets.vision import Dataset
-from common.utils import str2bool, integer_list
-from common.utils import set_seed
-from common.utils import save_results_to_file
-from common.utils import save_results_to_pickle
-from common.utils import append_text_results
-
-CODE_NAME = 'dropout'
-
-
-def _run(session, models, targets, x, y, training, n_batch=1000):
-    results = [0.0 for _ in targets]
-    i_list = list(range(0, x.shape[0], n_batch))
-    if len(i_list) > 1:
-        _tqdm = tqdm
-    else:
-        _tqdm = lambda x: x
-    for i in _tqdm(i_list):
-        _results = session.run(
-            [models[t] for t in targets],
-            feed_dict={
-                models['x']: x[i:i + n_batch],
-                models['y']: y[i:i + n_batch],
-                models['training']: training,
-            })
-        # print(np.std(_results[1]))
-        # print(np.mean(_results[1]))
-        # input('')
-        results = [
-            a + b * x[i:i + n_batch].shape[0] if b is not None else a
-            for a, b in zip(results, _results)
-        ]
-    return [r / x.shape[0] for r in results]
-
-
-def _get_confidence(session, models, test_x, test_y, args):
-    """
-        Reference: https://arxiv.org/pdf/1703.00410.pdf
-    """
-    features = []
-    for t in tqdm(range(50)):
-        feature = session.run(
-            models['feature'],
-            feed_dict={
-                models['x']: test_x,
-                models['y']: test_y,
-                models['training']: True,
-            })
-        features.append(feature)
-    features = np.stack(features, axis=2)
-
-    left = np.mean(np.sum(np.square(features), axis=1), axis=1)
-    right = np.sum(np.square(np.mean(features, axis=2)), axis=1)
-    confidences = left - right
-    return np.mean(confidences), np.std(confidences)
-
-
-def train(args):
-    out_dataset = Dataset(
-        "fashion",
-        dataset_seed=args.dataset_seed,
-        n_valid=args.n_valid,
-        sparsity_normalization=args.sparsity_normalization)
-    dataset = Dataset(
-        args.dataset,
-        dataset_seed=args.dataset_seed,
-        n_valid=args.n_valid,
-        sparsity_normalization=args.sparsity_normalization)
-    train_x = dataset.train_x
-    train_y = dataset.train_y
-    valid_x = dataset.valid_x
-    valid_y = dataset.valid_y
-    test_x = dataset.test_x
-    test_y = dataset.test_y
-
-    out_test_x = out_dataset.test_x
-    out_test_y = out_dataset.test_y
-
-    set_seed(args.seed)
-
-    gpu_options = tf.GPUOptions()
-    gpu_options.allow_growth = True
-    session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-
-    models = init_models(args, dataset.n_in, dataset.n_out)
-    session.run(tf.global_variables_initializer())
-
-    file_path = '.results/{}/{}/epochs/{}.txt'.format(CODE_NAME, args.dataset,
-                                                      args.mode)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    max_valid_acc = 0.0
-    max_valid_epoch_idx = 0
-    final_test_acc = 0.0
-
-    max_test_acc = 0.0
-    max_test_epoch_idx = 0
-
-    startTime = time.time()
-    for epoch_idx in range(args.max_epoch):
-        _run(
-            session,
-            models,
-            ['train_op'],
-            # ['train_op', 'weight_m_number'],
-            train_x,
-            train_y,
-            True,
-            n_batch=args.n_batch)
-
-        train_loss, train_acc = _run(
-            session,
-            models, ['loss', 'accuracy'],
-            train_x,
-            train_y,
-            False,
-            n_batch=args.n_batch)
-
-        valid_loss, valid_acc = _run(
-            session,
-            models, ['loss', 'accuracy'],
-            valid_x,
-            valid_y,
-            False,
-            n_batch=args.n_batch)
-
-        test_loss, test_acc = _run(
-            session,
-            models, ['loss', 'accuracy'],
-            test_x,
-            test_y,
-            False,
-            n_batch=args.n_batch)
-
-        test_confidence_mean, test_confidence_std = _get_confidence(
-            session, models, test_x, test_y, args)
-
-        out_test_confidence_mean, out_test_confidence_std = _get_confidence(
-            session, models, out_test_x, out_test_y, args)
-
-        if max_valid_acc + 1e-5 < valid_acc:
-            max_valid_acc = valid_acc
-            max_valid_epoch_idx = epoch_idx
-            final_test_acc = test_acc
-
-        if max_test_acc + 1e-5 < test_acc:
-            max_test_acc = test_acc
-            max_test_epoch_idx = epoch_idx
-
-        print('')
-        print(
-            '%6d' % epoch_idx,
-            '%.2f' % train_loss,
-            '%.4f' % train_acc,
-            '%.4f' % valid_acc,
-            '%.4f' % test_acc, )
-        print('%6d' % max_valid_epoch_idx, '%.4f' % max_valid_acc,
-              '%.4f' % final_test_acc)
-        print('%6d' % max_test_epoch_idx, '%.4f' % max_test_acc)
-        print(
-            '%.6f' % test_confidence_mean,
-            '%.6f' % test_confidence_std,
-            '%.6f' % out_test_confidence_mean,
-            '%.6f' % out_test_confidence_std, )
-
-        append_text_results(CODE_NAME, args.dataset, 'epochs', args.mode,
-                            '\t'.join(
-                                str(t)
-                                for t in [
-                                    epoch_idx,
-                                    train_loss,
-                                    valid_loss,
-                                    test_loss,
-                                    train_acc,
-                                    valid_acc,
-                                    test_acc,
-                                    test_confidence_mean,
-                                    test_confidence_std,
-                                    out_test_confidence_mean,
-                                    out_test_confidence_std,
-                                ]))
-
-        if epoch_idx > max_valid_epoch_idx + args.epoch_early_stop:
-            break
-
-    endTime = time.time() - startTime
-    endTime = int(endTime / 60)
-
-    results = []
-    results.append(args.seed)
-    results.append(args.n_hidden_layer)
-    results.append(args.activation_fn)
-    results.append(args.n_hidden_unit)
-    results.append(final_test_acc)
-    results.append(endTime)
-    save_results_to_file(CODE_NAME, args.dataset, results)
+import numpy as np
+import torch
+from dataset import init_boston
+from model import MLP
 
 
 def main():
-    import argparse
+    # get boston dataset
+    train_x, train_y, test_x, test_y = init_boston(args.input_normalization,
+                                                   args.split_ratio)
 
-    parser = argparse.ArgumentParser(description='Dropout')
-    parser.add_argument(
-        '--dataset',
-        type=str,
-        default='mnist',
-        # default='fashion',
-        # default='cifar10',
-        # default='cifar100',
-        choices=['mnist', 'fashion', 'cifar10', 'cifar100'],
-        help='MNIST or Fashion MNIST or CIFAR-10' or 'CIFAR-100')
-    parser.add_argument(
-        '--max_epoch',
-        type=int,
-        # default=10,
-        default=1000000,
-        help='Max epoch')
-    parser.add_argument(
-        '--epoch_early_stop',
-        type=int,
-        default=1000,
-        help='the number of epochation for early stop.')
-    parser.add_argument(
-        '--n_hidden_layer',
-        type=int,
-        default=2,
-        help='the number of hidden layers.')
-    parser.add_argument(
-        '--n_hidden_unit',
-        type=int,
-        default=800,
-        help='the number of hidden unit of each layer.')
-    parser.add_argument(
-        '--n_batch',
-        type=int,
-        # default=100000,
-        default=1000,
-        help='the number of mini batch size.')
-    parser.add_argument(
-        '--sparsity_normalization',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether to apply sparsity normalization to input layer')
-    parser.add_argument(
-        '--activation_fn',
-        type=str,
-        # default='tanh',
-        # default='relu',
-        default='leaky_relu',
-        # default='sigmoid',
-        choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'softplus', 'elu'],
-        help='the activation function')
-    parser.add_argument(
-        '--seed', type=int, default=1, help='the seed for training')
-    parser.add_argument(
-        '--dataset_seed',
-        type=int,
-        default=1,
-        help='the seed for split dataset. the seed for dataset.'
-        'None 일 때는 seed 값을 따라갑니다.')
+    # numpy to torch tensor
+    train_x = torch.from_numpy(train_x).type(torch.FloatTensor).cuda()
+    train_y = torch.from_numpy(train_y).type(
+        torch.FloatTensor).unsqueeze(1).cuda()
+    test_x = torch.from_numpy(test_x).type(torch.FloatTensor).cuda()
+    test_y = torch.from_numpy(test_y).type(
+        torch.FloatTensor).unsqueeze(1).cuda()
 
-    parser.add_argument(
-        '--drop_rate',
-        type=float,
-        # default=0.0,
-        default=0.5,
-        help='')
-    parser.add_argument(
-        '--mode',
-        type=str,
-        # default='none',
-        # default='default',
-        default='default-with-sn',
-        # default='expectation',
-        # default='exact',
-        choices=[
-            'none',  # no dropout
-            'default',
-            'default-with-sn',
-            'expectation',
-            'exact',
-        ],
-        help='')
-    parser.add_argument(
-        '--learning_rate',
-        type=float,
-        default=1e-3,
-        help='learning rate of optimizer')
+    # construct model
+    input_dim = train_x.shape[1]
+    model = MLP(input_dim, args.hidden_unit, args.layer_num, args.dropout_rate,
+                args.dropout_option)
+    model = model.cuda()
 
-    parser.add_argument(
-        '--n_valid',
-        type=int,
-        default=-10000,
-        help='음수로 입력되면, train set에서 validation을 떼고, '
-        '양수로 입력되면 test set에서 n_valid 갯수만큼 뗍니다. '
-        'NeurIPS 2019에 제출했던 버전에서는 -10000을 사용하였고, '
-        '리뷰탈 때는 +5000을 일부 실험에서 사용하였습니다.')
+    # define criterion and optimizer
+    criterion = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
 
-    args = parser.parse_args()
+    for epoch in tqdm(range(1, args.epochs + 1)):
+        # training
+        model.train()
+        pred_y = model(train_x)
+        train_loss = criterion(pred_y, train_y)
 
-    if args.dataset_seed is None:
-        args.dataset_seed = args.seed
+        # backprop
+        optimizer.zero_grad()
+        train_loss.backward()
+        optimizer.step()
 
-    train(args)
+        # testing
+        with torch.no_grad():
+            model.eval()
+            pred_y = model(test_x)
+            test_loss = criterion(pred_y, test_y)
+
+        if not args.testing:
+            # save results
+            res = collections.OrderedDict()
+            res['epoch'] = epoch
+            res['train_loss'] = np.sqrt(train_loss.item())
+            res['test_loss'] = np.sqrt(test_loss.item())
+            dict2tsv(res, 'results/{}_{}_{}_{}_{}.txt'.format(
+                args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
+                args.dropout_option))
+
+    # plot correlation of sparsity and expected activation
+    with torch.no_grad():
+        model.train()
+
+        expected_act = []
+        for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+            pred_y = model(test_x, dropout_new=p)
+            expected_act.append(pred_y.mean().item())
+
+        print('correlation of sparsity and expected activation:')
+        print('\t'.join(str(f) for f in expected_act))
 
 
 if __name__ == '__main__':
+    # arguement passing
+    parser = argparse.ArgumentParser(description='boston')
+    parser.add_argument(
+        '--input_normalization',
+        type=str,
+        choices=['none', 'min-0-max-1', 'min--1-max-1', 'standardization'],
+        default='min-0-max-1')
+    #default='standardization')
+    parser.add_argument('--split_ratio', type=float, default=0.8)
+
+    parser.add_argument('--hidden_unit', type=int, default=1024)
+    parser.add_argument('--layer_num', type=int, default=5)
+    parser.add_argument('--dropout_rate', type=float, default=0.5)
+    parser.add_argument(
+        '--dropout_option',
+        type=str,
+        choices=['sn', 'default_train', 'default_test', 'none'],
+        default='default_train')
+
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--epochs', type=int, default=1000)
+
+    parser.add_argument('--testing', action='store_true')
+    parser.add_argument('--seed', type=int, default=1)
+    args = parser.parse_args()
+
+    # Setting seed for reproducing
+    random.seed(args.seed)
+    os.environ['PYTHONHASHSEED'] = str(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     main()
