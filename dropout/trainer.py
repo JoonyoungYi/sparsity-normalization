@@ -38,8 +38,8 @@ def main(args):
     for epoch in tqdm(range(1, args.max_epoch + 1)):
         # training
         model.train()
-        pred_y = model(train_x)
-        train_loss = criterion(pred_y, train_y)
+        train_y_pred = model(train_x)
+        train_loss = criterion(train_y_pred, train_y)
 
         # backprop
         optimizer.zero_grad()
@@ -49,8 +49,8 @@ def main(args):
         # testing
         with torch.no_grad():
             model.eval()
-            pred_y = model(test_x)
-            test_loss = criterion(pred_y, test_y)
+            test_y_pred = model(test_x)
+            test_loss = criterion(test_y_pred, test_y)
 
         if not args.testing:
             # save results
@@ -62,15 +62,15 @@ def main(args):
             #     args.hidden_unit, args.layer_num, args.dropout_rate, args.lr,
             #     args.dropout_option))
 
-    # plot relation of sparsity and expected activation
     with torch.no_grad():
+        # plot relation of sparsity and expected activation
         model.eval()
 
         expected_act = []
         for rate in [i * 0.1 for i in range(1, 10)]:
-            pred_y = model(test_x, test_dropout_rate=rate)
-            print(rate, pred_y.mean().item())
-            expected_act.append(pred_y.mean().item())
+            test_y_pred = model(test_x, test_dropout_rate=rate)
+            print(rate, test_y_pred.mean().item())
+            expected_act.append(test_y_pred.mean().item())
 
         print('correlation of sparsity and expected activation:')
         print('\t'.join(str(f) for f in expected_act))
