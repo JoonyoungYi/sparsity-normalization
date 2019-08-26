@@ -54,7 +54,7 @@ def main(args):
             batch_loss.backward()
             optimizer.step()
 
-        train_rmse = (sum([l * c for l, c in train_mses]) / len(train_mses))
+        train_rmse = np.sqrt(sum([l * c for l, c in train_mses]) / sum(c for _, c in train_mses))
 
         # testing
         with torch.no_grad():
