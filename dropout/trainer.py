@@ -12,11 +12,14 @@ from .model import MLP
 from .logger import Logger
 from common.utils import set_torch_seed
 
-
 def main(args):
     # get boston dataset
     train_x, train_y, test_x, test_y = load_data(args.input_normalization,
                                                  args.split_ratio)
+    y_mean = train_y.mean().item()
+    y_std = train_y.std().item()
+
+    train_y = (train_y - y_mean) / y_std
 
     # Setting seed for reproducing
     set_torch_seed(args.seed)
@@ -60,6 +63,8 @@ def main(args):
         with torch.no_grad():
             model.eval()
             test_y_pred = model(test_x)
+            test_y_pred = test_y_pred * y_std + y_mean
+
             test_loss = criterion(test_y_pred, test_y)
             test_rmse = np.sqrt(test_loss.item())
 
@@ -78,6 +83,8 @@ def main(args):
         for i in range(1, 100):
             rate = i * 0.01
             test_y_pred = model(test_x, test_dropout_rate=rate)
+            test_y_pred = test_y_pred * y_std + y_mean
+
             test_y_pred_mean = test_y_pred.mean().item()
             if i % 10 == 0:
                 print(rate, test_y_pred_mean)
@@ -88,7 +95,7 @@ if __name__ == '__main__':
     # arguement passing
     parser = argparse.ArgumentParser(description='dropout')
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--n_batch', type=int, default=32)
+    parser.add_argument('--n_batch', type=int, default=128)
     parser.add_argument('--dataset', type=str, default='boston')
     parser.add_argument(
         '--input_normalization',
@@ -107,7 +114,7 @@ if __name__ == '__main__':
         # default='sparsity-normalization',
         choices=['default', 'sparsity-normalization'])
     parser.add_argument('--learning_rate', type=float, default=1e-3)
-    parser.add_argument('--max_epoch', type=int, default=1000)
+    parser.add_argument('--max_epoch', type=int, default=2000)
     parser.add_argument('--split_ratio', type=float, default=0.9)
 
     args = parser.parse_args()

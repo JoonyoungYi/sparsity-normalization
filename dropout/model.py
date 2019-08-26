@@ -9,7 +9,7 @@ class MLP(nn.Module):
         super().__init__()
 
         linears = [nn.Linear(n_input_unit, n_hidden_unit)]
-        for _ in range(n_hidden_layer):
+        for _ in range(n_hidden_layer-1):
             linears.append(nn.Linear(n_hidden_unit, n_hidden_unit))
         linears.append(nn.Linear(n_hidden_unit, 1))
 
@@ -38,29 +38,34 @@ class MLP(nn.Module):
             raise NotImplementedError()
 
         for linear in linears[:-1]:
+            x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate, training)
             x = linear(x)
-            if training:
-                x = F.dropout(x, p=dropout_rate)
-
-                if dropout_mode == 'default':
-                    if test_dropout_rate > 1e-20:
-                        # 예외적 self 사용
-                        multiplier = (1 - dropout_rate) / (
-                            1 - self.dropout_rate)
-                    else:
-                        multiplier = 1.0
-                elif dropout_mode == 'sparsity-normalization':
-                    multiplier = 1 - dropout_rate
-                    l0 = (torch.abs(x).detach() > 1e-20).sum(
-                        dim=1).type(torch.FloatTensor)
-                    l0 = torch.max(l0, torch.ones_like(l0))
-                    multiplier *= (n_hidden_unit / l0).unsqueeze(1)
-                    multiplier = multiplier.cuda()
-                else:
-                    raise NotImplementedError()
-                x = x * multiplier
-
             x = activation_function(x)
 
+        x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate, training)
         y_pred = linears[-1](x)
         return y_pred
+
+    def dropout(self, x, dropout_mode, dropout_rate, test_dropout_rate, training):
+        if training:
+            x = F.dropout(x, p=dropout_rate)
+
+            if dropout_mode == 'default':
+                if test_dropout_rate > 1e-20:
+                    # 예외적 self 사용
+                    multiplier = (1 - dropout_rate) / (
+                        1 - self.dropout_rate)
+                else:
+                    multiplier = 1.0
+            elif dropout_mode == 'sparsity-normalization':
+                multiplier = 1 - dropout_rate
+                l0 = (torch.abs(x).detach() > 1e-20).sum(
+                    dim=1).type(torch.FloatTensor)
+                l0 = torch.max(l0, torch.ones_like(l0))
+                multiplier *= (n_hidden_unit / l0).unsqueeze(1)
+                multiplier = multiplier.cuda()
+            else:
+                raise NotImplementedError()
+            x = x * multiplier
+
+        return x
