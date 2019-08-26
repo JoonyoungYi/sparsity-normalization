@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.datasets import load_boston
 import torch
 
+from common.utils import set_torch_seed
+
 
 def _normalize_input(x, input_normalization):
     if input_normalization == 'none':
@@ -24,7 +26,9 @@ def _normalize_input(x, input_normalization):
     return x
 
 
-def load_data(input_normalization, split_ratio):
+def load_data(input_normalization, split_ratio, datset_seed=1):
+    set_torch_seed(datset_seed)
+
     # get boston dataset from sklearn
     boston = load_boston()
 

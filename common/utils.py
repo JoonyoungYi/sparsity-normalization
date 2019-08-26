@@ -91,6 +91,15 @@ def save_results_to_pickle(code_name, dataset_name, folder_name, file_name,
         pickle.dump(object, f)
 
 
+def init_file(code_name, dataset_name, folder_name, file_name):
+    filepath = '.results/{code_name}/{dataset_name}/{folder_name}/{file_name}.txt'.format(
+        code_name=code_name,
+        dataset_name=dataset_name,
+        folder_name=folder_name,
+        file_name=file_name)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
 def append_text_results(code_name, dataset_name, folder_name, file_name, line):
     # make results folder if not exists.
     _make_folder_if_not_exist('.results')
