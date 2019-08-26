@@ -26,7 +26,6 @@ class MLP(nn.Module):
         activation_function = self.activation_function
         training = self.training
         dropout_rate = self.dropout_rate
-        n_hidden_unit = self.n_hidden_unit
         dropout_mode = self.dropout_mode
         if test_dropout_rate > 1e-20:
             assert not training
@@ -47,6 +46,8 @@ class MLP(nn.Module):
         return y_pred
 
     def dropout(self, x, dropout_mode, dropout_rate, test_dropout_rate, training):
+        n_hidden_unit = self.n_hidden_unit
+
         if training:
             x = F.dropout(x, p=dropout_rate)
 

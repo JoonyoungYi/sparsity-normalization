@@ -5,6 +5,7 @@ import collections
 
 from tqdm import tqdm
 import numpy as np
+from scipy.special import logsumexp
 import torch
 
 from .dataset import load_data
@@ -16,10 +17,10 @@ def main(args):
     # get boston dataset
     train_x, train_y, test_x, test_y = load_data(args.input_normalization,
                                                  args.split_ratio)
-    y_mean = train_y.mean().item()
-    y_std = train_y.std().item()
+    mean_y_train = train_y.mean().item()
+    std_y_train = train_y.std().item()
 
-    train_y = (train_y - y_mean) / y_std
+    train_y = (train_y - mean_y_train) / std_y_train
 
     # Setting seed for reproducing
     set_torch_seed(args.seed)
@@ -63,18 +64,19 @@ def main(args):
         with torch.no_grad():
             model.eval()
             test_y_pred = model(test_x)
-            test_y_pred = test_y_pred * y_std + y_mean
+            test_y_pred = test_y_pred * std_y_train + mean_y_train
 
             test_loss = criterion(test_y_pred, test_y)
             test_rmse = np.sqrt(test_loss.item())
 
         if min_test_rmse > test_rmse:
             min_test_rmse = test_rmse
+            min_epoch = epoch_idx
 
         # save results
         logger.log_epoch(epoch_idx, train_rmse, test_rmse, min_test_rmse)
 
-    print('MIN Test RMSE:', min_test_rmse)
+    print('MIN Test RMSE: {} (epoch: {})'.format(min_test_rmse, min_epoch))
 
     with torch.no_grad():
         # plot relation of sparsity and expected activation
@@ -83,13 +85,29 @@ def main(args):
         for i in range(1, 100):
             rate = i * 0.01
             test_y_pred = model(test_x, test_dropout_rate=rate)
-            test_y_pred = test_y_pred * y_std + y_mean
+            test_y_pred = test_y_pred * std_y_train + mean_y_train
 
             test_y_pred_mean = test_y_pred.mean().item()
             if i % 10 == 0:
-                print(rate, test_y_pred_mean)
+                print('{:.2f} {}'.format(rate, test_y_pred_mean))
             logger.log_test_drop(rate, test_y_pred_mean)
 
+    with torch.no_grad():
+        model.train()
+
+        T = args.n_iter
+        yt_hat = np.array([model(test_x).squeeze(1).cpu().numpy() for _ in range(T)])
+        yt_hat = yt_hat * std_y_train + mean_y_train
+        
+        tau = 1 / (yt_hat.T.var(axis=1, ddof=1) + 1e-4) # ddof=1 for unbiased estimator
+        variance = yt_hat.T.var(axis=1, ddof=1).mean()
+
+        ll = (logsumexp(-0.5 * tau * (test_y.reshape(1, -1).cpu().numpy() - yt_hat)**2., 0) - np.log(T)
+            - 0.5*np.log(2*np.pi) + 0.5*np.log(tau))
+        test_ll = np.mean(ll)
+
+        print('variance: {}'.format(variance))
+        print('log-likelihood: {}'.format(test_ll))
 
 if __name__ == '__main__':
     # arguement passing
@@ -116,6 +134,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--max_epoch', type=int, default=2000)
     parser.add_argument('--split_ratio', type=float, default=0.9)
+    parser.add_argument('--n_iter', type=int, default=10)
 
     args = parser.parse_args()
     assert args.dataset == 'boston'
