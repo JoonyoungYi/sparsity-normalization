@@ -25,6 +25,7 @@ class MLP(nn.Module):
         linears = self.linears
         activation_function = self.activation_function
         training = self.training
+        n_hidden_unit = self.n_hidden_unit
         dropout_rate = self.dropout_rate
         dropout_mode = self.dropout_mode
         if test_dropout_rate > 1e-20:
@@ -37,7 +38,7 @@ class MLP(nn.Module):
             raise NotImplementedError()
 
         for linear in linears[:-1]:
-            x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate, training)
+            x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate, n_hidden_unit, training)
             x = linear(x)
             x = activation_function(x)
 
@@ -45,9 +46,7 @@ class MLP(nn.Module):
         y_pred = linears[-1](x)
         return y_pred
 
-    def dropout(self, x, dropout_mode, dropout_rate, test_dropout_rate, training):
-        n_hidden_unit = self.n_hidden_unit
-
+    def dropout(self, x, dropout_mode, dropout_rate, test_dropout_rate, n_hidden_unit, training):
         if training:
             x = F.dropout(x, p=dropout_rate)
 
