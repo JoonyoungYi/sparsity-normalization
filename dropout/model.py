@@ -3,9 +3,37 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def _dropout(x,
+             training,
+             dropout_rate,
+             dropout_mode,
+             n_hidden_unit,
+             original_dropout_rate=None):
+    if training:
+        x = F.dropout(x, p=dropout_rate)
+
+        if dropout_mode == 'default':
+            if original_dropout_rate is not None:
+                # 예외적 self 사용
+                multiplier = (1 - dropout_rate) / (1 - original_dropout_rate)
+            else:
+                multiplier = 1.0
+        elif dropout_mode == 'sparsity-normalization':
+            multiplier = 1 - dropout_rate
+            l0 = (torch.abs(x).detach() > 1e-20).sum(
+                dim=1).type(torch.FloatTensor)
+            l0 = torch.max(l0, torch.ones_like(l0))
+            multiplier *= (n_hidden_unit / l0).unsqueeze(1)
+            multiplier = multiplier.cuda()
+        else:
+            raise NotImplementedError()
+        x = x * multiplier
+    return x
+
+
 class MLP(nn.Module):
     def __init__(self, n_input_unit, n_hidden_unit, n_hidden_layer,
-                 dropout_rate, dropout_mode):
+                 dropout_rate, dropout_mode, activation_fn):
         super().__init__()
 
         linears = [nn.Linear(n_input_unit, n_hidden_unit)]
@@ -18,49 +46,57 @@ class MLP(nn.Module):
         self.n_hidden_layer = n_hidden_layer
         self.dropout_rate = dropout_rate
         self.dropout_mode = dropout_mode
-        self.activation_function = F.relu
+        self.activation_fn = activation_fn
         self.linears = nn.ModuleList(linears)
 
     def forward(self, x, test_dropout_rate=0.0):
         linears = self.linears
-        activation_function = self.activation_function
         training = self.training
         dropout_rate = self.dropout_rate
         n_hidden_unit = self.n_hidden_unit
         dropout_mode = self.dropout_mode
+        activation_fn = self.activation_fn
         if test_dropout_rate > 1e-20:
             assert not training
             training = True
             dropout_rate = test_dropout_rate
 
-        if activation_function not in [F.relu, F.leaky_relu]:
-            print("relu와 leaky relu가 아닐 경우 dropout 메커니즘을 바꿔야 합니다.")
-            raise NotImplementedError()
-
         for linear in linears[:-1]:
             x = linear(x)
-            if training:
-                x = F.dropout(x, p=dropout_rate)
 
-                if dropout_mode == 'default':
-                    if test_dropout_rate > 1e-20:
-                        # 예외적 self 사용
-                        multiplier = (1 - dropout_rate) / (
-                            1 - self.dropout_rate)
-                    else:
-                        multiplier = 1.0
-                elif dropout_mode == 'sparsity-normalization':
-                    multiplier = 1 - dropout_rate
-                    l0 = (torch.abs(x).detach() > 1e-20).sum(
-                        dim=1).type(torch.FloatTensor)
-                    l0 = torch.max(l0, torch.ones_like(l0))
-                    multiplier *= (n_hidden_unit / l0).unsqueeze(1)
-                    multiplier = multiplier.cuda()
+            if activation_fn == 'relu':
+                x = _dropout(
+                    x,
+                    training,
+                    dropout_rate,
+                    dropout_mode,
+                    n_hidden_unit,
+                    original_dropout_rate=self.dropout_rate
+                    if test_dropout_rate > 1e-20 else None)
+                x = F.relu(x)
+
+            elif activation_fn in ['leaky_relu', 'elu', 'sigmoid', 'tanh']:
+                if activation_fn == 'leaky_relu':
+                    x = F.leaky_relu(x)
+                elif activation_fn == 'elu':
+                    x = nn.ELU()(x)
+                elif activation_fn == 'sigmoid':
+                    x = torch.sigmoid(x)
+                elif activation_fn == 'tanh':
+                    x = torch.tanh(x)
                 else:
                     raise NotImplementedError()
-                x = x * multiplier
 
-            x = activation_function(x)
+                x = _dropout(
+                    x,
+                    training,
+                    dropout_rate,
+                    dropout_mode,
+                    n_hidden_unit,
+                    original_dropout_rate=self.dropout_rate
+                    if test_dropout_rate > 1e-20 else None)
+            else:
+                raise NotImplementedError()
 
         y_pred = linears[-1](x)
         return y_pred

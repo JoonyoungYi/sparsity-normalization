@@ -26,8 +26,11 @@ def _normalize_input(x, input_normalization):
     return x
 
 
-def load_data(input_normalization, split_ratio, datset_seed=1):
-    set_torch_seed(datset_seed)
+def load_data(input_normalization,
+              train_test_ratio=0.9,
+              train_valid_ratio=0.8,
+              dataset_seed=1):
+    set_torch_seed(dataset_seed)
 
     # get boston dataset from sklearn
     boston = load_boston()
@@ -43,18 +46,27 @@ def load_data(input_normalization, split_ratio, datset_seed=1):
     x = x[perm]
     y = y[perm]
 
-    train_x = x[:int(x.shape[0] * split_ratio)]
-    test_x = x[int(x.shape[0] * split_ratio):]
+    split_boundary = int(x.shape[0] * train_test_ratio)
+    train_x = x[:split_boundary]
+    train_y = y[:split_boundary]
+    test_x = x[split_boundary:]
+    test_y = y[split_boundary:]
 
-    train_y = y[:int(x.shape[0] * split_ratio)]
-    test_y = y[int(x.shape[0] * split_ratio):]
+    split_boundary = int(train_x.shape[0] * train_valid_ratio)
+    valid_x = train_x[split_boundary:]
+    valid_y = train_y[split_boundary:]
+    train_x = train_x[:split_boundary]
+    train_y = train_y[:split_boundary]
 
     # numpy to torch tensor
     train_x = torch.from_numpy(train_x).type(torch.FloatTensor).cuda()
     train_y = torch.from_numpy(train_y).type(
         torch.FloatTensor).unsqueeze(1).cuda()
+    valid_x = torch.from_numpy(valid_x).type(torch.FloatTensor).cuda()
+    valid_y = torch.from_numpy(valid_y).type(
+        torch.FloatTensor).unsqueeze(1).cuda()
     test_x = torch.from_numpy(test_x).type(torch.FloatTensor).cuda()
     test_y = torch.from_numpy(test_y).type(
         torch.FloatTensor).unsqueeze(1).cuda()
 
-    return train_x, train_y, test_x, test_y
+    return (train_x, train_y), (valid_x, valid_y), (test_x, test_y)

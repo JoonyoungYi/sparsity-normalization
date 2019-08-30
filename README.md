@@ -10,28 +10,31 @@
 
 ## How to initialize
 
-* docker를 먼저 셋팅하고, ```requirements.txt``` 에 있는 package를 깔면됨.
+* docker 이미지 만들기
 ```
-sudo docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
-docker run --runtime=nvidia -it -v /home:/home tensorflow/tensorflow:1.12.0-gpu-py3 /bin/bash
-cd .. && cd home/server01/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server02/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server03/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server04/SN-tensorflow
-cd .. && cd home/server05/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/joonyoung/ml/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server09/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server10/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server12/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server13/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server14/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server17/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server19/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server20/joonyoung/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server22/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server23/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-cd .. && cd home/server24/SN-tensorflow && export CUDA_VISIBLE_DEVICES=0
-pip3 install -r requirements.txt
+sh docker/build.sh
+```
+
+* docker 실행하기
+```
+sh docker/run.sh
+cd ../home/server01/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server02/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server03/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server04/sparsity-normalization
+cd ../home/server05/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/joonyoung/ml/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server09/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server10/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server12/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server13/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server14/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server17/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server19/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server20/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server22/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server23/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server24/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 ```
 
 ### How to run
