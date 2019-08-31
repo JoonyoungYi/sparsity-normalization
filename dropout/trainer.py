@@ -57,10 +57,10 @@ def main(args):
     else:
         raise NotImplementedError()
 
-    if args.n_batch is not None:
-        n_batch = args.n_batch
-    else:
+    if not args.n_batch or args.n_batch <= 0:
         n_batch = train_x.shape[0]
+    else:
+        n_batch = args.n_batch
 
     min_valid_rmse = float('inf')
     min_valid_epoch_idx = -1
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         # default='default',
         default='sparsity-normalization',
         choices=['default', 'sparsity-normalization'])
-    parser.add_argument('--max_epoch', type=int, default=20000)
+    parser.add_argument('--max_epoch', type=int, default=100000)
     parser.add_argument('--T', type=int, default=10000)
 
     args = parser.parse_args()

@@ -60,18 +60,44 @@ def main():
     _train(args)
 
 
-# [torch-0] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 && python3 -m dropout.train --optimizer=adam --activation_fn=leaky_relu --n_hidden_layer=2 --learning_rate=1e-3
-# [torch-1] python3 -m dropout.train --optimizer=adam --activation_fn=sigmoid --n_hidden_layer=2 --learning_rate=1e-3 && python3 -m dropout.train --optimizer=adam --activation_fn=tanh --n_hidden_layer=2 --learning_rate=1e-3
-# [torch-2] python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 && python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4
-# [torch-3] python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-5 && python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3
-# [torch-4] python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=1 --learning_rate=1e-3
-# [torch-5] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=3 --learning_rate=1e-3 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=4 --learning_rate=1e-3
-# [torch-6] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-2 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4
-# [torch-7] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=32 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=64
-# [torch-8] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=256 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=None
-# [torch-9] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=25 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=100
-# [torch-10] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=250 && python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=500
-# [torch-11] python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-5 && python3 -m dropout.train --optimizer=adam --activation_fn=elu --n_hidden_layer=2 --learning_rate=1e-3
+# RQ1. Activation Function의 변화에 따른 성능의 변화
+# [torch-0] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3
+# [torch-0] python3 -m dropout.train --optimizer=adam --activation_fn=leaky_relu --n_hidden_layer=2 --learning_rate=1e-3
+# [torch-1] python3 -m dropout.train --optimizer=adam --activation_fn=sigmoid --n_hidden_layer=2 --learning_rate=1e-3
+# [torch-1] python3 -m dropout.train --optimizer=adam --activation_fn=tanh --n_hidden_layer=2 --learning_rate=1e-3
+# [torch-2] python3 -m dropout.train --optimizer=adam --activation_fn=elu --n_hidden_layer=2 --learning_rate=1e-3
+
+# RQ2. optimizer와 learning rate에 따라 어떻게 변화하는지
+# [torch-2] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4
+# python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-5
+# python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3
+# python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4
+# python3 -m dropout.train --optimizer=momentum --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-5
+# python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3
+# python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-4
+# python3 -m dropout.train --optimizer=sgd --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-5
+
+# RQ3. hidden layer 수에 따라서 어떻게 되는가?
+# python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=1 --learning_rate=1e-3
+# [torch-7] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=3 --learning_rate=1e-3
+# [torch-7] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=4 --learning_rate=1e-3
+# [torch-4] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=1 --learning_rate=1e-4
+# [torch-5] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=3 --learning_rate=1e-4
+# [torch-6] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=4 --learning_rate=1e-4
+
+# RQ4. batch size에 어떻게 영향을 받는가?
+# [torch-9] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=16
+# [torch-8] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=32
+# [torch-8] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=64
+# python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=256
+# python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=0
+
+# RQ5. hidden unit 갯수에 어떻게 영향을 받는가?
+# [torch-10] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=25
+# [torch-10] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=100
+# [torch-11] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=250
+# [torch-11] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=500
+# [torch-3] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=128 --n_hidden_unit=1000
 
 if __name__ == '__main__':
     main()
