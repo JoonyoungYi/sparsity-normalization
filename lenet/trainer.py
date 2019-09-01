@@ -92,7 +92,6 @@ def main(args):
         model.train()
         model.apply(add_momentum)
 
-        correct = 0
         for x, y in tqdm(train_loader):
             x = x.cuda()
             y = y.cuda()
