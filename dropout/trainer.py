@@ -13,7 +13,6 @@ from .model import MLP
 from .logger import Logger
 from common.utils import set_torch_seed
 
-
 def _get_variance(model, test_x, args):
     test_y_preds = [
         model(test_x, test_dropout_rate=args.dropout_rate)
@@ -97,6 +96,8 @@ def main(args):
             valid_rmse = np.sqrt(valid_loss.item())
 
             test_y_pred = model(test_x)
+            test_y_pred = test_y_pred * std_y_train + mean_y_train
+
             test_loss = criterion(test_y_pred, test_y)
             test_rmse = np.sqrt(test_loss.item())
 
@@ -126,9 +127,11 @@ def main(args):
         for i in range(1, 100):
             rate = i * 0.01
             test_y_pred = model(test_x, test_dropout_rate=rate)
+            test_y_pred = test_y_pred * std_y_train + mean_y_train
+
             test_y_pred_mean = test_y_pred.mean().item()
             if i % 10 == 0:
-                print(rate, test_y_pred_mean)
+                print('{:.2f} {}'.format(rate, test_y_pred_mean))
             logger.log_test_drop(rate, test_y_pred_mean)
 
 

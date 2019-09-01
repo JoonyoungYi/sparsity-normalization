@@ -37,7 +37,7 @@ class MLP(nn.Module):
         super().__init__()
 
         linears = [nn.Linear(n_input_unit, n_hidden_unit)]
-        for _ in range(n_hidden_layer):
+        for _ in range(n_hidden_layer - 1):
             linears.append(nn.Linear(n_hidden_unit, n_hidden_unit))
         linears.append(nn.Linear(n_hidden_unit, 1))
 
@@ -52,8 +52,8 @@ class MLP(nn.Module):
     def forward(self, x, test_dropout_rate=0.0):
         linears = self.linears
         training = self.training
-        dropout_rate = self.dropout_rate
         n_hidden_unit = self.n_hidden_unit
+        dropout_rate = self.dropout_rate
         dropout_mode = self.dropout_mode
         activation_fn = self.activation_fn
         if test_dropout_rate > 1e-20:
@@ -62,6 +62,8 @@ class MLP(nn.Module):
             dropout_rate = test_dropout_rate
 
         for linear in linears[:-1]:
+            x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate,
+                             n_hidden_unit, training)
             x = linear(x)
 
             if activation_fn == 'relu':
@@ -98,5 +100,7 @@ class MLP(nn.Module):
             else:
                 raise NotImplementedError()
 
+        x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate,
+                         training)
         y_pred = linears[-1](x)
         return y_pred
