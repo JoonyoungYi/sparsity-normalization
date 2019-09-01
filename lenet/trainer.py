@@ -13,18 +13,19 @@ from common.utils import str2bool
 
 
 def _get_loss_and_accuracy(loader, model, criterion):
-    total = 0
-    correct = 0
-    loss = 0
-    for x, y in loader:
-        x, y = x.cuda(), y.cuda()
-        y_hat = model(x)
-        loss += criterion(y_hat, y).sum().item()
-        _, pred = out.max(1)
-        total += y.shape[0]
-        correct += pred.eq(y).sum().item()
-    train_loss = loss / total
-    train_acc = correct / total
+    with torch.no_grad():
+        total = 0
+        correct = 0
+        loss = 0
+        for x, y in loader:
+            x, y = x.cuda(), y.cuda()
+            y_hat = model(x)
+            loss += criterion(y_hat, y).sum().item()
+            _, pred = y_hat.max(1)
+            total += y.shape[0]
+            correct += pred.eq(y).sum().item()
+        train_loss = loss / total
+        train_acc = correct / total
     return loss, acc
 
 
@@ -113,39 +114,14 @@ def main(args):
 
         # validation phase
         model.eval()
-
         # get validation accuracy using moving average batch statistics
-        with torch.no_grad():
-            total = 0
-            correct = 0
-            for x, y in valid_loader:
-                x = x.cuda()
-                y = y.cuda()
-
-                out = model(x)
-
-                _, pred = out.max(1)
-                total += y.shape[0]
-                correct += pred.eq(y).sum().item()
-
-            moving_stats_valid_acc = correct / total
+        _, moving_stats_valid_acc = _get_loss_and_accuracy(
+            valid_loader, model, criterion)
 
         # get validation accuracy using mini-batch statistics
         model.apply(init_bn)
-        with torch.no_grad():
-            total = 0
-            correct = 0
-            for x, y in valid_loader:
-                x = x.cuda()
-                y = y.cuda()
-
-                out = model(x)
-
-                _, pred = out.max(1)
-                total += y.shape[0]
-                correct += pred.eq(y).sum().item()
-
-            mini_stats_valid_acc = correct / total
+        _, mini_stats_valid_acc = _get_loss_and_accuracy(
+            valid_loader, model, criterion)
 
         # calibration
         model.apply(init_bn)
@@ -158,14 +134,13 @@ def main(args):
 
         # get train, validation, test results after calibration
         model.eval()
-        with torch.no_grad():
-            # get train result to see learning curve
-            train_loss, train_acc = _get_loss_and_accuracy(
-                train_loader, model, criterion)
-            valid_loss, valid_acc = _get_loss_and_accuracy(
-                valid_loader, model, criterion)
-            test_loss, test_acc = _get_loss_and_accuracy(
-                test_loader, model, criterion)
+        # get train result to see learning curve
+        train_loss, train_acc = _get_loss_and_accuracy(train_loader, model,
+                                                       criterion)
+        valid_loss, valid_acc = _get_loss_and_accuracy(valid_loader, model,
+                                                       criterion)
+        test_loss, test_acc = _get_loss_and_accuracy(test_loader, model,
+                                                     criterion)
 
         # save the result
         res = collections.OrderedDict()
