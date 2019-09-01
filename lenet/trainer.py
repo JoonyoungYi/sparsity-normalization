@@ -44,48 +44,22 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
     # resume training
-    if args.resume:
-        checkpoint = torch.load(model._get_model_path())
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        last_epoch = checkpoint['last_epoch']
+    last_epoch = 0
 
-        best_moving_stats_valid_acc = checkpoint['best_moving_stats_valid_acc']
-        best_moving_stats_epoch = checkpoint['best_moving_stats_epoch']
-        model_moving_stats_test_acc = checkpoint['model_moving_stats_test_acc']
+    best_moving_stats_valid_acc = 0
+    best_moving_stats_epoch = 0
+    model_moving_stats_test_acc = 0
 
-        best_mini_stats_valid_acc = checkpoint['best_mini_stats_valid_acc']
-        best_mini_stats_epoch = checkpoint['best_mini_stats_epoch']
-        model_mini_stats_test_acc = checkpoint['model_mini_stats_test_acc']
+    best_mini_stats_valid_acc = 0
+    best_mini_stats_epoch = 0
+    model_mini_stats_test_acc = 0
 
-        best_valid_acc = checkpoint['best_valid_acc']
-        best_epoch = checkpoint['best_epoch']
-        model_test_acc = checkpoint['model_test_acc']
-    else:
-        last_epoch = 0
-
-        best_moving_stats_valid_acc = 0
-        best_moving_stats_epoch = 0
-        model_moving_stats_test_acc = 0
-
-        best_mini_stats_valid_acc = 0
-        best_mini_stats_epoch = 0
-        model_mini_stats_test_acc = 0
-
-        best_valid_acc = 0
-        best_epoch = 0
-        model_test_acc = 0
-
-        bn1_state_dict = None
-        bn2_state_dict = None
+    best_valid_acc = 0
+    best_epoch = 0
+    model_test_acc = 0
 
     for epoch in range(last_epoch + 1, args.epochs + 1):
         print('Epoch: {}'.format(epoch))
-
-        # restore bn state
-        if bn1_state_dict is not None and bn2_state_dict is not None:
-            model.bn1.load_state_dict(bn1_state_dict)
-            model.bn2.load_state_dict(bn2_state_dict)
 
         # training phase
         model.train()
@@ -99,10 +73,6 @@ def main(args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-        # to restore bn state
-        bn1_state_dict = deepcopy(model.bn1.state_dict())
-        bn2_state_dict = deepcopy(model.bn2.state_dict())
 
         # validation phase
         model.eval()
@@ -204,8 +174,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dropout_mode',
         type=str,
-        choices=['default', 'sparsity-normalization'],
-        default='default')
+        default='default',
+        choices=['default', 'sparsity-normalization'])
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--epochs', type=int, default=300)
