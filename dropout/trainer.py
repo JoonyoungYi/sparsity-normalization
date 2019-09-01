@@ -13,6 +13,7 @@ from .model import MLP
 from .logger import Logger
 from common.utils import set_torch_seed
 
+
 def _get_variance(model, test_x, args):
     test_y_preds = [
         model(test_x, test_dropout_rate=args.dropout_rate)
