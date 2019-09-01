@@ -1,195 +1,203 @@
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
 
-from common.utils import make_folder_if_not_exist
+
+def _forward_conv2d(x,
+                    conv,
+                    batch_norm,
+                    dropout_rate=0.0,
+                    activation_fn=F.leaky_relu,
+                    training=True,
+                    use_batch_normalization=False):
+    x = conv(x)
+    if use_batch_normalization:
+        x = batch_norm(x)
+    x = activation_fn(x)
+    x = F.max_pool2d(x, 2)
+    if dropout_rate > 1e-20:
+        x = F.dropout(x, dropout_rate, training=training)
+    return x
 
 
-# def _init_folders():
-#     make_folder_if_not_exist('.results/')
-#     make_folder_if_not_exist('.results/lenet/')
-#     make_folder_if_not_exist('.results/lenet/models/')
+def _forward_mlp(x, linears, activation_fn):
+    for linear in linears[:-1]:
+        x = linear(x)
+        x = activation_fn(x)
+    return linears[-1](x)
 
 
 class LeNet(nn.Module):
     def __init__(self,
-                 batch_norm=False,
-                 dropout=False,
-                 dropout_rate=0.5,
+                 dropout_rate=0.0,
                  dropout_mode='default',
-                 resume=False):
+                 use_batch_normalization=False):
         super(LeNet, self).__init__()
-        # _init_folders()
 
-        self.batch_norm = batch_norm
-        self.dropout = dropout
         self.dropout_rate = dropout_rate
         self.dropout_mode = dropout_mode
+        self.use_batch_normalization = use_batch_normalization
+        self.activation_fn = F.leaky_relu
 
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.bn1 = nn.BatchNorm2d(6)
+        self.conv1, self.bn1 = nn.Conv2d(3, 6, 5), nn.BatchNorm2d(6)
+        self.conv2, self.bn2 = nn.Conv2d(6, 16, 5), nn.BatchNorm2d(16)
+        self.linear1 = nn.Linear(16 * 5 * 5, 120)
+        self.linear2 = nn.Linear(120, 84)
+        self.linear3 = nn.Linear(84, 10)
 
-        self.conv2 = nn.Conv2d(6, 16, 5, bias=False)
-        self.bn2 = nn.BatchNorm2d(16)
-        self.bias2 = nn.Parameter(torch.zeros(16))
-
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.convs = [self.conv1, self.conv2]
+        self.batch_norms = [self.bn1, self.bn2]
+        self.linears = [self.linear1, self.linear2, self.linear3]
 
     def forward(self, x):
-        out = self.conv1(x)
-        if self.batch_norm:
-            out = self.bn1(out)
-        out = F.leaky_relu(out)
-        out = F.max_pool2d(out, 2)
+        activation_fn = self.activation_fn
+        dropout_rate = self.dropout_rate
+        convs = self.convs
+        batch_norms = self.batch_norms
+        linears = self.linears
+        use_batch_normalization = self.use_batch_normalization
 
-        if self.dropout:
-            out = F.dropout(out, self.dropout_rate, training=self.training)
+        # 2 convolution layers
+        for conv, batch_norm in zip(convs, batch_norms):
+            x = _forward_conv2d(
+                x,
+                conv,
+                batch_norm,
+                activation_fn=activation_fn,
+                dropout_rate=dropout_rate,
+                training=self.training,
+                use_batch_normalization=use_batch_normalization)
+        x = x.view(x.size(0), -1)
 
-            # compute multiplier
-            multiplier = self.compute_multiplier_2d(
-                out.detach(),
-                self.dropout_rate,
-                self.dropout_mode,
-                6,
-                16,
-                5,
-                training=self.training)
+        # full connected layers
+        x = _forward_mlp(x, linears=linears, activation_fn=activation_fn)
+        return x
 
-            # forward pass without bias
-            out = self.conv2(out)
-            # calibration
-            out *= multiplier
-            # add bias
-            out += self.bias2.reshape(-1, 1, 1)
-        else:
-            out = self.conv2(out)
-            out += self.bias2.reshape(-1, 1, 1)
+    def start_batch_norm_post_statistics(self, train_loader=None):
+        assert not self.training
+        assert train_loader
+        batch_norms = self.batch_norms
 
-        if self.batch_norm:
-            out = self.bn2(out)
-        out = F.leaky_relu(out)
-        out = F.max_pool2d(out, 2)
+        # 일단 batch norm state_dict 저장
+        self.batch_norm_state_dicts = [
+            deepcopy(batch_norm.state_dict()) for batch_norm in batch_norms
+        ]
 
-        if self.dropout:
-            out = F.dropout(out, self.dropout_rate, training=self.training)
+        # exact average 취할 수 있도록 설정 변경
+        for batch_norm in batch_norms:
+            batch_norm.training = True
+            # reset all values for post-statistics
+            batch_norm.reset_running_stats()
+            # use cumulative moving average (exact average)
+            batch_norm.momentum = None
 
-            out = out.view(out.size(0), -1)
+        # print([batch_norm.state_dict() for batch_norm in batch_norms])
 
-            # compute multiplier
-            multiplier = self.compute_multiplier_1d(
-                out.detach(),
-                self.dropout_rate,
-                self.dropout_mode,
-                training=self.training)
-            # calibration
-            out *= multiplier
-        else:
-            out = out.view(out.size(0), -1)
+        # train_loader를 이용해서 batch norm statistics 재계산
+        with torch.no_grad():
+            for x, y in tqdm(train_loader):
+                self(x.cuda())
 
-        out = self.fc1(out)
-        out = F.leaky_relu(out)
-        out = F.leaky_relu(self.fc2(out))
-        out = self.fc3(out)
+        # print([batch_norm.state_dict() for batch_norm in batch_norms])
 
-        return out
+    def finish_batch_norm_post_statistics(self):
+        assert not self.training
+        batch_norms = self.batch_norms
+        state_dicts = self.batch_norm_state_dicts
 
-    def compute_multiplier_1d(self,
-                              x,
-                              dropout_rate,
-                              dropout_mode,
-                              training=True):
+        for batch_norm, state_dict in zip(batch_norms, state_dicts):
+            batch_norm.load_state_dict(state_dict)
 
-        multiplier = 1.0
+        # 다시 moving average로 돌아가도록 설정 변경
+        for batch_norm in batch_norms:
+            batch_norm.momentum = 0.1
+            batch_norm.training = False
 
-        if training:
-            if dropout_mode == 'default':
-                multiplier = 1.0
-
-            elif dropout_mode == 'sparsity-normalization':
-                # original dropout automatically multiply 1 / (1 - dropout_rate)
-                # restore this
-                multiplier = 1 - dropout_rate
-
-                # compute l0 norm
-                l0 = (torch.abs(x) > 1e-20).sum(
-                    dim=1).type(torch.cuda.FloatTensor)
-                # zero to one to prevent nan
-                l0 = torch.max(l0, torch.ones_like(l0))
-
-                # calculate multiplier
-                multiplier *= (x.shape[1] / l0).unsqueeze(1)
-
-            else:
-                raise NotImplementedError()
-
-        return multiplier
-
-    def compute_multiplier_2d(self,
-                              x,
-                              dropout_rate,
-                              dropout_mode,
-                              in_channels,
-                              out_channels,
-                              kernel_size,
-                              stride=1,
-                              padding=0,
-                              training=True):
-        multiplier = 1.0
-        if training:
-            if dropout_mode == 'default':
-                multiplier = 1.0
-
-            elif dropout_mode == 'sparsity-normalization':
-                # original dropout automatically multiply 1 / (1 - dropout_rate)
-                # restore this
-                multiplier = 1 - dropout_rate
-
-                # binarize x and get x_ones
-                x_ones = torch.ones_like(x)
-                xb = (torch.abs(x) > 1e-20).type(torch.cuda.FloatTensor)
-                # W_ones for conv2d filter filled with 1
-                W_ones = torch.ones(out_channels, in_channels, kernel_size,
-                                    kernel_size).cuda()
-
-                # calculate number of contributed neurons
-                l0_i = F.conv2d(x_ones, W_ones, stride=stride, padding=padding)
-                l0 = F.conv2d(xb, W_ones, stride=stride, padding=padding)
-                # zero to one to prevent nan
-                l0 = torch.max(l0, torch.ones_like(l0))
-
-                # calculate multiplier
-                multiplier *= (l0_i / l0)
-
-            else:
-                raise NotImplementedError()
-
-        return multiplier
-
-    # def _get_model_name(self):
-    #     batch_norm = self.batch_norm
-    #     dropout = self.dropout
-    #     dropout_rate = self.dropout_rate
-    #     dropout_mode = self.dropout_mode
-    #     return '{}_{}_{:.1f}_{}'.format(batch_norm, dropout, dropout_rate,
-    #                                     dropout_mode)
+    # def compute_multiplier_1d(self,
+    #                           x,
+    #                           dropout_rate,
+    #                           dropout_mode,
+    #                           training=True):
     #
-    # def _get_model_path(self):
-    #     model_name = self._get_model_name()
-    #     return '.results/lenet/models/{}.latest.pt'.format(model_name)
+    #     multiplier = 1.0
+    #
+    #     if training:
+    #         if dropout_mode == 'default':
+    #             multiplier = 1.0
+    #
+    #         elif dropout_mode == 'sparsity-normalization':
+    #             # original dropout automatically multiply 1 / (1 - dropout_rate)
+    #             # restore this
+    #             multiplier = 1 - dropout_rate
+    #
+    #             # compute l0 norm
+    #             l0 = (torch.abs(x) > 1e-20).sum(
+    #                 dim=1).type(torch.cuda.FloatTensor)
+    #             # zero to one to prevent nan
+    #             l0 = torch.max(l0, torch.ones_like(l0))
+    #
+    #             # calculate multiplier
+    #             multiplier *= (x.shape[1] / l0).unsqueeze(1)
+    #
+    #         else:
+    #             raise NotImplementedError()
+    #
+    #     return multiplier
+    #
+    # def compute_multiplier_2d(self,
+    #                           x,
+    #                           dropout_rate,
+    #                           dropout_mode,
+    #                           in_channels,
+    #                           out_channels,
+    #                           kernel_size,
+    #                           stride=1,
+    #                           padding=0,
+    #                           training=True):
+    #     multiplier = 1.0
+    #     if training:
+    #         if dropout_mode == 'default':
+    #             multiplier = 1.0
+    #
+    #         elif dropout_mode == 'sparsity-normalization':
+    #             # original dropout automatically multiply 1 / (1 - dropout_rate)
+    #             # restore this
+    #             multiplier = 1 - dropout_rate
+    #
+    #             # binarize x and get x_ones
+    #             x_ones = torch.ones_like(x)
+    #             xb = (torch.abs(x) > 1e-20).type(torch.cuda.FloatTensor)
+    #             # W_ones for conv2d filter filled with 1
+    #             W_ones = torch.ones(out_channels, in_channels, kernel_size,
+    #                                 kernel_size).cuda()
+    #
+    #             # calculate number of contributed neurons
+    #             l0_i = F.conv2d(x_ones, W_ones, stride=stride, padding=padding)
+    #             l0 = F.conv2d(xb, W_ones, stride=stride, padding=padding)
+    #             # zero to one to prevent nan
+    #             l0 = torch.max(l0, torch.ones_like(l0))
+    #
+    #             # calculate multiplier
+    #             multiplier *= (l0_i / l0)
+    #
+    #         else:
+    #             raise NotImplementedError()
+    #
+    #     return multiplier
 
-
-# def _________init_bn(m):
-#     if type(m) == nn.BatchNorm2d:
-#         # set bn in training mode to update post-statistics
-#         m.training = True
-#         # reset all values for post-statistics
-#         m.reset_running_stats()
-#         # use cumulative moving average (exact average)
-#         m.momentum = None
-#
-#
-# def _________add_momentum(m):
-#     if type(m) == nn.BatchNorm2d:
-#         m.momentum = 0.1
+    # def _________init_bn(m):
+    #     if type(m) == nn.BatchNorm2d:
+    #         # set bn in training mode to update post-statistics
+    #         m.training = True
+    #         # reset all values for post-statistics
+    #         m.reset_running_stats()
+    #         # use cumulative moving average (exact average)
+    #         m.momentum = None
+    #
+    #
+    # def _________add_momentum(m):
+    #     if type(m) == nn.BatchNorm2d:
+    #         m.momentum = 0.1
