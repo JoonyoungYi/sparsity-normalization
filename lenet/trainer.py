@@ -12,7 +12,7 @@ from common.utils import set_torch_seed
 from common.utils import str2bool
 
 
-def _get_loss_and_accuracy(loader):
+def _get_loss_and_accuracy(loader, model, criterion):
     total = 0
     correct = 0
     loss = 0
@@ -43,8 +43,8 @@ def main(args):
         dropout_mode=args.dropout_mode).cuda()
     optimizer = torch.optim.Adam(
         params=model.parameters(), lr=args.learning_rate)
-    # QUESTION: 왜 reduction이 none일까?
-    criterion = torch.nn.CrossEntropyLoss(reduction='none')
+    criterion = torch.nn.CrossEntropyLoss(
+        reduction='none')  # QUESTION: 왜 reduction이 none일까?
 
     # resume training
     if args.resume:
@@ -96,12 +96,12 @@ def main(args):
 
         total = 0
         correct = 0
-        for src, trg in tqdm(train_loader):
-            src = src.cuda()
-            trg = trg.cuda()
+        for x, y in tqdm(train_loader):
+            x = x.cuda()
+            y = y.cuda()
 
-            out = model(src)
-            loss = criterion(out, trg).mean()
+            out = model(x)
+            loss = criterion(out, y).mean()
 
             optimizer.zero_grad()
             loss.backward()
@@ -118,15 +118,15 @@ def main(args):
         with torch.no_grad():
             total = 0
             correct = 0
-            for src, trg in valid_loader:
-                src = src.cuda()
-                trg = trg.cuda()
+            for x, y in valid_loader:
+                x = x.cuda()
+                y = y.cuda()
 
-                out = model(src)
+                out = model(x)
 
                 _, pred = out.max(1)
-                total += trg.shape[0]
-                correct += pred.eq(trg).sum().item()
+                total += y.shape[0]
+                correct += pred.eq(y).sum().item()
 
             moving_stats_valid_acc = correct / total
 
@@ -135,34 +135,37 @@ def main(args):
         with torch.no_grad():
             total = 0
             correct = 0
-            for src, trg in valid_loader:
-                src = src.cuda()
-                trg = trg.cuda()
+            for x, y in valid_loader:
+                x = x.cuda()
+                y = y.cuda()
 
-                out = model(src)
+                out = model(x)
 
                 _, pred = out.max(1)
-                total += trg.shape[0]
-                correct += pred.eq(trg).sum().item()
+                total += y.shape[0]
+                correct += pred.eq(y).sum().item()
 
             mini_stats_valid_acc = correct / total
 
         # calibration
         model.apply(init_bn)
         with torch.no_grad():
-            for src, trg in train_loader:
-                src = src.cuda()
-                trg = trg.cuda()
+            for x, y in train_loader:
+                x = x.cuda()
+                y = y.cuda()
 
-                out = model(src)
+                out = model(x)
 
         # get train, validation, test results after calibration
         model.eval()
         with torch.no_grad():
             # get train result to see learning curve
-            train_loss, train_acc = _get_loss_and_accuracy(train_loader)
-            valid_loss, valid_acc = _get_loss_and_accuracy(valid_loader)
-            test_loss, test_acc = _get_loss_and_accuracy(test_loader)
+            train_loss, train_acc = _get_loss_and_accuracy(
+                train_loader, model, criterion)
+            valid_loss, valid_acc = _get_loss_and_accuracy(
+                valid_loader, model, criterion)
+            test_loss, test_acc = _get_loss_and_accuracy(
+                test_loader, model, criterion)
 
         # save the result
         res = collections.OrderedDict()
