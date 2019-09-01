@@ -13,20 +13,17 @@ from common.utils import str2bool
 
 
 def _get_loss_and_accuracy(loader, model, criterion):
+    count, correct, loss = 0, 0, 0
     with torch.no_grad():
-        total = 0
-        correct = 0
-        loss = 0
         for x, y in loader:
             x, y = x.cuda(), y.cuda()
             y_hat = model(x)
             loss += criterion(y_hat, y).sum().item()
             _, pred = y_hat.max(1)
-            total += y.shape[0]
+            count += y.shape[0]
             correct += pred.eq(y).sum().item()
-        train_loss = loss / total
-        train_acc = correct / total
-    return loss, acc
+    loss, accuracy = loss / count, correct / count
+    return loss, accuracy
 
 
 def main(args):
