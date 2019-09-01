@@ -6,28 +6,6 @@ import numpy as np
 import torch
 
 
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
-def set_torch_seed(seed):
-    # for reproducibility.
-    # note that pytorch is not completely reproducible https://pytorch.org/docs/stable/notes/randomness.html
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
 def dict2tsv(res, file_name):
     if not os.path.exists(file_name):
         with open(file_name, 'a') as f:

@@ -7,8 +7,9 @@ from tqdm import tqdm
 
 from .dataset import load_data
 from .model import LeNet, add_momentum, init_bn
-from .utils import dict2tsv, str2bool, write_result_to_file
+from .utils import dict2tsv, write_result_to_file
 from common.utils import set_torch_seed
+from common.utils import str2bool
 
 
 def main(args):
