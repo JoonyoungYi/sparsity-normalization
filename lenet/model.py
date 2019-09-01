@@ -2,14 +2,25 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from common.utils import make_folder_if_not_exist
+
+
+def _init_folders():
+    make_folder_if_not_exist('.results/')
+    make_folder_if_not_exist('.results/lenet/')
+    make_folder_if_not_exist('.results/lenet/models/')
+
 
 class LeNet(nn.Module):
     def __init__(self,
                  batch_norm=False,
                  dropout=False,
                  dropout_rate=0.5,
-                 dropout_mode='default'):
+                 dropout_mode='default',
+                 resume=False):
         super(LeNet, self).__init__()
+        _init_folders()
+
         self.batch_norm = batch_norm
         self.dropout = dropout
         self.dropout_rate = dropout_rate
@@ -125,9 +136,7 @@ class LeNet(nn.Module):
                               stride=1,
                               padding=0,
                               training=True):
-
         multiplier = 1.0
-
         if training:
             if dropout_mode == 'default':
                 multiplier = 1.0
@@ -157,6 +166,18 @@ class LeNet(nn.Module):
                 raise NotImplementedError()
 
         return multiplier
+
+    def _get_model_name(self):
+        batch_norm = self.batch_norm
+        dropout = self.dropout
+        dropout_rate = self.dropout_rate
+        dropout_mode = self.dropout_mode
+        return '{}_{}_{:.1f}_{}'.format(batch_norm, dropout, dropout_rate,
+                                        dropout_mode)
+
+    def _get_model_path(self):
+        model_name = self._get_model_name()
+        return '.results/lenet/models/{}.latest.pt'.format(model_name)
 
 
 def init_bn(m):

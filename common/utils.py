@@ -61,6 +61,10 @@ def _make_folder_if_not_exist(path):
         os.mkdir(path, 0o777)
 
 
+def make_folder_if_not_exist(path):
+    return _make_folder_if_not_exist(path)
+
+
 def save_results_to_file(code_name, dataset_name, results):
     line = '\t'.join([str(datetime.now())] + [str(r) for r in results]) + '\n'
     return append_text_results(code_name, dataset_name, 'results', 'default',
@@ -99,6 +103,7 @@ def init_file(code_name, dataset_name, folder_name, file_name):
         file_name=file_name)
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def append_text_results(code_name, dataset_name, folder_name, file_name, line):
     # make results folder if not exists.

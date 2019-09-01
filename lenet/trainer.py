@@ -27,13 +27,12 @@ def main(args):
         dropout_mode=args.dropout_mode).cuda()
     optimizer = torch.optim.Adam(
         params=model.parameters(), lr=args.learning_rate)
+    # QUESTION: 왜 reduction이 none일까?
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
     # resume training
     if args.resume:
-        checkpoint = torch.load('results/{}_{}_{:.1f}_{}_latest.pt'.format(
-            args.batch_norm, args.dropout, args.dropout_rate,
-            args.dropout_mode))
+        checkpoint = torch.load(model._get_model_path())
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         last_epoch = checkpoint['last_epoch']
@@ -81,7 +80,7 @@ def main(args):
 
         total = 0
         correct = 0
-        for src, trg in train_loader:
+        for src, trg in tqdm(train_loader):
             src = src.cuda()
             trg = trg.cuda()
 
@@ -228,7 +227,6 @@ def main(args):
             best_epoch = epoch
             model_test_acc = test_acc
 
-        # save the latest model
         torch.save(
             {
                 'model': model.state_dict(),
@@ -244,9 +242,7 @@ def main(args):
                 'best_epoch': best_epoch,
                 'model_test_acc': model_test_acc
             },
-            'results/{}_{}_{:.1f}_{}_latest.pt'.format(
-                args.batch_norm, args.dropout, args.dropout_rate,
-                args.dropout_mode), )
+            model._get_model_path(), )
 
     # save best result
     best_result = {
@@ -269,7 +265,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LeNet')
     parser.add_argument('--batch_norm', type=str2bool, default=False)
     parser.add_argument('--dropout', type=str2bool, default=False)
-    parser.add_argument('--dropout_rate', type=float, default=0.5)
+    parser.add_argument('--dropout_rate', type=float, default=0.0)
     parser.add_argument(
         '--dropout_mode',
         type=str,
