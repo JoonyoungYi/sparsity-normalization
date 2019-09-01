@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from common.utils import make_folder_if_not_exist
 
 
-def _init_folders():
-    make_folder_if_not_exist('.results/')
-    make_folder_if_not_exist('.results/lenet/')
-    make_folder_if_not_exist('.results/lenet/models/')
+# def _init_folders():
+#     make_folder_if_not_exist('.results/')
+#     make_folder_if_not_exist('.results/lenet/')
+#     make_folder_if_not_exist('.results/lenet/models/')
 
 
 class LeNet(nn.Module):
@@ -19,7 +19,7 @@ class LeNet(nn.Module):
                  dropout_mode='default',
                  resume=False):
         super(LeNet, self).__init__()
-        _init_folders()
+        # _init_folders()
 
         self.batch_norm = batch_norm
         self.dropout = dropout
@@ -167,29 +167,29 @@ class LeNet(nn.Module):
 
         return multiplier
 
-    def _get_model_name(self):
-        batch_norm = self.batch_norm
-        dropout = self.dropout
-        dropout_rate = self.dropout_rate
-        dropout_mode = self.dropout_mode
-        return '{}_{}_{:.1f}_{}'.format(batch_norm, dropout, dropout_rate,
-                                        dropout_mode)
-
-    def _get_model_path(self):
-        model_name = self._get_model_name()
-        return '.results/lenet/models/{}.latest.pt'.format(model_name)
-
-
-def init_bn(m):
-    if type(m) == nn.BatchNorm2d:
-        # set bn in training mode to update post-statistics
-        m.training = True
-        # reset all values for post-statistics
-        m.reset_running_stats()
-        # use cumulative moving average (exact average)
-        m.momentum = None
+    # def _get_model_name(self):
+    #     batch_norm = self.batch_norm
+    #     dropout = self.dropout
+    #     dropout_rate = self.dropout_rate
+    #     dropout_mode = self.dropout_mode
+    #     return '{}_{}_{:.1f}_{}'.format(batch_norm, dropout, dropout_rate,
+    #                                     dropout_mode)
+    #
+    # def _get_model_path(self):
+    #     model_name = self._get_model_name()
+    #     return '.results/lenet/models/{}.latest.pt'.format(model_name)
 
 
-def add_momentum(m):
-    if type(m) == nn.BatchNorm2d:
-        m.momentum = 0.1
+# def _________init_bn(m):
+#     if type(m) == nn.BatchNorm2d:
+#         # set bn in training mode to update post-statistics
+#         m.training = True
+#         # reset all values for post-statistics
+#         m.reset_running_stats()
+#         # use cumulative moving average (exact average)
+#         m.momentum = None
+#
+#
+# def _________add_momentum(m):
+#     if type(m) == nn.BatchNorm2d:
+#         m.momentum = 0.1
