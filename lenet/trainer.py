@@ -229,23 +229,24 @@ def main(args):
             model_test_acc = test_acc
 
         # save the latest model
-        torch.save({
-            'model': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'last_epoch': epoch,
-            'best_moving_stats_valid_acc': best_moving_stats_valid_acc,
-            'best_moving_stats_epoch': best_moving_stats_epoch,
-            'model_moving_stats_test_acc': model_moving_stats_test_acc,
-            'best_mini_stats_valid_acc': best_mini_stats_valid_acc,
-            'best_mini_stats_epoch': best_mini_stats_epoch,
-            'model_mini_stats_test_acc': model_mini_stats_test_acc,
-            'best_valid_acc': best_valid_acc,
-            'best_epoch': best_epoch,
-            'model_test_acc': model_test_acc
-        },
-                   'results/{}_{}_{:.1f}_{}_latest.pt'.format(
-                       args.batch_norm, args.dropout, args.dropout_rate,
-                       args.dropout_mode))
+        torch.save(
+            {
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'last_epoch': epoch,
+                'best_moving_stats_valid_acc': best_moving_stats_valid_acc,
+                'best_moving_stats_epoch': best_moving_stats_epoch,
+                'model_moving_stats_test_acc': model_moving_stats_test_acc,
+                'best_mini_stats_valid_acc': best_mini_stats_valid_acc,
+                'best_mini_stats_epoch': best_mini_stats_epoch,
+                'model_mini_stats_test_acc': model_mini_stats_test_acc,
+                'best_valid_acc': best_valid_acc,
+                'best_epoch': best_epoch,
+                'model_test_acc': model_test_acc
+            },
+            'results/{}_{}_{:.1f}_{}_latest.pt'.format(
+                args.batch_norm, args.dropout, args.dropout_rate,
+                args.dropout_mode), )
 
     # save best result
     best_result = {
@@ -274,14 +275,17 @@ if __name__ == '__main__':
         type=str,
         choices=['default', 'sparsity-normalization'],
         default='default')
-
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--epochs', type=int, default=300)
-
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--dataset_seed', type=int, default=2019)
     parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
+
+    if args.dropout:
+        assert args.dropout_rate > 1e-20
+    else:
+        assert args.dropout_rate < 1e-20
 
     main(args)
