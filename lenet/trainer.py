@@ -25,7 +25,8 @@ def main(args):
         dropout=args.dropout,
         dropout_rate=args.dropout_rate,
         dropout_mode=args.dropout_mode).cuda()
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(
+        params=model.parameters(), lr=args.learning_rate)
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
     # resume training
@@ -275,7 +276,7 @@ if __name__ == '__main__':
         default='default')
 
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--epochs', type=int, default=300)
 
     parser.add_argument('--seed', type=int, default=1)
