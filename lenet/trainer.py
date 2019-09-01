@@ -41,8 +41,7 @@ def main(args):
         dropout_mode=args.dropout_mode).cuda()
     optimizer = torch.optim.Adam(
         params=model.parameters(), lr=args.learning_rate)
-    criterion = torch.nn.CrossEntropyLoss(
-        reduction='none')  # QUESTION: 왜 reduction이 none일까?
+    criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
     # resume training
     if args.resume:
