@@ -1,8 +1,10 @@
+import argparse
+import os
 import random
+
 import numpy as np
 import torch
-import os
-import argparse
+
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -12,9 +14,10 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
 def set_torch_seed(seed):
-    # for reproducibility. 
-    # note that pytorch is not completely reproducible https://pytorch.org/docs/stable/notes/randomness.html  
+    # for reproducibility.
+    # note that pytorch is not completely reproducible https://pytorch.org/docs/stable/notes/randomness.html
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     random.seed(seed)
@@ -23,6 +26,7 @@ def set_torch_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
 
 def dict2tsv(res, file_name):
     if not os.path.exists(file_name):
@@ -33,6 +37,7 @@ def dict2tsv(res, file_name):
     with open(file_name, 'a') as f:
         f.write('\t'.join([str(r) for r in list(res.values())]))
         f.write('\n')
+
 
 def write_result_to_file(args, result_dict, file_name):
     args_dict = vars(args)
