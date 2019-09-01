@@ -13,7 +13,7 @@ from common.utils import str2bool
 
 
 def main(args):
-    train_loader, val_loader, test_loader = load_data(
+    train_loader, valid_loader, test_loader = load_data(
         batch_size=args.batch_size, dataset_seed=args.dataset_seed)
 
     # set seed for reproducing
@@ -37,29 +37,29 @@ def main(args):
         optimizer.load_state_dict(checkpoint['optimizer'])
         last_epoch = checkpoint['last_epoch']
 
-        best_moving_stats_val_acc = checkpoint['best_moving_stats_val_acc']
+        best_moving_stats_valid_acc = checkpoint['best_moving_stats_valid_acc']
         best_moving_stats_epoch = checkpoint['best_moving_stats_epoch']
         model_moving_stats_test_acc = checkpoint['model_moving_stats_test_acc']
 
-        best_mini_stats_val_acc = checkpoint['best_mini_stats_val_acc']
+        best_mini_stats_valid_acc = checkpoint['best_mini_stats_valid_acc']
         best_mini_stats_epoch = checkpoint['best_mini_stats_epoch']
         model_mini_stats_test_acc = checkpoint['model_mini_stats_test_acc']
 
-        best_val_acc = checkpoint['best_val_acc']
+        best_valid_acc = checkpoint['best_valid_acc']
         best_epoch = checkpoint['best_epoch']
         model_test_acc = checkpoint['model_test_acc']
     else:
         last_epoch = 0
 
-        best_moving_stats_val_acc = 0
+        best_moving_stats_valid_acc = 0
         best_moving_stats_epoch = 0
         model_moving_stats_test_acc = 0
 
-        best_mini_stats_val_acc = 0
+        best_mini_stats_valid_acc = 0
         best_mini_stats_epoch = 0
         model_mini_stats_test_acc = 0
 
-        best_val_acc = 0
+        best_valid_acc = 0
         best_epoch = 0
         model_test_acc = 0
 
@@ -102,7 +102,7 @@ def main(args):
         with torch.no_grad():
             total = 0
             correct = 0
-            for src, trg in val_loader:
+            for src, trg in valid_loader:
                 src = src.cuda()
                 trg = trg.cuda()
 
@@ -112,14 +112,14 @@ def main(args):
                 total += trg.shape[0]
                 correct += pred.eq(trg).sum().item()
 
-            moving_stats_val_acc = correct / total
+            moving_stats_valid_acc = correct / total
 
         # get validation accuracy using mini-batch statistics
         model.apply(init_bn)
         with torch.no_grad():
             total = 0
             correct = 0
-            for src, trg in val_loader:
+            for src, trg in valid_loader:
                 src = src.cuda()
                 trg = trg.cuda()
 
@@ -129,7 +129,7 @@ def main(args):
                 total += trg.shape[0]
                 correct += pred.eq(trg).sum().item()
 
-            mini_stats_val_acc = correct / total
+            mini_stats_valid_acc = correct / total
 
         # calibration
         model.apply(init_bn)
@@ -164,7 +164,7 @@ def main(args):
             total = 0
             correct = 0
             loss = 0
-            for src, trg in val_loader:
+            for src, trg in valid_loader:
                 src = src.cuda()
                 trg = trg.cuda()
 
@@ -175,8 +175,8 @@ def main(args):
                 total += trg.shape[0]
                 correct += pred.eq(trg).sum().item()
 
-            val_loss = loss / total
-            val_acc = correct / total
+            valid_loss = loss / total
+            valid_acc = correct / total
 
             # get test result for convenience
             total = 0
@@ -200,30 +200,30 @@ def main(args):
         res = collections.OrderedDict()
         res['epoch'] = epoch
         res['train_loss'] = train_loss
-        res['val_loss'] = val_loss
+        res['valid_loss'] = valid_loss
         res['test_loss'] = test_loss
         res['train_acc'] = train_acc
-        res['moving_stats_val_acc'] = moving_stats_val_acc
-        res['mini_stats_val_acc'] = mini_stats_val_acc
-        res['val_acc'] = val_acc
+        res['moving_stats_valid_acc'] = moving_stats_valid_acc
+        res['mini_stats_valid_acc'] = mini_stats_valid_acc
+        res['valid_acc'] = valid_acc
         res['test_acc'] = test_acc
         dict2tsv(res, 'results/{}_{}_{:.1f}_{}_acc.txt'.format(
             args.batch_norm, args.dropout, args.dropout_rate,
             args.dropout_mode))
 
         # track best result
-        if moving_stats_val_acc > best_moving_stats_val_acc:
-            best_moving_stats_val_acc = moving_stats_val_acc
+        if moving_stats_valid_acc > best_moving_stats_valid_acc:
+            best_moving_stats_valid_acc = moving_stats_valid_acc
             best_moving_stats_epoch = epoch
             model_moving_stats_test_acc = test_acc
 
-        if mini_stats_val_acc > best_mini_stats_val_acc:
-            best_mini_stats_val_acc = mini_stats_val_acc
+        if mini_stats_valid_acc > best_mini_stats_valid_acc:
+            best_mini_stats_valid_acc = mini_stats_valid_acc
             best_mini_stats_epoch = epoch
             model_mini_stats_test_acc = test_acc
 
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        if valid_acc > best_valid_acc:
+            best_valid_acc = valid_acc
             best_epoch = epoch
             model_test_acc = test_acc
 
@@ -232,13 +232,13 @@ def main(args):
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'last_epoch': epoch,
-            'best_moving_stats_val_acc': best_moving_stats_val_acc,
+            'best_moving_stats_valid_acc': best_moving_stats_valid_acc,
             'best_moving_stats_epoch': best_moving_stats_epoch,
             'model_moving_stats_test_acc': model_moving_stats_test_acc,
-            'best_mini_stats_val_acc': best_mini_stats_val_acc,
+            'best_mini_stats_valid_acc': best_mini_stats_valid_acc,
             'best_mini_stats_epoch': best_mini_stats_epoch,
             'model_mini_stats_test_acc': model_mini_stats_test_acc,
-            'best_val_acc': best_val_acc,
+            'best_valid_acc': best_valid_acc,
             'best_epoch': best_epoch,
             'model_test_acc': model_test_acc
         },
@@ -248,13 +248,13 @@ def main(args):
 
     # save best result
     best_result = {
-        'best_moving_stats_val_acc': best_moving_stats_val_acc,
+        'best_moving_stats_valid_acc': best_moving_stats_valid_acc,
         'model_moving_stats_test_acc': model_moving_stats_test_acc,
         'best_moving_stats_epoch': best_moving_stats_epoch,
-        'best_mini_stats_val_acc': best_mini_stats_val_acc,
+        'best_mini_stats_valid_acc': best_mini_stats_valid_acc,
         'model_mini_stats_test_acc': model_mini_stats_test_acc,
         'best_mini_stats_epoch': best_mini_stats_epoch,
-        'best_val_acc': best_val_acc,
+        'best_valid_acc': best_valid_acc,
         'model_test_acc': model_test_acc,
         'best_epoch': best_epoch
     }

@@ -15,13 +15,13 @@ def _data_transforms():
     ])
 
     train_transforms = data_transforms
-    val_transforms = data_transforms
+    valid_transforms = data_transforms
     test_transforms = data_transforms
 
-    return train_transforms, val_transforms, test_transforms
+    return train_transforms, valid_transforms, test_transforms
 
 
-def _dataset(train_transforms, val_transforms, test_transforms):
+def _dataset(train_transforms, valid_transforms, test_transforms):
     """get dataset for classification"""
     train_set = torchvision.datasets.CIFAR10(
         root='.datasets/cifar-10-torch',
@@ -41,32 +41,32 @@ def _dataset(train_transforms, val_transforms, test_transforms):
 
     np.random.shuffle(indices)
 
-    test_idx, val_idx = indices[split:], indices[:split]
+    test_idx, valid_idx = indices[split:], indices[:split]
 
-    val_set = torch.utils.data.Subset(remain_set, val_idx)
+    valid_set = torch.utils.data.Subset(remain_set, valid_idx)
     test_set = torch.utils.data.Subset(remain_set, test_idx)
 
-    return train_set, val_set, test_set
+    return train_set, valid_set, test_set
 
 
-def _data_loader(train_set, val_set, test_set, batch_size):
+def _data_loader(train_set, valid_set, test_set, batch_size):
     """get data loader"""
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=batch_size, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=batch_size, shuffle=False)
+    valid_loader = torch.utils.data.DataLoader(
+        valid_set, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(
         test_set, batch_size=batch_size, shuffle=False)
 
-    return train_loader, val_loader, test_loader
+    return train_loader, valid_loader, test_loader
 
 
 def load_data(batch_size, dataset_seed=1):
     # set dataset seed and get data
     set_torch_seed(dataset_seed)
-    train_transforms, val_transforms, test_transforms = _data_transforms()
-    train_set, val_set, test_set = _dataset(train_transforms, val_transforms,
+    train_transforms, valid_transforms, test_transforms = _data_transforms()
+    train_set, valid_set, test_set = _dataset(train_transforms, valid_transforms,
                                             test_transforms)
-    train_loader, val_loader, test_loader = _data_loader(
-        train_set, val_set, test_set, batch_size)
-    return train_loader, val_loader, test_loader
+    train_loader, valid_loader, test_loader = _data_loader(
+        train_set, valid_set, test_set, batch_size)
+    return train_loader, valid_loader, test_loader
