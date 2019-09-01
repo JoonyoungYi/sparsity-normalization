@@ -13,7 +13,8 @@ from common.utils import str2bool
 
 
 def main(args):
-    train_loader, val_loader, test_loader = load_data(args.dataset_seed)
+    train_loader, val_loader, test_loader = load_data(
+        batch_size=args.batch_size, dataset_seed=args.dataset_seed)
 
     # set seed for reproducing
     set_torch_seed(args.seed)

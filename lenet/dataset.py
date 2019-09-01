@@ -61,12 +61,12 @@ def _data_loader(train_set, val_set, test_set, batch_size):
     return train_loader, val_loader, test_loader
 
 
-def load_data(dataset_seed=1):
+def load_data(batch_size, dataset_seed=1):
     # set dataset seed and get data
     set_torch_seed(dataset_seed)
     train_transforms, val_transforms, test_transforms = _data_transforms()
     train_set, val_set, test_set = _dataset(train_transforms, val_transforms,
                                             test_transforms)
     train_loader, val_loader, test_loader = _data_loader(
-        train_set, val_set, test_set, args.batch_size)
+        train_set, val_set, test_set, batch_size)
     return train_loader, val_loader, test_loader
