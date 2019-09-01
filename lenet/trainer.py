@@ -16,7 +16,7 @@ def _get_loss_and_accuracy(loader, model, criterion):
     total = 0
     correct = 0
     loss = 0
-    for x, y in train_loader:
+    for x, y in loader:
         x, y = x.cuda(), y.cuda()
         y_hat = model(x)
         loss += criterion(y_hat, y).sum().item()
