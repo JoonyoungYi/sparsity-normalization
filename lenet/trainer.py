@@ -5,19 +5,14 @@ from copy import deepcopy
 import torch
 from tqdm import tqdm
 
-from .dataset import data_transforms, dataset, data_loader
+from .dataset import load_data
 from .model import LeNet, add_momentum, init_bn
-from .utils import set_torch_seed, dict2tsv, str2bool, write_result_to_file
+from .utils import dict2tsv, str2bool, write_result_to_file
+from common.utils import set_torch_seed
 
 
 def main(args):
-    # set dataset seed and get data
-    set_torch_seed(2019)
-    train_transforms, val_transforms, test_transforms = data_transforms()
-    train_set, val_set, test_set = dataset(train_transforms, val_transforms,
-                                           test_transforms)
-    train_loader, val_loader, test_loader = data_loader(
-        train_set, val_set, test_set, args.batch_size)
+    train_loader, val_loader, test_loader = load_data(args.dataset_seed)
 
     # set seed for reproducing
     set_torch_seed(args.seed)
@@ -282,6 +277,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=300)
 
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--dataset_seed', type=int, default=2019)
     parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
 

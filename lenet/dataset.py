@@ -3,8 +3,10 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from common.utils import set_torch_seed
 
-def data_transforms():
+
+def _data_transforms():
     """get transform of dataset"""
     data_transforms = transforms.Compose([
         transforms.ToTensor(),
@@ -19,7 +21,7 @@ def data_transforms():
     return train_transforms, val_transforms, test_transforms
 
 
-def dataset(train_transforms, val_transforms, test_transforms):
+def _dataset(train_transforms, val_transforms, test_transforms):
     """get dataset for classification"""
     train_set = torchvision.datasets.CIFAR10(
         root='./data', train=True, download=True, transform=train_transforms)
@@ -41,7 +43,7 @@ def dataset(train_transforms, val_transforms, test_transforms):
     return train_set, val_set, test_set
 
 
-def data_loader(train_set, val_set, test_set, batch_size):
+def _data_loader(train_set, val_set, test_set, batch_size):
     """get data loader"""
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=batch_size, shuffle=True)
@@ -50,4 +52,15 @@ def data_loader(train_set, val_set, test_set, batch_size):
     test_loader = torch.utils.data.DataLoader(
         test_set, batch_size=batch_size, shuffle=False)
 
+    return train_loader, val_loader, test_loader
+
+
+def load_data(dataset_seed=1):
+    # set dataset seed and get data
+    set_torch_seed(dataset_seed)
+    train_transforms, val_transforms, test_transforms = data_transforms()
+    train_set, val_set, test_set = dataset(train_transforms, val_transforms,
+                                           test_transforms)
+    train_loader, val_loader, test_loader = data_loader(
+        train_set, val_set, test_set, args.batch_size)
     return train_loader, val_loader, test_loader
