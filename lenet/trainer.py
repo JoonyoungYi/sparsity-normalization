@@ -12,6 +12,22 @@ from common.utils import set_torch_seed
 from common.utils import str2bool
 
 
+def _get_loss_and_accuracy(loader):
+    total = 0
+    correct = 0
+    loss = 0
+    for x, y in train_loader:
+        x, y = x.cuda(), y.cuda()
+        y_hat = model(x)
+        loss += criterion(y_hat, y).sum().item()
+        _, pred = out.max(1)
+        total += y.shape[0]
+        correct += pred.eq(y).sum().item()
+    train_loss = loss / total
+    train_acc = correct / total
+    return loss, acc
+
+
 def main(args):
     train_loader, valid_loader, test_loader = load_data(
         batch_size=args.batch_size, dataset_seed=args.dataset_seed)
@@ -144,57 +160,9 @@ def main(args):
         model.eval()
         with torch.no_grad():
             # get train result to see learning curve
-            total = 0
-            correct = 0
-            loss = 0
-            for src, trg in train_loader:
-                src = src.cuda()
-                trg = trg.cuda()
-
-                out = model(src)
-                loss += criterion(out, trg).sum().item()
-
-                _, pred = out.max(1)
-                total += trg.shape[0]
-                correct += pred.eq(trg).sum().item()
-
-            train_loss = loss / total
-            train_acc = correct / total
-
-            total = 0
-            correct = 0
-            loss = 0
-            for src, trg in valid_loader:
-                src = src.cuda()
-                trg = trg.cuda()
-
-                out = model(src)
-                loss += criterion(out, trg).sum().item()
-
-                _, pred = out.max(1)
-                total += trg.shape[0]
-                correct += pred.eq(trg).sum().item()
-
-            valid_loss = loss / total
-            valid_acc = correct / total
-
-            # get test result for convenience
-            total = 0
-            correct = 0
-            loss = 0
-            for src, trg in test_loader:
-                src = src.cuda()
-                trg = trg.cuda()
-
-                out = model(src)
-                loss += criterion(out, trg).sum().item()
-
-                _, pred = out.max(1)
-                total += trg.shape[0]
-                correct += pred.eq(trg).sum().item()
-
-            test_loss = loss / total
-            test_acc = correct / total
+            train_loss, train_acc = _get_loss_and_accuracy(train_loader)
+            valid_loss, valid_acc = _get_loss_and_accuracy(valid_loader)
+            test_loss, test_acc = _get_loss_and_accuracy(test_loader)
 
         # save the result
         res = collections.OrderedDict()
