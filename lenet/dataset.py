@@ -24,9 +24,15 @@ def _data_transforms():
 def _dataset(train_transforms, val_transforms, test_transforms):
     """get dataset for classification"""
     train_set = torchvision.datasets.CIFAR10(
-        root='./data', train=True, download=True, transform=train_transforms)
+        root='.datasets/cifar-10-torch',
+        train=True,
+        download=True,
+        transform=train_transforms)
     remain_set = torchvision.datasets.CIFAR10(
-        root='./data', train=False, download=True, transform=test_transforms)
+        root='.datasets/cifar-10-torch',
+        train=False,
+        download=True,
+        transform=test_transforms)
 
     # Split validation set from remain set
     num_remain = len(remain_set)
@@ -58,9 +64,9 @@ def _data_loader(train_set, val_set, test_set, batch_size):
 def load_data(dataset_seed=1):
     # set dataset seed and get data
     set_torch_seed(dataset_seed)
-    train_transforms, val_transforms, test_transforms = data_transforms()
-    train_set, val_set, test_set = dataset(train_transforms, val_transforms,
-                                           test_transforms)
-    train_loader, val_loader, test_loader = data_loader(
+    train_transforms, val_transforms, test_transforms = _data_transforms()
+    train_set, val_set, test_set = _dataset(train_transforms, val_transforms,
+                                            test_transforms)
+    train_loader, val_loader, test_loader = _data_loader(
         train_set, val_set, test_set, args.batch_size)
     return train_loader, val_loader, test_loader
