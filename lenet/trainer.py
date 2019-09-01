@@ -93,11 +93,9 @@ def main(args):
         model.apply(add_momentum)
 
         for x, y in tqdm(train_loader):
-            x = x.cuda()
-            y = y.cuda()
-
-            out = model(x)
-            loss = criterion(out, y).mean()
+            x, y = x.cuda(), y.cuda()
+            y_hat = model(x)
+            loss = criterion(y_hat, y).mean()
 
             optimizer.zero_grad()
             loss.backward()
@@ -120,12 +118,9 @@ def main(args):
 
         # calibration
         model.apply(init_bn)
-        with torch.no_grad():
+        with torch.no_grad():  # QUESTION: 이 코드 block은 왜 필요한걸까?
             for x, y in train_loader:
-                x = x.cuda()
-                y = y.cuda()
-
-                out = model(x)
+                model(x.cuda())
 
         # get train, validation, test results after calibration
         model.eval()
