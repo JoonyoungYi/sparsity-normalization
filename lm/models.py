@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .modules import Dropout
+
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
@@ -14,9 +16,11 @@ class RNNModel(nn.Module):
                  nhid,
                  nlayers,
                  dropout=0.5,
-                 tie_weights=False):
+                 tie_weights=False,
+                 drop_mode="standard"):
         super(RNNModel, self).__init__()
-        self.drop = nn.Dropout(dropout)
+
+        self.drop = Dropout(dropout, drop_mode=drop_mode)
         self.encoder = nn.Embedding(ntoken, ninp)
         if rnn_type == 'LSTM':
             rnns = [

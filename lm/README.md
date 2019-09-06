@@ -5,9 +5,14 @@ By default, the training script uses the Wikitext-2 dataset, provided.
 The trained model can then be used by the generate script to generate new text.
 
 ```bash
+python main.py --cuda --epochs=40 --tied --dropout=0.0 --drop_mode="standard"               --save="lm/pts/drop(0.0)_standard.pt"
+python main.py --cuda --epochs=40 --tied --dropout=0.2 --drop_mode="standard"               --save="lm/pts/drop(0.2)_standard.pt"
+python main.py --cuda --epochs=40 --tied --dropout=0.2 --drop_mode="sparsity-normalization" --save="lm/pts/drop(0.2)_sparsity-normalization.pt"
+
 python main.py --cuda --epochs 6           # Train a LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs 6 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
-python main.py --cuda --epochs=10 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
+python main.py --cuda --epochs=40 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
+python main.py --cuda --epochs=40 --tied --save="models/temp.pt"   # Train a tied LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs 6 --model Transformer --lr 5   
                                            # Train a Transformer model on Wikitext-2 with CUDA
 python main.py --cuda --tied               # Train a tied LSTM on Wikitext-2 with CUDA for 40 epochs
@@ -29,6 +34,7 @@ optional arguments:
   -h, --help                       show this help message and exit
   --data DATA                      location of the data corpus
   --model MODEL                    type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU)
+  --drop_mode DROP_MODE            mode of drop (standard, sparsity-normalization)
   --emsize EMSIZE                  size of word embeddings
   --nhid NHID                      number of hidden units per layer
   --nlayers NLAYERS                number of layers
