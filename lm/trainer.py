@@ -105,7 +105,8 @@ def get_batch(source, i, bptt):
     return data, target
 
 
-def evaluate(data_source, criterion, args):
+def evaluate(model, val_data, criterion, corpus, args, eval_batch_size=10):
+    data_source = val_data
     # Turn on evaluation mode which disables dropout.
     model.eval()
     total_loss = 0.
@@ -286,7 +287,13 @@ def main():
                     train_data=train_data,
                     args=args,
                     epoch=epoch)
-                val_loss = evaluate(val_data, criterion=criterion, args=args)
+                val_loss = evaluate(
+                    model=model,
+                    val_data=val_data,
+                    criterion=criterion,
+                    corpus=corpus,
+                    args=args,
+                    eval_batch_size=eval_batch_size)
                 print('-' * 89)
                 print(
                     '| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
@@ -317,7 +324,13 @@ def main():
                 rnn.flatten_parameters()
 
     # Run on test data.
-    test_loss = evaluate(test_data, criterion=criterion, args=args)
+    test_loss = evaluate(
+        model=model,
+        val_data=test_data,
+        criterion=criterion,
+        corpus=corpus,
+        args=args,
+        eval_batch_size=eval_batch_size)
     print('=' * 89)
     print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
         test_loss, math.exp(test_loss)))
