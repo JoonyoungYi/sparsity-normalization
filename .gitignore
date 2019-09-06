@@ -153,3 +153,4 @@ biasmf/weights
 dropout/*.pt
 dropout/*.pickle
 dropout/*.png
+lm/model.pt
