@@ -12,11 +12,17 @@ def _init_folder_and_files(dataset):
 
 
 def _get_model_name(args):
-    return '{}_{:.1f}_{}'.format(args.use_batch_normalization,
-                                 args.dropout_rate, args.dropout_mode).lower()
+    return 'bn{use_batch_normalization}_drop-rate{dropout_rate}_drop-mode{dropout_mode}_use-sn1d
+    {use_sparsity_norm1d}'.format(
+        use_batch_normalization=args.use_batch_normalization,
+        dropout_rate='{:.1f}'.format(args.dropout_rate),
+        dropout_mode=args.dropout_mode,
+        use_sparsity_norm1d=args.use_sparsity_norm1d).lower()
+
 
 def get_epoch_file_name(args):
-    return _get_model_name(args) + '.tsv'
+    return _get_model_name(args)
+
 
 def get_model_file_name(args):
     return _get_model_name(args) + '.pt.latest'

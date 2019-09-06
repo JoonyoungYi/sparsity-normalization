@@ -3,7 +3,7 @@ import collections
 from copy import deepcopy
 
 import torch
-from tqdm import tqdm
+# from tqdm import tqdm
 tqdm = lambda x: x
 
 from .dataset import load_data
@@ -48,7 +48,9 @@ def main(args):
 
     # get model, optimizer and criterion
     model = LeNet(
-        dropout_rate=args.dropout_rate, dropout_mode=args.dropout_mode).cuda()
+        dropout_rate=args.dropout_rate,
+        dropout_mode=args.dropout_mode,
+        use_sparsity_norm1d=args.use_sparsity_norm1d).cuda()
     optimizer = torch.optim.Adam(
         params=model.parameters(), lr=args.learning_rate)
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
@@ -85,18 +87,23 @@ if __name__ == '__main__':
     # get arguments
     parser = argparse.ArgumentParser(description='LeNet')
     parser.add_argument(
-        '--use_batch_normalization', type=str2bool, default=False)
-    parser.add_argument('--dropout_rate', type=float, default=0.1)
+        '--use_batch_normalization', default=True, type=str2bool)
+    parser.add_argument('--use_sparsity_norm1d', default=True, type=str2bool)
+    parser.add_argument('--dropout_rate', default=0.5, type=float)
     parser.add_argument(
         '--dropout_mode',
         type=str,
-        default='default',
+        # default='default',
+        default='sparsity-normalization',
         choices=['default', 'sparsity-normalization'])
     parser.add_argument('--n_batch', type=int, default=128)
     parser.add_argument('--learning_rate', type=float, default=1e-3)
-    parser.add_argument('--max_epoch', type=int, default=300)
+    parser.add_argument('--max_epoch', type=int, default=3000)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--dataset_seed', type=int, default=2019)
     args = parser.parse_args()
+
+    if args.use_sparsity_norm1d:
+        assert args.dropout_mode == 'sparsity-normalization'
 
     main(args)
