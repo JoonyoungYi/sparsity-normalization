@@ -15,7 +15,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     '--data',
     type=str,
-    default='./data/wikitext-2',
+    # default='./data/wikitext-2',
+    default='./data/ptb',
     help='location of the data corpus')
 parser.add_argument(
     '--model',
@@ -55,7 +56,7 @@ parser.add_argument(
 parser.add_argument(
     '--save',
     type=str,
-    default='model.pt',
+    default='models/default.pt',
     help='path to save the final model')
 parser.add_argument(
     '--onnx-export',
