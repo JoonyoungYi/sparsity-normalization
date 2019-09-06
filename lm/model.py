@@ -18,26 +18,38 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken, ninp)
-        if rnn_type in ['LSTM', 'GRU']:
-            self.rnn = getattr(nn, rnn_type)(
-                ninp, nhid, nlayers, dropout=dropout)
+        if rnn_type == 'LSTM':
+            rnns = [
+                torch.nn.LSTM(
+                    ninp if l == 0 else nhid,
+                    nhid if l != nlayers - 1 else (ninp
+                                                   if tie_weights else nhid),
+                    1,
+                    dropout=0) for l in range(nlayers)
+            ]
         else:
-            try:
-                nonlinearity = {
-                    'RNN_TANH': 'tanh',
-                    'RNN_RELU': 'relu'
-                }[rnn_type]
-            except KeyError:
-                raise ValueError(
-                    """An invalid option for `--model` was supplied,
-                                 options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']"""
-                )
-            self.rnn = nn.RNN(
-                ninp,
-                nhid,
-                nlayers,
-                nonlinearity=nonlinearity,
-                dropout=dropout)
+            raise NotImplementedError()
+            if rnn_type in ['LSTM', 'GRU']:
+                self.rnn = getattr(nn, rnn_type)(
+                    ninp, nhid, nlayers, dropout=dropout)
+            else:
+                try:
+                    nonlinearity = {
+                        'RNN_TANH': 'tanh',
+                        'RNN_RELU': 'relu'
+                    }[rnn_type]
+                except KeyError:
+                    raise ValueError(
+                        """An invalid option for `--model` was supplied,
+                                     options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']"""
+                    )
+                self.rnn = nn.RNN(
+                    ninp,
+                    nhid,
+                    nlayers,
+                    nonlinearity=nonlinearity,
+                    dropout=dropout)
+        self.rnns = torch.nn.ModuleList(rnns)
         self.decoder = nn.Linear(nhid, ntoken)
 
         # Optionally tie weights as in:
@@ -57,6 +69,8 @@ class RNNModel(nn.Module):
         self.rnn_type = rnn_type
         self.nhid = nhid
         self.nlayers = nlayers
+        self.tie_weights = tie_weights
+        self.ninp = ninp
 
     def init_weights(self):
         initrange = 0.1
@@ -66,17 +80,38 @@ class RNNModel(nn.Module):
 
     def forward(self, input, hidden):
         emb = self.drop(self.encoder(input))
-        output, hidden = self.rnn(emb, hidden)
-        output = self.drop(output)
+
+        raw_output = emb
+        new_hidden = []
+        for l, rnn in enumerate(self.rnns):
+            current_input = raw_output
+            raw_output, new_h = rnn(raw_output, hidden[l])
+            new_hidden.append(new_h)
+            raw_output = self.drop(raw_output)
+        output = raw_output
+        hidden = new_hidden
+
+        # output, hidden = self.rnn(emb, hidden)
+        # output = self.drop(output)
+
         decoded = self.decoder(output)
         return decoded, hidden
 
     def init_hidden(self, bsz):
         weight = next(self.parameters())
         if self.rnn_type == 'LSTM':
-            return (weight.new_zeros(self.nlayers, bsz, self.nhid),
-                    weight.new_zeros(self.nlayers, bsz, self.nhid))
+            return [(weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else
+                                (self.ninp
+                                 if self.tie_weights else self.nhid)).zero_(),
+                     weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else
+                                (self.ninp
+                                 if self.tie_weights else self.nhid)).zero_())
+                    for l in range(self.nlayers)]
+
+            # return (weight.new_zeros(self.nlayers, bsz, self.nhid),
+            #         weight.new_zeros(self.nlayers, bsz, self.nhid))
         else:
+            raise NotImplementedError()
             return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
 

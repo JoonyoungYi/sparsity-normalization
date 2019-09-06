@@ -29,7 +29,11 @@ parser.add_argument(
     '--nhid', type=int, default=200, help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2, help='number of layers')
 parser.add_argument(
-    '--lr', type=float, default=20, help='initial learning rate')
+    '--lr',
+    type=float,
+    default=1e-3,
+    # default=20,
+    help='initial learning rate')
 parser.add_argument(
     '--clip', type=float, default=0.25, help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40, help='upper epoch limit')
@@ -182,7 +186,7 @@ def evaluate(data_source):
     return total_loss / (len(data_source) - 1)
 
 
-def train():
+def train(optimizer):
     # Turn on training mode which enables dropout.
     model.train()
     total_loss = 0.
@@ -201,25 +205,30 @@ def train():
             hidden = repackage_hidden(hidden)
             output, hidden = model(data, hidden)
         loss = criterion(output.view(-1, ntokens), targets)
+
+        optimizer.zero_grad()
         loss.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(-lr, p.grad.data)
+        # # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+        # for p in model.parameters():
+        #     p.data.add_(-lr, p.grad.data)
+        if args.clip:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+
+        optimizer.step()
 
         total_loss += loss.item()
 
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print(
-                '| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                'loss {:5.2f} | ppl {:8.2f}'.format(
-                    epoch, batch,
-                    len(train_data) // args.bptt, lr,
-                    elapsed * 1000 / args.log_interval, cur_loss,
-                    math.exp(cur_loss)))
+            print('| epoch {:3d} | {:5d}/{:5d} batches | ms/batch {:5.2f} | '
+                  'loss {:5.2f} | ppl {:8.2f}'.format(
+                      epoch, batch,
+                      len(train_data) // args.bptt,
+                      elapsed * 1000 / args.log_interval, cur_loss,
+                      math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
 
@@ -235,14 +244,16 @@ def export_onnx(path, batch_size, seq_len):
 
 
 # Loop over epochs.
-lr = args.lr
+# lr = args.lr
 best_val_loss = None
+
+optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
 # At any point you can hit Ctrl + C to break out of training early.
 try:
     for epoch in range(1, args.epochs + 1):
         epoch_start_time = time.time()
-        train()
+        train(optimizer)
         val_loss = evaluate(val_data)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
@@ -255,9 +266,9 @@ try:
             with open(args.save, 'wb') as f:
                 torch.save(model, f)
             best_val_loss = val_loss
-        else:
-            # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 4.0
+        # else:
+        # Anneal the learning rate if no improvement has been seen in the validation dataset.
+        # lr /= 4.0
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
@@ -269,7 +280,8 @@ with open(args.save, 'rb') as f:
     # this makes them a continuous chunk, and will speed up forward pass
     # Currently, only rnn model supports flatten_parameters function.
     if args.model in ['RNN_TANH', 'RNN_RELU', 'LSTM', 'GRU']:
-        model.rnn.flatten_parameters()
+        for rnn in model.rnns:
+            rnn.flatten_parameters()
 
 # Run on test data.
 test_loss = evaluate(test_data)
