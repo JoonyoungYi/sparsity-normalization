@@ -146,3 +146,10 @@ results/
 .datasets/
 text8.zip
 vision_mnist/result*
+autorec/figures
+autorec/weights
+biasmf/figures
+biasmf/weights
+dropout/*.pt
+dropout/*.pickle
+dropout/*.png
