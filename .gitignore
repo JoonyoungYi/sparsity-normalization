@@ -153,4 +153,4 @@ biasmf/weights
 dropout/*.pt
 dropout/*.pickle
 dropout/*.png
-# lm/pts/
+lm/pts/
