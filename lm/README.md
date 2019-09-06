@@ -9,6 +9,12 @@ python main.py --cuda --epochs=40 --tied --dropout=0.0 --drop_mode="standard"   
 python main.py --cuda --epochs=40 --tied --dropout=0.2 --drop_mode="standard"               --save="lm/pts/drop(0.2)_standard.pt"
 python main.py --cuda --epochs=40 --tied --dropout=0.2 --drop_mode="sparsity-normalization" --save="lm/pts/drop(0.2)_sparsity-normalization.pt"
 
+python3 -m lm.trainer --epochs=40 --tied --dropout=0.2 --drop_mode="standard"               --save="lm/pts/temp.pt"
+
+python3 -m lm.trainer --epochs=40 --tied --dropout=0.0 --drop_mode="standard"               --save="lm/pts/drop(0.0)_default.pt" --train=True
+python3 -m lm.trainer --epochs=40 --tied --dropout=0.2 --drop_mode="standard"               --save="lm/pts/drop(0.2)_default.pt" --train=True
+python3 -m lm.trainer --epochs=40 --tied --dropout=0.2 --drop_mode="sparsity-normalization" --save="lm/pts/drop(0.2)_sparsity-normalization.pt" --train=True
+
 python main.py --cuda --epochs 6           # Train a LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs 6 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs=40 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
