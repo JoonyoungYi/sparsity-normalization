@@ -7,6 +7,7 @@ The trained model can then be used by the generate script to generate new text.
 ```bash
 python main.py --cuda --epochs 6           # Train a LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs 6 --tied    # Train a tied LSTM on Wikitext-2 with CUDA
+python main.py --cuda --tied    # Train a tied LSTM on Wikitext-2 with CUDA
 python main.py --cuda --epochs 6 --model Transformer --lr 5   
                                            # Train a Transformer model on Wikitext-2 with CUDA
 python main.py --cuda --tied               # Train a tied LSTM on Wikitext-2 with CUDA for 40 epochs
