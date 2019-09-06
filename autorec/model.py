@@ -30,6 +30,8 @@ def _forward(train_x, weights, biases, training, args):
         activation_fn = tf.nn.sigmoid
     elif args.activation_fn == 'relu':
         activation_fn = tf.nn.relu
+    elif args.activation_fn == 'identity':
+        activation_fn = lambda x: x
     else:
         # ACTIVATION_FUNCTION = tf.nn.tanh
         raise NotImplementedError()
@@ -56,6 +58,12 @@ def _get_mask(y):
     where = tf.greater(y, zero)
     m = tf.cast(where, tf.float32)
     return m
+
+
+def _get_rec_loss(y, y_hat):
+    _y_hat = tf.gather_nd(y_hat, y.indices)
+    rec_loss = tf.reduce_sum(tf.square(y.values - _y_hat))
+    return rec_loss
 
 
 def _get_loss(y, y_hat, weights, args):
@@ -112,6 +120,9 @@ def init_models(n_col, args):
     return {
         'x': x,
         'y': y,
+        'weights': weights,
+        'biases': biases,
+        'y_hat': y_hat,
         'training': training,
         'loss': loss,
         'rmse': rmse,

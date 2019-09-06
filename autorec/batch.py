@@ -21,7 +21,13 @@ def _sparse__get_count(x, n_row):
 
 def _sparse__normalize(x, c, n_col):
     for i in range(x.shape[0]):
-        x[i][2] *= (n_col / c[int(x[i][0])])
+        x[i][2] = (x[i][2]) * (n_col / c[int(x[i][0])])
+    return x
+
+
+def _sparse__standardize(x):
+    for i in range(x.shape[0]):
+        x[i][2] = (x[i][2] - 3.533424036281179)
     return x
 
 
@@ -62,6 +68,13 @@ class Batch:
             row_indices = list(range(n_row))
             random.shuffle(row_indices)
             self.row_indices = row_indices
+
+            if args.standardization:
+                train_x = _sparse__standardize(train_x)
+                train_y = _sparse__standardize(train_y)
+                valid_y = _sparse__standardize(valid_y)
+                test_x = _sparse__standardize(test_x)
+                test_y = _sparse__standardize(test_y)
 
             if args.normalize_input:
                 # n_mutiplier = n_col

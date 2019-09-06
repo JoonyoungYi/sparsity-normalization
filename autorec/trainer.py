@@ -1,6 +1,7 @@
 import time
 import random
 import math
+import pickle
 from datetime import datetime
 
 import numpy as np
@@ -10,9 +11,32 @@ from common.datasets.movielens import Dataset
 from .configs import *
 from .model import init_models
 from .batch import Batch
+from .plotter import get_name
 from common.utils import str2bool
 from common.utils import set_seed
 from common.utils import save_results_to_file
+
+
+def get_name_from_args(args):
+    return get_name(
+        normalize_input=args.normalize_input,
+        standardization=args.standardization,
+        lambda_w=args.lambda_w,
+        K_prime=args.K_denominator,
+        use_user_vector=args.use_user_vector,
+        activation_fn=args.activation_fn)
+
+
+def __get_test_y_hat(session, models, batch):
+    x, y = batch.batch_test()
+    y_hat = session.run(
+        models['y_hat'],
+        feed_dict={
+            models['x']: x,
+            models['y']: y,
+            models['training']: False,
+        }, )
+    return y_hat
 
 
 def __get_rmse(session, models, batch, key, args):
@@ -67,6 +91,10 @@ def _train(args):
     models = init_models(batch.n_col, args)
     session.run(tf.global_variables_initializer())
 
+    # print(batch.n_row, batch.n_col)
+    # print(dataset.train_data.shape)
+    # input('')
+
     min_valid_rmse = float('inf')
     min_valid_rmse_epoch_idx = 0
     min_test_rmse = float('inf')
@@ -104,11 +132,18 @@ def _train(args):
             train_rmse, valid_rmse, test_rmse = _validate(
                 session, models, batch, args)
 
+            if train_rmse < 0.1:
+                break
+
             if min_valid_rmse - 1e-5 > valid_rmse:
                 min_valid_rmse = valid_rmse
                 final_test_rmse = test_rmse
                 final_train_rmse = train_rmse
                 min_valid_rmse_epoch_idx = epoch_idx
+
+                test_y_hat = __get_test_y_hat(session, models, batch)
+                weights, biases = session.run(
+                    [models['weights'], models['biases']])
 
             if min_test_rmse - 1e-5 > test_rmse:
                 min_test_rmse = test_rmse
@@ -128,6 +163,15 @@ def _train(args):
 
     session.close()
 
+    if args.save_weights:
+        test_weights = {
+            'test_y_hat': test_y_hat,
+            'weights': weights,
+            'biases': biases
+        }
+        with open('autorec/weights/{}.pickle'.format(get_name_from_args(args)), 'wb') as f:
+            pickle.dump(test_weights, f)
+
     results = []
     results.append(args.use_user_vector)
     results.append(args.normalize_input)
@@ -136,6 +180,8 @@ def _train(args):
     results.append(args.optimizer)
     results.append(args.lambda_w)
     results.append(args.seed)
+    results.append(args.activation_fn)
+    results.append(args.K_denominator)
     results.append(args.n_hidden_unit)
     results.append(args.dataset_seed)
     results.append(args.dropout_rate)
@@ -176,15 +222,21 @@ def main():
         # default=False,
         help='Whether normalize input.')
     parser.add_argument(
-        '--use_user_vector',
+        '--standardization',
         type=str2bool,
         # default=True,
         default=False,
+        help='')
+    parser.add_argument(
+        '--use_user_vector',
+        type=str2bool,
+        default=True,
+        # default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=1e-4,
+        default=1e-3,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--dropout_rate',
@@ -204,7 +256,10 @@ def main():
         help='the number of epochation for early stop.')
 
     parser.add_argument(
-        '--lambda_w', type=float, default=0.0, help='lambda for weight decay.')
+        '--lambda_w',
+        type=float,
+        default=600.0,
+        help='lambda for weight decay.')
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -218,12 +273,13 @@ def main():
         type=str,
         # default='relu',
         default='sigmoid',
-        choices=['relu', 'sigmoid'],
+        choices=['relu', 'sigmoid', 'identity'],
         help='')
     parser.add_argument(
         '--K_denominator',
         type=float,
         default=500,
+        # default=52.44,
         # default=None,
         help='K')
     parser.add_argument(
@@ -243,6 +299,12 @@ def main():
         type=str2bool,
         default=True,
         help='whether use sparse tensor.')
+    parser.add_argument(
+        '--save_weights',
+        type=str2bool,
+        default=True,
+        # default=False,
+        help='')
     parser.add_argument(
         '--n_batch',
         type=int,
@@ -265,14 +327,17 @@ def main():
         # RProp optimizer can be used only for dense tensor.
         assert args.optimizer != 'rprop'
 
+    if not args.normalize_input:
+        assert args.K_denominator == 500
+
     _train(args)
 
 
 if __name__ == '__main__':
     main()
 
+
+
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
-
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
-
 # python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=item-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=1 --n_hidden_unit=1000 --K_denominator=1000 --lambda_w=45
