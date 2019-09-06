@@ -1,6 +1,7 @@
 import os
 import random
 import argparse
+import pickle
 import collections
 
 from tqdm import tqdm
@@ -97,8 +98,6 @@ def main(args):
             valid_rmse = np.sqrt(valid_loss.item())
 
             test_y_pred = model(test_x)
-            test_y_pred = test_y_pred * std_y_train + mean_y_train
-
             test_loss = criterion(test_y_pred, test_y)
             test_rmse = np.sqrt(test_loss.item())
 
@@ -107,11 +106,34 @@ def main(args):
             min_valid_epoch_idx = epoch_idx
             final_test_rmse = test_rmse
 
+            torch.save(model.state_dict(),
+                       'dropout/model-{dropout_mode}-seed{seed}.pt'.format(
+                           dropout_mode=args.dropout_mode, seed=args.seed))
+
         # print(epoch_idx, train_rmse, test_rmse, min_test_rmse)
 
         # save results
         logger.log_epoch(epoch_idx, batch_rmse, train_rmse, valid_rmse,
                          test_rmse)
+
+    model.load_state_dict(
+        torch.load('dropout/model-{dropout_mode}-seed{seed}.pt'.format(
+            dropout_mode=args.dropout_mode, seed=args.seed)))
+    with torch.no_grad():
+        model.eval()
+        test_y_preds, masks = [], []
+        for _ in range(1000):
+            _test_y_pred, _mask = model(
+                test_x, return_mask=True, test_dropout_rate=args.dropout_rate)
+            test_y_preds.append(_test_y_pred)
+            masks.append(_mask)
+    result = {
+        'test_y_preds': test_y_preds,
+        'masks': masks,
+    }
+    with open('dropout/results-{dropout_mode}-seed{seed}.pickle'.format(
+            dropout_mode=args.dropout_mode, seed=args.seed), 'wb') as f:
+        pickle.dump(result, f)
 
     print('MIN Test RMSE:', final_test_rmse, min_valid_epoch_idx)
 
@@ -128,8 +150,6 @@ def main(args):
         for i in range(1, 100):
             rate = i * 0.01
             test_y_pred = model(test_x, test_dropout_rate=rate)
-            test_y_pred = test_y_pred * std_y_train + mean_y_train
-
             test_y_pred_mean = test_y_pred.mean().item()
             if i % 10 == 0:
                 print('{:.2f} {}'.format(rate, test_y_pred_mean))
@@ -148,7 +168,7 @@ def parse_arguments(parser):
         default='relu',
         choices=['relu', 'leaky_relu', 'elu', 'tanh', 'sigmoid'])
     parser.add_argument('--n_hidden_layer', type=int, default=2)
-    parser.add_argument('--learning_rate', type=float, default=1e-3)
+    parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument(
         '--n_batch',
         type=int,
@@ -172,14 +192,14 @@ if __name__ == '__main__':
         # default='min-max',
         default='standardization',
         choices=['none', 'min-max', 'standardization'])
-    parser.add_argument('--dropout_rate', type=float, default=0.2)
+    parser.add_argument('--dropout_rate', type=float, default=0.1)
     parser.add_argument(
         '--dropout_mode',
         type=str,
-        # default='default',
-        default='sparsity-normalization',
+        default='default',
+        # default='sparsity-normalization',
         choices=['default', 'sparsity-normalization'])
-    parser.add_argument('--max_epoch', type=int, default=100000)
+    parser.add_argument('--max_epoch', type=int, default=20000)
     parser.add_argument('--T', type=int, default=10000)
 
     args = parser.parse_args()

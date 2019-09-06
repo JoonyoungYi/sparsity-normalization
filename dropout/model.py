@@ -28,7 +28,9 @@ def _dropout(x,
         else:
             raise NotImplementedError()
         x = x * multiplier
-    return x
+
+    return x, (torch.abs(x).detach() > 1e-20).sum(
+        dim=1).type(torch.FloatTensor)
 
 
 class MLP(nn.Module):
@@ -49,7 +51,7 @@ class MLP(nn.Module):
         self.activation_fn = activation_fn
         self.linears = nn.ModuleList(linears)
 
-    def forward(self, x, test_dropout_rate=0.0):
+    def forward(self, x, test_dropout_rate=0.0, return_mask=False):
         linears = self.linears
         training = self.training
         n_hidden_unit = self.n_hidden_unit
@@ -61,13 +63,12 @@ class MLP(nn.Module):
             training = True
             dropout_rate = test_dropout_rate
 
+        ms = []
         for linear in linears[:-1]:
-            x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate,
-                             n_hidden_unit, training)
             x = linear(x)
 
             if activation_fn == 'relu':
-                x = _dropout(
+                x, m = _dropout(
                     x,
                     training,
                     dropout_rate,
@@ -89,7 +90,7 @@ class MLP(nn.Module):
                 else:
                     raise NotImplementedError()
 
-                x = _dropout(
+                x, m = _dropout(
                     x,
                     training,
                     dropout_rate,
@@ -100,7 +101,11 @@ class MLP(nn.Module):
             else:
                 raise NotImplementedError()
 
-        x = self.dropout(x, dropout_mode, dropout_rate, test_dropout_rate,
-                         training)
+            ms.append(m)
+
         y_pred = linears[-1](x)
-        return y_pred
+
+        if return_mask:
+            return y_pred, ms
+        else:
+            return y_pred
