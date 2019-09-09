@@ -23,11 +23,12 @@ class Dropout(nn.Module):
             m = binomial.sample(X.size()).cuda()
             y = X * m
             if drop_mode == "standard":
-                return y * (1.0 / keep_prob)
+                return y * (1.0 / keep_prob), m
             elif drop_mode == "sparsity-normalization":
                 l0 = (m.detach() > 1e-20).sum(
                     dim=-1, keepdims=True).type(torch.FloatTensor).cuda()
-                return y * (m.shape[-1] / l0)
+                return y * (m.shape[-1] / l0), m
             else:
                 raise NotImplementedError()
-        return X
+
+        return X, None

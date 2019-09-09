@@ -147,10 +147,15 @@ results/
 text8.zip
 vision_mnist/result*
 autorec/figures
-autorec/weights
+autorec/weights/
+autorec/weights-noclip/
+autorec/weights-old/
+autorec/vsp/
+autorec/vsp-noclip/
 biasmf/figures
 biasmf/weights
 dropout/*.pt
 dropout/*.pickle
 dropout/*.png
 lm/pts/
+lm/*.png

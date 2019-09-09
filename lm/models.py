@@ -82,8 +82,11 @@ class RNNModel(nn.Module):
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, input, hidden):
-        emb = self.drop(self.encoder(input))
+    def forward(self, input, hidden, return_mask=False):
+        ms = []
+
+        emb, m = self.drop(self.encoder(input))
+        ms.append(m)
 
         raw_output = emb
         new_hidden = []
@@ -91,7 +94,8 @@ class RNNModel(nn.Module):
             current_input = raw_output
             raw_output, new_h = rnn(raw_output, hidden[l])
             new_hidden.append(new_h)
-            raw_output = self.drop(raw_output)
+            raw_output,m = self.drop(raw_output)
+            ms.append(m)
         output = raw_output
         hidden = new_hidden
 
@@ -99,7 +103,7 @@ class RNNModel(nn.Module):
         # output = self.drop(output)
 
         decoded = self.decoder(output)
-        return decoded, hidden
+        return decoded, hidden, ms
 
     def init_hidden(self, bsz):
         weight = next(self.parameters())

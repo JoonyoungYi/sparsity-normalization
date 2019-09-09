@@ -2,9 +2,13 @@ import argparse
 import time
 import math
 import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.onnx
+from tqdm import tqdm
+from matplotlib import pyplot as plt
 
 from . import data
 from . import models
@@ -107,22 +111,112 @@ def get_batch(source, i, bptt):
 
 def evaluate(model, val_data, criterion, corpus, args, eval_batch_size=10):
     data_source = val_data
+
     # Turn on evaluation mode which disables dropout.
-    model.eval()
+    if args.test_mode == 'weight-averaging':
+        model.eval()
+    elif args.test_mode == 'monte-carlo':
+        model.train()
+    else:
+        raise NotImplementedError()
+
     total_loss = 0.
     ntokens = len(corpus.dictionary)
     if args.model != 'Transformer':
         hidden = model.init_hidden(eval_batch_size)
+
     with torch.no_grad():
-        for i in range(0, data_source.size(0) - 1, args.bptt):
+        for i in tqdm(range(0, data_source.size(0) - 1, args.bptt)):
             data, targets = get_batch(data_source, i, args.bptt)
-            if args.model == 'Transformer':
-                output = model(data)
+
+            if args.test_mode == 'weight-averaging':
+                if args.model == 'Transformer':
+                    output = model(data)
+                else:
+                    output, hidden, _ = model(data, hidden)
+                    hidden = repackage_hidden(hidden)
+                output_flat = output.view(-1, ntokens)
+                # output_flat = torch.nn.functional.softmax(
+                #     output_flat, dim=1)
+                # output_flat = torch.log(output_flat)
+
+                total_loss += len(data) * criterion(output_flat,
+                                                    targets).item()
+            elif args.test_mode == 'monte-carlo':
+                output_flat = None
+                T = 1000
+                masks = []
+
+                x_dict = {}
+                y_dict = {}
+                for _ in range(T):
+                    if args.model == 'Transformer':
+                        output = model(data)
+                    else:
+                        output, hidden, ms = model(data, hidden)
+                        hidden = repackage_hidden(hidden)
+                        n_used_units = torch.stack(
+                            [m.sum(dim=2).view(-1) for m in ms]).sum(dim=0)
+                        # masks.append([ms])
+
+                    _output = output.view(-1, ntokens)
+                    _output_flat = _output
+                    _output_flat = torch.nn.functional.softmax(
+                        _output_flat, dim=1)
+                    if output_flat is None:
+                        output_flat = _output_flat
+                    else:
+                        output_flat += _output_flat
+
+                    for target_idx in range(5):
+                        xs = x_dict.get(target_idx, [])
+                        ys = y_dict.get(target_idx, [])
+                        losses = nn.functional.cross_entropy(
+                            _output, targets, reduction='none')
+                        xs.append(n_used_units[target_idx].cpu().numpy())
+                        # ys.append(losses[target_idx].cpu().numpy())
+                        ys.append(_output[target_idx][targets[target_idx]]
+                                  .cpu().numpy())
+                        # ys.append(
+                        #     _output_flat[target_idx][targets[target_idx]].cpu().numpy())
+
+                        x_dict[target_idx] = xs
+                        y_dict[target_idx] = ys
+
+                for target_idx in range(5):
+                    xs = x_dict.get(target_idx, [])
+                    ys = y_dict.get(target_idx, [])
+
+                    z = np.polyfit(xs, ys, 1)
+                    p = np.poly1d(z)
+                    plt.plot(xs, p(xs), "r--")
+                    plt.scatter(xs, ys, s=1)
+                    # plt.ylim([
+                    #     [-3, 3],
+                    #     [0.5, 5.5],
+                    #     [-2, 3],
+                    #     [3, 6],
+                    #     [4, 6],
+                    # ][target_idx])
+                    plt.savefig(
+                        'lm/target{target_idx}-plot-{}.png'.format(
+                            args.drop_mode, target_idx=target_idx),
+                        format='png')
+                    plt.close()
+                exit(0)
+
+                output_flat = torch.log(output_flat / T)
+
+                print(len(masks))
+                print(len(masks[0]))
+                print(masks[0][0].shape)
+                input('')
+
+                total_loss += len(data) * criterion(output_flat,
+                                                    targets).item()
             else:
-                output, hidden = model(data, hidden)
-                hidden = repackage_hidden(hidden)
-            output_flat = output.view(-1, ntokens)
-            total_loss += len(data) * criterion(output_flat, targets).item()
+                raise NotImplementedError()
+
     return total_loss / (len(data_source) - 1)
 
 
@@ -140,13 +234,19 @@ def main():
         '--model',
         type=str,
         default='LSTM',
-        help=
-        'type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, Transformer)')
+        choices=["LSTM", "RNN_TANH", "RNN_RELU", "GRU", "Transformer"],
+        help='type of network')
     parser.add_argument(
         '--drop_mode',
         type=str,
         default='standard',
         choices=['standard', 'sparsity-normalization'],
+        help='')
+    parser.add_argument(
+        '--test_mode',
+        type=str,
+        default='weight-averaging',
+        choices=['weight-averaging', 'monte-carlo'],
         help='')
     parser.add_argument(
         '--emsize', type=int, default=200, help='size of word embeddings')

@@ -27,10 +27,15 @@ def _get_count_dict(count_dict, train_data, use_user_vector=False):
 
 
 def get_name(normalize_input, standardization, lambda_w, K_prime,
-             activation_fn, use_user_vector):
-    return '{}_{}_{}_{}_{}_{}'.format(normalize_input, standardization,
-                                      lambda_w, K_prime, activation_fn,
-                                      use_user_vector)
+             activation_fn, use_user_vector, clipping):
+    return '{}_{}_{}_{}_{}_{}_clip{clipping}'.format(
+        normalize_input,
+        standardization,
+        lambda_w,
+        K_prime,
+        activation_fn,
+        use_user_vector,
+        clipping=clipping)
 
 
 def _plot_dataset(use_user_vector=False):
@@ -234,8 +239,6 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
             ratings.append((user_id, rating))
             train_rating_dict[item_id] = ratings
 
-    target_idx = 0
-
     test_ratings = []
     for i in range(test_data.shape[0]):
         _data = test_data[i]
@@ -243,8 +246,9 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
         item_id = int(_data[1])
         rating = float(_data[2])
 
-        if user_id == target_idx:
-            test_ratings.append((item_id, rating))
+        # if user_id == target_idx:
+        test_ratings.append((item_id, rating))
+
     # print(test_ratings)
     # input('')
     assert test_ratings
@@ -253,8 +257,8 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
     # input('')
 
     result_dict = {}
-    # for key in tqdm(range(n_data)):
-    for key in tqdm(range(target_idx, target_idx + 1)):
+    for key in tqdm(range(10)):
+        # for key in tqdm(range(target_idx, target_idx + 1)):
         if activation_fn == 'sigmoid':
             activation_f = lambda x: 1 / (1 + np.exp(-x))
         elif activation_fn == 'identity':
@@ -273,6 +277,10 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
             x = np.zeros(n_feature)
             for i, r in _batch_ratings:
                 x[i] = r
+
+            if normalize_input:
+                x = x * 500 / n_known_entry
+
             y_hat = _forward(x, weights, biases, activation_fn=activation_f)
 
             s = result_dict.get(n_known_entry, [])

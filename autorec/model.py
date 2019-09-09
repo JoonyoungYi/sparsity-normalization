@@ -30,8 +30,18 @@ def _forward(train_x, weights, biases, training, args):
         activation_fn = tf.nn.sigmoid
     elif args.activation_fn == 'relu':
         activation_fn = tf.nn.relu
+    elif args.activation_fn == 'relu6':
+        activation_fn = tf.nn.relu6
+    elif args.activation_fn == 'elu':
+        activation_fn = tf.nn.elu
+    elif args.activation_fn == 'leaky_relu':
+        activation_fn = tf.nn.leaky_relu
     elif args.activation_fn == 'identity':
         activation_fn = lambda x: x
+    elif args.activation_fn == 'tanh':
+        activation_fn = tf.nn.tanh
+    elif args.activation_fn == 'softplus':
+        activation_fn = tf.math.softplus
     else:
         # ACTIVATION_FUNCTION = tf.nn.tanh
         raise NotImplementedError()
@@ -85,6 +95,8 @@ def _get_rmse(y, y_hat, args, epsilon=0.0):
     # y_hat = tf.clip_by_value(y_hat, 1, 5)
     if args.sparse_tensor:
         _y_hat = tf.gather_nd(y_hat, y.indices)
+        if args.clipping:
+            _y_hat = tf.clip_by_value(_y_hat, 1, 5)
         return tf.sqrt(tf.reduce_mean(tf.square(y.values - _y_hat)))
     else:
         m = _get_mask(y)

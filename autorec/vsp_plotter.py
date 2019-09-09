@@ -7,14 +7,8 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 
 from .batch import Batch
+from .plotter import get_name
 from common.datasets.movielens import Dataset
-
-
-def get_name(normalize_input, standardization, lambda_w, K_prime,
-             activation_fn, use_user_vector):
-    return '{}_{}_{}_{}_{}_{}'.format(normalize_input, standardization,
-                                      lambda_w, K_prime, activation_fn,
-                                      use_user_vector)
 
 
 def _get_count_dict(count_dict, train_data, use_user_vector=False):
@@ -43,16 +37,28 @@ def _forward(x, weights, biases, activation_fn):
     return layer
 
 
-def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
-          use_user_vector):
+def _plot(normalize_input,
+          standardization,
+          lambda_w,
+          K_prime,
+          activation_fn,
+          use_user_vector,
+          target_idx=0,
+          clipping=True):
     dataset = Dataset(
         'movielens-100k', Dataset.SPLIT_DEFAULT_10_PERCENT, seed=1)
     train_data = dataset.train_data
     valid_data = dataset.valid_data
     test_data = dataset.test_data
 
-    name = get_name(normalize_input, standardization, lambda_w, K_prime,
-                    activation_fn, use_user_vector)
+    name = get_name(
+        normalize_input,
+        standardization,
+        lambda_w,
+        K_prime,
+        activation_fn,
+        use_user_vector,
+        clipping=clipping)
 
     # l0 와 mean activation의 관계 scatter
     count_dict = _get_count_dict(
@@ -73,106 +79,6 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
     with open('autorec/weights/{}.pickle'.format(name), 'rb') as f:
         test_weights = pickle.load(f)
     test_y_hat = test_weights['test_y_hat']
-    test_y_hat_mean = np.mean(test_y_hat, axis=1)
-    # print(test_y_hat_mean.shape)
-    # plt.scatter(c, test_y_hat_mean, s=1)
-    # plt.ylim([1, 5])
-    # plt.savefig(
-    #     'autorec/figures/mean-activation-scatter-{}.png'.format(name),
-    #     format='png')
-    # plt.close()
-
-    # # 각 count 끼리 모아서 plot
-    # mean_dict = {}
-    # for i in range(c.shape[0]):
-    #     s = mean_dict.get(c[i], [])
-    #     s.append(test_y_hat_mean[i])
-    #     mean_dict[c[i]] = s
-    # xs = []
-    # ys = []
-    # for key, item in mean_dict.items():
-    #     xs.append(key)
-    #     ys.append(sum(item) / len(item))
-    # plt.scatter(xs, ys, s=1)
-    # plt.ylim([1, 5])
-    # plt.savefig(
-    #     'autorec/figures/mean-activation-mean-{}.png'.format(name),
-    #     format='png')
-    # plt.close()
-
-    # # residual plotting
-    # target_test_y_count = test_data[:, 1].copy()
-    # target_test_y_hat = test_data[:, 2].copy()
-    # for i in range(test_data.shape[0]):
-    #     _data = test_data[i]
-    #     user_id = int(_data[0])
-    #     item_id = int(_data[1])
-    #     rating = float(_data[2])
-    #     if use_user_vector:
-    #         _y_hat = test_y_hat[user_id][item_id]
-    #     else:
-    #         _y_hat = test_y_hat[item_id][user_id]
-    #
-    #     if use_user_vector:
-    #         target = user_id
-    #     else:
-    #         target = item_id
-    #     target_test_y_hat[i] = _y_hat - rating
-    #     target_test_y_count[i] = c[target]
-    #
-    # plt.scatter(target_test_y_count, target_test_y_hat, s=1)
-    # plt.ylim([-3, 3])
-    # plt.savefig('autorec/figures/residual-{}.png'.format(name), format='png')
-    # plt.close()
-
-    # # error plotting
-    # error_dict = {}
-    # target_activation_dict = {}
-    # for i in range(test_data.shape[0]):
-    #     _data = test_data[i]
-    #     user_id = int(_data[0])
-    #     item_id = int(_data[1])
-    #     rating = float(_data[2])
-    #     if use_user_vector:
-    #         _y_hat = test_y_hat[user_id][item_id]
-    #     else:
-    #         _y_hat = test_y_hat[item_id][user_id]
-    #
-    #     if use_user_vector:
-    #         target = user_id
-    #     else:
-    #         target = item_id
-    #
-    #     error = (_y_hat - rating)**2
-    #     errors = error_dict.get(target, [])
-    #     errors.append(error)
-    #     error_dict[item_id] = errors
-    #
-    #     target_activations = target_activation_dict.get(target, [])
-    #     target_activations.append(_y_hat)
-    #     target_activation_dict[target] = target_activations
-    #
-    # results = np.array([[
-    #     count_dict.get(i, 0),
-    #     math.sqrt(sum(error_dict.get(i, [])) / len(error_dict.get(i, [])))
-    #     if len(error_dict.get(i, [])) else -1
-    # ] for i in range(n_data)])
-    # plt.scatter(results[:, 0], results[:, 1], s=1)
-    # plt.ylim([0, 2])
-    # plt.savefig('autorec/figures/rmse-{}.png'.format(name), format='png')
-    # plt.close()
-    #
-    # results = np.array([[
-    #     count_dict.get(i, 0),
-    #     sum(target_activation_dict.get(i, [])) /
-    #     len(target_activation_dict.get(i, []))
-    #     if len(target_activation_dict.get(i, [])) else -1
-    # ] for i in range(n_data)])
-    # plt.scatter(results[:, 0], results[:, 1], s=1)
-    # plt.ylim([1, 5])
-    # plt.savefig(
-    #     'autorec/figures/target-activation-{}.png'.format(name), format='png')
-    # plt.close()
 
     # 1개씩 train 갯수 늘려가며 찍어보기
     weights = test_weights['weights']
@@ -194,8 +100,6 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
             ratings.append((user_id, rating))
             train_rating_dict[item_id] = ratings
 
-    target_idx = 0
-
     test_ratings = []
     for i in range(test_data.shape[0]):
         _data = test_data[i]
@@ -209,23 +113,34 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
     # input('')
     assert test_ratings
     target_column_index, target_rating = test_ratings[0]
-    print(target_column_index)
+    # print(target_column_index)
     # input('')
 
-    result_dict = {}
-    # for key in tqdm(range(n_data)):
-    for key in tqdm(range(target_idx, target_idx + 1)):
+    T = 100
+    xs, ys = [], []
+    d = {}
+    for _ in tqdm(range(T)):
         if activation_fn == 'sigmoid':
             activation_f = lambda x: 1 / (1 + np.exp(-x))
+        elif activation_fn == 'tanh':
+            activation_f = lambda x: np.tanh(x)
+        elif activation_fn == 'elu':
+            activation_f = lambda x: np.where(x > 0, x, np.exp(x) - 1)
         elif activation_fn == 'identity':
             activation_f = lambda x: x
         elif activation_fn == 'relu':
             activation_f = lambda x: np.clip(x, a_min=0, a_max=None)
+        elif activation_fn == 'relu6':
+            activation_f = lambda x: np.clip(x, a_min=0, a_max=6)
+        elif activation_fn == 'leaky_relu':
+            activation_f = lambda x: np.where(x > 0, x, x * 0.2)
+        elif activation_fn == 'softplus':
+            activation_f = lambda x: np.log(np.exp(x) + 1)
         else:
             # print(activation_fn)
             raise NotImplementedError()
 
-        train_ratings = train_rating_dict.get(key, None)
+        train_ratings = train_rating_dict.get(target_idx, None)
         if not train_ratings:
             continue
 
@@ -236,95 +151,321 @@ def _plot(normalize_input, standardization, lambda_w, K_prime, activation_fn,
             for i, r in _batch_ratings:
                 x[i] = r
 
+            if normalize_input:
+                x = x * K_prime / n_known_entry
+
             y_hat = _forward(x, weights, biases, activation_fn=activation_f)
 
-            s = result_dict.get(n_known_entry, [])
-            # s.append(np.mean(y_hat))
-            s.append(y_hat[target_column_index])
-            result_dict[n_known_entry] = s
+            # s = result_dict.get(n_known_entry, [])
+            # # s.append(np.mean(y_hat))
+            # s.append(y_hat[target_column_index])
+            # result_dict[n_known_entry] = s
+            xs.append(n_known_entry)
+            ys.append(y_hat[target_column_index])
 
-    xs, ys = [], []
-    for key, item in sorted(result_dict.items()):
-        xs.append(key)
-        ys.append(sum(item) / len(item))
+            _hats = d.get(n_known_entry, [])
+            _hats.append(y_hat[target_column_index])
+            d[n_known_entry] = _hats
 
     plt.scatter(xs, ys, s=1, label='w/ SN' if normalize_input else 'w/o SN')
     plt.axhline(y=target_rating, color='g', linestyle='-')
 
+    results = np.array([[key, sum(item) / len(item)]
+                        for key, item in sorted(d.items())])
+    plt.plot(results[:, 0], results[:, 1], "r-")
+
+    plt.ylim([0.5, 5.5])
+    plt.legend()
+    plt.savefig(
+        'autorec/vsp/T{T}_usevec{use_user_vector}-target{target_idx}-act{activation_fn}-clip{clipping}-sn{sn}-kprime{k_prime}.png'.
+        format(
+            T=T,
+            sn=normalize_input,
+            activation_fn=activation_fn,
+            clipping=clipping,
+            use_user_vector=use_user_vector,
+            k_prime=K_prime,
+            target_idx=target_idx).lower(),
+        format='png')
+    plt.close()
+
 
 def main():
-    # _plot(
-    #     False,
-    #     False,
-    #     lambda_w=300.0,
-    #     K_prime=500,
-    #     activation_fn='sigmoid',
-    #     use_user_vector=False)
-    # _plot(
-    #     True,
-    #     False,
-    #     lambda_w=600.0,
-    #     K_prime=500,
-    #     activation_fn='sigmoid',
-    #     use_user_vector=False)
-    # _plot(
-    #     True,
-    #     False,
-    #     lambda_w=200.0,
-    #     K_prime=52.44,
-    #     activation_fn='sigmoid',
-    #     use_user_vector=False)
+    # for target_idx in range(10):
+    #     _plot(
+    #         False,
+    #         False,
+    #         lambda_w=300.0,
+    #         K_prime=500,
+    #         activation_fn='sigmoid',
+    #         use_user_vector=True,
+    #         target_idx=target_idx,
+    #         clipping=False)
+    #     _plot(
+    #         True,
+    #         False,
+    #         lambda_w=600.0,
+    #         K_prime=500,
+    #         activation_fn='sigmoid',
+    #         use_user_vector=True,
+    #         target_idx=target_idx,
+    #         clipping=False)
+    #
+    #     activation_fn = 'relu'
+    #     use_user_vector = True
+    #     _plot(
+    #         False,
+    #         False,
+    #         lambda_w=2000.0,
+    #         K_prime=500.0,
+    #         activation_fn=activation_fn,
+    #         use_user_vector=use_user_vector,
+    #         target_idx=target_idx,
+    #         clipping=False)
+    #     _plot(
+    #         True,
+    #         False,
+    #         lambda_w=8000.0,
+    #         K_prime=500.0,
+    #         activation_fn=activation_fn,
+    #         use_user_vector=use_user_vector,
+    #         target_idx=target_idx,
+    #         clipping=False)
 
-    activation_fn = 'relu'
-    use_user_vector = False
-    _plot(
-        False,
-        False,
-        lambda_w=2000.0,
-        K_prime=500.0,
-        activation_fn=activation_fn,
-        use_user_vector=use_user_vector)
-    _plot(
-        True,
-        False,
-        lambda_w=8000.0,
-        K_prime=500.0,
-        activation_fn=activation_fn,
-        use_user_vector=use_user_vector)
+    for target_idx in range(10):
+        activation_fn = 'identity'
+        _plot(
+            False,
+            False,
+            lambda_w=2000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=8000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=800.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
 
-    # _plot(
-    #     True,
-    #     False,
-    #     lambda_w=0.0,
-    #     K_prime=500,
-    #     activation_fn='identity',
-    #     use_user_vector=False)
-    # _plot(
-    #     False,
-    #     False,
-    #     lambda_w=0.0,
-    #     K_prime=500,
-    #     activation_fn='identity',
-    #     use_user_vector=False)
-    # _plot(
-    #     True,
-    #     False,
-    #     lambda_w=0.0,
-    #     K_prime=500,
-    #     activation_fn='identity',
-    #     use_user_vector=True)
-    # _plot(
-    #     False,
-    #     False,
-    #     lambda_w=0.0,
-    #     K_prime=500,
-    #     activation_fn='identity',
-    #     use_user_vector=True)
+        activation_fn = 'leaky_relu'
+        _plot(
+            False,
+            False,
+            lambda_w=2000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=8000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=900.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
 
-    # plt.ylim([0.5, 5.5])
-    plt.legend()
-    plt.savefig('autorec/vsp.png', format='png')
-    plt.close()
+        activation_fn = 'relu'
+        _plot(
+            False,
+            False,
+            lambda_w=2000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=8000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=900.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        activation_fn = 'relu6'
+        _plot(
+            False,
+            False,
+            lambda_w=2000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=7000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=800.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        activation_fn = 'elu'
+        _plot(
+            False,
+            False,
+            lambda_w=2000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=800.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=1000.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        activation_fn = 'sigmoid'
+        _plot(
+            False,
+            False,
+            lambda_w=300.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=500.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=200.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        activation_fn = 'tanh'
+        _plot(
+            False,
+            False,
+            lambda_w=800.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=1000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=500.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        activation_fn = 'softplus'
+        _plot(
+            False,
+            False,
+            lambda_w=1000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=7000.0,
+            K_prime=500.0,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+        _plot(
+            True,
+            False,
+            lambda_w=700.0,
+            K_prime=52.44,
+            activation_fn=activation_fn,
+            use_user_vector=True,
+            target_idx=target_idx,
+            clipping=True)
+
+        # break
 
 
 if __name__ == '__main__':

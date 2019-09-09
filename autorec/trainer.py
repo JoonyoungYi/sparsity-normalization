@@ -14,7 +14,7 @@ from .batch import Batch
 from .plotter import get_name
 from common.utils import str2bool
 from common.utils import set_seed
-from common.utils import save_results_to_file
+from common.utils import append_text_results
 
 
 def get_name_from_args(args):
@@ -24,6 +24,7 @@ def get_name_from_args(args):
         lambda_w=args.lambda_w,
         K_prime=args.K_denominator,
         use_user_vector=args.use_user_vector,
+        clipping=args.clipping,
         activation_fn=args.activation_fn)
 
 
@@ -102,7 +103,7 @@ def _train(args):
     final_test_rmse = float('inf')
     final_train_rmse = float('inf')
 
-    for epoch_idx in range(1, args.max_epoch):
+    for epoch_idx in range(1, args.max_epoch + 1):
 
         if args.n_batch is None:
             batch_x, batch_y = batch.batch_train()
@@ -169,29 +170,35 @@ def _train(args):
             'weights': weights,
             'biases': biases
         }
-        with open('autorec/weights/{}.pickle'.format(get_name_from_args(args)), 'wb') as f:
+        with open('autorec/weights/{}.pickle'.format(get_name_from_args(args)),
+                  'wb') as f:
             pickle.dump(test_weights, f)
 
     results = []
-    results.append(args.use_user_vector)
-    results.append(args.normalize_input)
+    results.append(args.max_epoch)
     results.append(args.sparse_tensor)
-    results.append(args.n_batch)
-    results.append(args.optimizer)
-    results.append(args.lambda_w)
-    results.append(args.seed)
-    results.append(args.activation_fn)
-    results.append(args.K_denominator)
-    results.append(args.n_hidden_unit)
     results.append(args.dataset_seed)
+    results.append(args.seed)
     results.append(args.dropout_rate)
+    results.append(args.n_hidden_unit)
+    results.append(args.optimizer)
+    results.append(args.n_batch)
+    results.append(args.lambda_w)
+    results.append(min_valid_rmse)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
 
-    filename = args.dataset
-    if args.filename:
-        filename += '-' + args.filename
-    save_results_to_file('autorec', filename, results)
+    append_text_results(
+        'autorec',
+        args.dataset,
+        args.activation_fn,
+        'uservec{use_user_vector}_Kprime{K_denominator}_clip{clipping}_sn{normalize_input}'.
+        format(
+            normalize_input=args.normalize_input,
+            use_user_vector=args.use_user_vector,
+            K_denominator=args.K_denominator,
+            clipping=args.clipping),
+        '\t'.join([str(r) for r in results]), )
 
 
 def main():
@@ -204,7 +211,11 @@ def main():
         default=1,
         help='epoch unit for validation')
     parser.add_argument(
-        '--max_epoch', type=int, default=100000, help='Max epoch')
+        '--max_epoch',
+        type=int,
+        default=100000,
+        # default=1,
+        help='Max epoch')
     parser.add_argument(
         '--n_hidden_unit',
         type=int,
@@ -223,6 +234,12 @@ def main():
         help='Whether normalize input.')
     parser.add_argument(
         '--standardization',
+        type=str2bool,
+        # default=True,
+        default=False,
+        help='')
+    parser.add_argument(
+        '--clipping',
         type=str2bool,
         # default=True,
         default=False,
@@ -273,7 +290,16 @@ def main():
         type=str,
         # default='relu',
         default='sigmoid',
-        choices=['relu', 'sigmoid', 'identity'],
+        choices=[
+            'relu',
+            'sigmoid',
+            'identity',
+            'tanh',
+            'leaky_relu',
+            'relu6',
+            'elu',
+            'softplus',
+        ],
         help='')
     parser.add_argument(
         '--K_denominator',
@@ -335,8 +361,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
 
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
 # python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
