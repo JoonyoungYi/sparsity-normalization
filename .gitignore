@@ -159,3 +159,5 @@ dropout/*.pickle
 dropout/*.png
 lm/pts/
 lm/*.png
+auto_impute/checkpoints/
+auto_impute/log.txt
