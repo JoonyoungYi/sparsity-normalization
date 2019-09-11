@@ -1,3 +1,5 @@
+load('yoursession.RData')
+
 # Path definition
 rm(list=ls())
 source_dir = getwd()
@@ -12,9 +14,12 @@ print(Input_file)
 DATASET <- args[2]
 Output_file <- paste(OUTPUT_DIR,DATASET,".csv",sep='')
 
-# Import necessary libraries and functions required for preporcessing
+# Import necessary libraries and functions required for preprocessing
+print("import functions.R")
 suppressMessages(source("functions.R"))
+print("import libraries.R")
 suppressMessages(source("libraries.R"))
+# suppressMessages()
 
 # Read raw data
 raw <- read.table(file=Input_file, header = TRUE, sep=",", row.names = 1)
