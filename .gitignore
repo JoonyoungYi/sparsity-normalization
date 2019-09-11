@@ -161,3 +161,8 @@ lm/pts/
 lm/*.png
 auto_impute/checkpoints/
 auto_impute/log.txt
+auto_impute/figures/
+auto_impute/imputed_matrices/
+auto_impute/masked_matrices/
+auto_impute/original_matrices/
+auto_impute/weights/

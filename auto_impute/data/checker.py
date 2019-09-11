@@ -26,6 +26,7 @@ rs = np.sum(x_filt, axis=1, keepdims=True)
 rs_med = np.median(rs)
 
 print(rs)
+print(rs.shape)
 print(rs_med)
 
 # print(rs.shape)

@@ -10,18 +10,18 @@ For detailed information refer to our paper titled "[AutoImpute : Autoencoder ba
 -	For technical problems, please report to [Issues](https://github.com/divyanshu-talwar/AutoImpute/issues).
 
 ## Description
-The input to `main.py` is a pre-processed count single cell matrix, with columns representing genes and rows representing cells. It's output is an imputed count matrix with the same dimension. The complete pipeline is described with the following image :
+The input to `trainer.py` is a pre-processed count single cell matrix, with columns representing genes and rows representing cells. It's output is an imputed count matrix with the same dimension. The complete pipeline is described with the following image :
 
 ![AutoImpute-Pipeline](./images/pipeline.jpg).
 
 ## Dependencies
-* For Python (2.7):
+* For Python (3):
     > numpy, scikit-learn, tensorflow, matplotlib.
 * For R (pre-processing):
 	> R.matlab, Matrix, ggplot2, Rtsne, svd, plyr, dplyr, data.table, mclust, flexclust, reshape2, irlba, dynamicTreeCut, RColorBrewer, GenSA, gplots
 
 ## Contents
-* `main.py` - is the AutoImpute imputation model.
+* `trainer.py` - is the AutoImpute imputation model.
 * `data/raw` - contains the raw data in `.csv` format.
 * `data/` - contains the pre-processed data in `<dataset_name>.{mat, csv}` format.
 * `preprocess/` - contains the R scripts for pre-processing.
@@ -29,7 +29,7 @@ The input to `main.py` is a pre-processed count single cell matrix, with columns
 ## Execution
 * `AutoImpute` model can be run using the following command and command line arguments :
 ```bash
-python main.py
+python3 -m auto_impute.trainer
 ```
 ```
 Options :
@@ -51,7 +51,7 @@ Options :
 		--masked_save masked_matrix 	# Save the masked matrix as
 
 ```
-_**Note:** If you use any other dataset (apart from blakeley.csv), do the necessary preprocessing using as described below, then run AutoImpute as `python main.py --data <dataset_name>.{mat, csv}`._
+_**Note:** If you use any other dataset (apart from blakeley.csv), do the necessary preprocessing using as described below, then run AutoImpute as `python3 -m auto_impute.trainer --data <dataset_name>.{mat, csv}`._
 
 * To pre-process any dataset, place the raw data (in `.csv` format) into `AutoImpute\ Model/data/raw/` and change your directory to `AutoImpute\ Model/Pre-processing/`.
 * Run the R-script `pre-process.R` using the following command:
