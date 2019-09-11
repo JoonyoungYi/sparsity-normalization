@@ -48,4 +48,7 @@ Rscript pre-process.R Blakeley_raw_data.csv blakeley
 Rscript pre-process.R Preimplantation_raw_data.csv preimplantation
 Rscript pre-process.R Jurkat_raw_data.csv jurkat
 Rscript pre-process.R Kolodziejczyk_raw_data.csv kolodziejczyk
+Rscript pre-process.R Quake_raw_data.csv quake
+Rscript pre-process.R Usoskin_raw_data.csv usoskin
+Rscript pre-process.R Zeisel_raw_data.csv zeisel
 ```

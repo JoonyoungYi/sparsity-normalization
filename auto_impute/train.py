@@ -4,9 +4,11 @@ from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
 # DATASET = 'jurkat'
-
-DATASET = 'kolodziejczyk'
+# DATASET = 'kolodziejczyk'
 # DATASET = 'preimplantation'
+# DATASET = 'quake'
+# DATASET = 'usoskin'
+DATASET = 'zeisel'
 
 
 def main():
@@ -24,6 +26,12 @@ def main():
                     base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
                 elif DATASET == 'preimplantation':
                     base_command += '--dataset=preimplantation --lambda_val=2000 --hidden_units=4000 --learning_rate=0.001'
+                elif DATASET == 'quake':
+                    base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001'
+                elif DATASET == 'usoskin':
+                    base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001'
+                elif DATASET == 'zeisel':
+                    base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001'
                 else:
                     raise NotImplementedError()
 

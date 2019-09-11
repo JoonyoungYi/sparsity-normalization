@@ -324,9 +324,17 @@ def main():
         '--dataset',
         type=str,
         default='blakeley',
-        choices=['blakeley', 'preimplantation', 'kolodziejczyk', 'jurkat'],
+        choices=[
+            'blakeley',
+            'preimplantation',
+            'kolodziejczyk',
+            'jurkat',
+            'quake',
+            'usoskin',
+            'zeisel',
+        ],
         help=
-        "Dataset to run the script on. In the paper we choose from : ['blakeley.csv', 'jurkat-293T.mat', 'kolodziejczyk.csv', 'PBMC.csv', 'preimplantation.mat', 'quake.csv', 'usoskin.csv', 'zeisel.csv']"
+        "Dataset to run the script on."
     )
 
     # Run the masked matrix recovery test
