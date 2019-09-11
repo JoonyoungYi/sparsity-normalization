@@ -18,11 +18,12 @@ from common.utils import append_text_results
 CODE_NAME = 'auto_impute'
 
 
-def get_name(sparsity_normalization, masking_percentage, seed):
-    return 'drop{masking_percentage}-seed{seed}-sn{sparsity_normalization}'.format(
+def get_name(sparsity_normalization, masking_percentage, seed, dataset_seed):
+    return 'drop{masking_percentage}-seed{seed}-dseed{dataset_seed}-sn{sparsity_normalization}'.format(
         sparsity_normalization='T' if sparsity_normalization else 'F',
         masking_percentage=masking_percentage,
-        seed=seed)
+        seed=seed,
+        dataset_seed=dataset_seed)
 
 
 def _evaluate(sess, X, processed_count_matrix, matrix_mask, y_pred,
@@ -91,10 +92,12 @@ def _train(args):
     name = get_name(
         sparsity_normalization=args.sparsity_normalization,
         masking_percentage=int(masking_percentage * 100),
-        seed=args.seed)
-    np.save(
-        'auto_impute/original_matrices/{name}.npy'.format(name=name),
-        processed_count_matrix)
+        seed=args.seed,
+        dataset_seed=args.dataset_seed)
+    # weight_name = name + ''.format()
+    if args.save_weights:
+        np.save('auto_impute/original_matrices/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), processed_count_matrix)
 
     dataset = args.dataset
     idxi, idxj = np.nonzero(processed_count_matrix)
@@ -109,9 +112,9 @@ def _train(args):
     matrix_mask = processed_count_matrix.copy()
     matrix_mask[matrix_mask.nonzero()] = 1
 
-    np.save(
-        'auto_impute/masked_matrices/{name}.npy'.format(name=name),
-        processed_count_matrix)
+    if args.save_weights:
+        np.save('auto_impute/masked_matrices/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), processed_count_matrix)
 
     init_file(CODE_NAME, args.dataset, 'epochs', name)
 
@@ -225,17 +228,22 @@ def _train(args):
     last_mae, last_rmse, last_nmse, imputed_count_matrix = _evaluate(
         sess, X, processed_count_matrix, matrix_mask, y_pred, store_for_future,
         indices, mask)
-    np.save(
-        'auto_impute/imputed_matrices/{name}.npy'.format(name=name),
-        imputed_count_matrix)
+    if args.save_weights:
+        np.save('auto_impute/imputed_matrices/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), imputed_count_matrix)
     w1, w2, b1, b2 = sess.run([
         weights['encoder_h'], weights['decoder_h'], biases['encoder_b'],
         biases['decoder_b']
     ])
-    np.save('auto_impute/weights/w1/{name}.npy'.format(name=name), w1)
-    np.save('auto_impute/weights/w2/{name}.npy'.format(name=name), w2)
-    np.save('auto_impute/weights/b1/{name}.npy'.format(name=name), b1)
-    np.save('auto_impute/weights/b2/{name}.npy'.format(name=name), b2)
+    if args.save_weights:
+        np.save('auto_impute/weights/w1/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), w1)
+        np.save('auto_impute/weights/w2/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), w2)
+        np.save('auto_impute/weights/b1/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), b1)
+        np.save('auto_impute/weights/b2/{dataset}/{name}.npy'.format(
+            name=name, dataset=args.dataset), b2)
     sess.close()
 
     print("<------------------------------------Statistics for " + args.data.
@@ -254,10 +262,12 @@ def _train(args):
     results.append(args.max_epoch)
     results.append(args.learning_rate)
     results.append(args.seed)
+    results.append(args.dataset_seed)
     results.append(last_mae)
     results.append(last_rmse)
     results.append(last_nmse)
-    file_name = re.sub('-seed\d+', '', name)
+    file_name = re.sub('-seed\d+-', '-', name)
+    file_name = re.sub('-dseed\d+-', '-', file_name)
     file_name = re.sub('-sn[TF]$', '', file_name)
     append_text_results(CODE_NAME, args.dataset, 'results', file_name,
                         '\t'.join([str(r) for r in results]))
@@ -269,11 +279,9 @@ def main():
 
     # Print debug statements
     parser.add_argument(
-        '--debug',
-        type=bool,
-        default=True,
-        nargs='+',
-        help="Want debug statements.")
+        '--debug', type=str2bool, default=True, help="Want debug statements.")
+    parser.add_argument(
+        '--save_weights', type=str2bool, default=False, help="")
 
     # Hyper-parameters
     parser.add_argument(
@@ -316,6 +324,7 @@ def main():
         '--dataset',
         type=str,
         default='blakeley',
+        choices=['blakeley', 'preimplantation', 'kolodziejczyk', 'jurkat'],
         help=
         "Dataset to run the script on. In the paper we choose from : ['blakeley.csv', 'jurkat-293T.mat', 'kolodziejczyk.csv', 'PBMC.csv', 'preimplantation.mat', 'quake.csv', 'usoskin.csv', 'zeisel.csv']"
     )
