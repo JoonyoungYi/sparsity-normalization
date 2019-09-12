@@ -24,10 +24,10 @@ def run_epoch(split, upto=None):
     nsteps = N//B if upto is None else min(N//B, upto)
     lossfs = []
     for step in range(nsteps):
-        
+
         # fetch the next batch of data
         xb = Variable(x[step*B:step*B+B])
-        
+
         # get the logits, potentially run the same batch a number of times, resampling each time
         xbhat = torch.zeros_like(xb)
         for s in range(nsamples):
@@ -37,18 +37,18 @@ def run_epoch(split, upto=None):
             # forward the model
             xbhat += model(xb)
         xbhat /= nsamples
-        
+
         # evaluate the binary cross entropy loss
         loss = F.binary_cross_entropy_with_logits(xbhat, xb, size_average=False) / B
         lossf = loss.data.item()
         lossfs.append(lossf)
-        
+
         # backward/update
         if split == 'train':
             opt.zero_grad()
             loss.backward()
             opt.step()
-        
+
     print("%s epoch average loss: %f" % (split, np.mean(lossfs)))
 # ------------------------------------------------------------------------------
 
@@ -61,12 +61,12 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--samples', type=int, default=1, help="How many samples of connectivity/masks to average logits over during inference")
     args = parser.parse_args()
     # --------------------------------------------------------------------------
-    
+
     # reproducibility is good
     np.random.seed(42)
     torch.manual_seed(42)
     torch.cuda.manual_seed_all(42)
-    
+
     # load the dataset
     print("loading binarized mnist from", args.data_path)
     mnist = np.load(args.data_path)
@@ -83,14 +83,13 @@ if __name__ == '__main__':
     # set up the optimizer
     opt = torch.optim.Adam(model.parameters(), 1e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=45, gamma=0.1)
-    
+
     # start the training
     for epoch in range(100):
         print("epoch %d" % (epoch, ))
         scheduler.step(epoch)
         run_epoch('test', upto=5) # run only a few batches for approximate test accuracy
         run_epoch('train')
-    
+
     print("optimization done. full test set eval:")
     run_epoch('test')
-
