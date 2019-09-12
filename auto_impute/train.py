@@ -7,8 +7,8 @@ from common.parallel import run_parallel
 # DATASET = 'kolodziejczyk'
 # DATASET = 'preimplantation'
 # DATASET = 'quake'
-# DATASET = 'usoskin'
-DATASET = 'zeisel'
+DATASET = 'usoskin'
+# DATASET = 'zeisel'
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
                         seed=seed,
                         masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=10)
+    run_parallel(commands, n_worker=1)
 
 
 if __name__ == '__main__':
