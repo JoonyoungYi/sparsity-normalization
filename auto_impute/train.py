@@ -18,16 +18,37 @@ def main():
     #     for masking_percentage in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
     #         for seed in range(1, 11):
     for masking_percentage, sparsity_normalization, seeds in [
+        (10, False, [3, 4, 5, 7, 8]),
+        (10, True, [2, 5, 6, 7]),
+        (20, False, [6, 7, 8, 9, 10]),
+
+        # (20, True, [1, 3, 8, 9, 10]),
+        # (30, False, [6, 7, 8, 9, 10]),
+        # (30, True, [4, 7, 8, 9, 10]),
+
+        # (40, False, [4, 6, 7, 9, 10]),
+        # (40, True, [5, 6, 7, 8, 10]),
+        # (50, False, [6, 7, 8, 9, 10]),
+
+        # (50, True, [5, 6, 8, 9, 10]),
             # (10, False, [1]),
-            # # (10, True, [1, 5, 8, 9]),
             # (20, False, [1, 2, 3, 4]),
-            # # (20, True, [5, 6, 9]),
             # (30, False, [1, 2, 4]),
             # (30, True, [2, 3]),
-        (40, False, [1, 3]),
-        (40, True, [1, 4]),
-        (50, False, [1, 2, 3, 4, 5]),
-        (50, True, [1, 3]),
+            # (40, False, [1, 3]),
+            # (40, True, [1, 4]),
+            # (50, False, [1, 2, 3, 4, 5]),
+            # (50, True, [1, 3]),
+            # (10, False, [1]),
+            # (10, True, [1, 5, 8, 9]),
+            # (20, False, [1, 2, 3, 4]),
+            # (20, True, [5, 6, 9]),
+            # (30, False, [1, 2, 4]),
+            # (30, True, [2, 3]),
+            # (40, False, [1, 3]),
+            # (40, True, [1, 4]),
+            # (50, False, [1, 2, 3, 4, 5]),
+            # (50, True, [1, 3]),
             # (60, False, [2, 3, 7, 8]),
             # (60, True, [7, 9]),
             # (70, False, [1, 3, 5, 6, 7]),
@@ -65,7 +86,7 @@ def main():
                     seed=seed,
                     masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=11)
+    run_parallel(commands, n_worker=15)
 
 
 if __name__ == '__main__':
