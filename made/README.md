@@ -15,18 +15,18 @@ wget https://github.com/mgermain/MADE/releases/download/ICML2015/binarized_mnist
 ```
 
 ```
-python run.py --data-path binarized_mnist.npz -q 500
+python3 -m made.trainer -q 500
 ```
 
 which converges at binary cross entropy loss of `94.5`, as shown in the paper. We can then simultaneously train a larger model ensemble (with weight sharing in the one MLP) and average over all of the models at test time. For instance, we can use 10 orderings (`-n 10`) and also average over the 10 at inference time (`-s 10`):
 
 ```
-python run.py --data-path binarized_mnist.npz -q 500 -n 10 -s 10
+python3 -m made.trainer -q 500 -n 10 -s 10
 ```
 which gives a much better test loss of `79.3`, but at the cost of multiple forward passes. I was not able to reproduce single-forward-pass gains that the paper alludes to when training with multiple masks, might be doing something wrong.
 ```
-python run.py --data-path binarized_mnist.npz -q 500 -n 2 -s 2
-python run.py --data-path binarized_mnist.npz -q 500 -n 4 -s 4
+python3 -m made.trainer -q 500 -n 2 -s 2
+python3 -m made.trainer -q 500 -n 4 -s 4
 ```
 
 ## usage

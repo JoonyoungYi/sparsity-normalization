@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from made import MADE
+from .models import MADE
 
 
 # ------------------------------------------------------------------------------
@@ -57,20 +57,15 @@ def run_epoch(split, upto=None):
             loss.backward()
             opt.step()
 
-    print("%s epoch average loss: %f" % (split, np.sum(lossfs) / _total_batch))
-    # input('!')
+    nll = np.sum(lossfs) / _total_batch
+    print("%s epoch average loss: %f" % (split, nll))
+    return nll
+
 
 # ------------------------------------------------------------------------------
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-d',
-        '--data-path',
-        required=True,
-        type=str,
-        help="Path to binarized_mnist.npz")
     parser.add_argument(
         '-q',
         '--hiddens',
@@ -79,13 +74,13 @@ if __name__ == '__main__':
         help="Comma separated sizes for hidden layers, e.g. 500, or 500,500")
     parser.add_argument(
         '-n',
-        '--num-masks',
+        '--num_masks',
         type=int,
         default=1,
         help="Number of orderings for order/connection-agnostic training")
     parser.add_argument(
         '-r',
-        '--resample-every',
+        '--resample_every',
         type=int,
         default=20,
         help=
@@ -99,12 +94,16 @@ if __name__ == '__main__':
         help=
         "How many samples of connectivity/masks to average logits over during inference"
     )
+    parser.add_argument('--max_epoch', type=int, default=10000, help="")
+    parser.add_argument('--learning_rate', type=float, default=1e-2, help="")
     parser.add_argument(
         '--sparsity_normalization',
         # default=True,
         default=False,
         help="")
     args = parser.parse_args()
+    args.data_path = 'made/binarized_mnist.npz'
+
     # --------------------------------------------------------------------------
 
     # reproducibility is good
@@ -132,16 +131,26 @@ if __name__ == '__main__':
     model.cuda()
 
     # set up the optimizer
-    opt = torch.optim.Adam(model.parameters(), 1e-3, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=45, gamma=0.1)
+    opt = torch.optim.Adagrad(model.parameters(), lr=args.learning_rate)
+    # opt = torch.optim.Adam(model.parameters(), 1e-3, weight_decay=1e-4)
+    # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=45, gamma=0.1)
 
     # start the training
-    for epoch in range(100):
-        print("epoch %d" % (epoch, ))
-        scheduler.step(epoch)
-        run_epoch(
+    min_test_nll = float('inf')
+    min_test_epoch_idx = -1
+    for epoch_idx in range(args.max_epoch):
+        print("epoch %d" % (epoch_idx, ))
+        # scheduler.step(epoch)
+        test_nll = run_epoch(
             'test',
             upto=5)  # run only a few batches for approximate test accuracy
+        if test_nll < min_test_nll:
+            min_test_nll = test_nll
+            min_test_epoch_idx = epoch_idx
+
+        print("min test epoch average loss:", "%.4f" % min_test_nll,
+              "(%d)" % min_test_epoch_idx)
+
         run_epoch('train')
 
     print("optimization done. full test set eval:")

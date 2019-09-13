@@ -30,7 +30,7 @@ class MaskedLinear(nn.Linear):
         mask = mask.astype(np.float32).T
 
         if self.sparsity_normalization:
-            divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
+            divider = np.maximum(np.sum(mask, axis=0, keepdims=True), 1.0)
             mask = mask * np.mean(divider) / divider
 
         self.mask.data.copy_(torch.from_numpy(mask))
