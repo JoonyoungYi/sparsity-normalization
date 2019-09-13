@@ -23,8 +23,11 @@ which converges at binary cross entropy loss of `94.5`, as shown in the paper. W
 ```
 python run.py --data-path binarized_mnist.npz -q 500 -n 10 -s 10
 ```
-
 which gives a much better test loss of `79.3`, but at the cost of multiple forward passes. I was not able to reproduce single-forward-pass gains that the paper alludes to when training with multiple masks, might be doing something wrong.
+```
+python run.py --data-path binarized_mnist.npz -q 500 -n 2 -s 2
+python run.py --data-path binarized_mnist.npz -q 500 -n 4 -s 4
+```
 
 ## usage
 

@@ -13,35 +13,43 @@ from torch.autograd import Variable
 
 from made import MADE
 
+
 # ------------------------------------------------------------------------------
 def run_epoch(split, upto=None):
-    torch.set_grad_enabled(split=='train') # enable/disable grad for efficiency of forwarding test batches
+    torch.set_grad_enabled(
+        split == 'train'
+    )  # enable/disable grad for efficiency of forwarding test batches
     model.train() if split == 'train' else model.eval()
     nsamples = 1 if split == 'train' else args.samples
     x = xtr if split == 'train' else xte
-    N,D = x.size()
-    B = 100 # batch size
-    nsteps = N//B if upto is None else min(N//B, upto)
+    N, D = x.size()
+    B = 100  # batch size
+    nsteps = N // B if upto is None else min(N // B, upto)
     lossfs = []
+
+    _total_batch = 0
     for step in range(nsteps):
 
         # fetch the next batch of data
-        xb = Variable(x[step*B:step*B+B])
+        xb = Variable(x[step * B:step * B + B])
+        _n_batch = xb.shape[0]
 
         # get the logits, potentially run the same batch a number of times, resampling each time
         xbhat = torch.zeros_like(xb)
         for s in range(nsamples):
             # perform order/connectivity-agnostic training by resampling the masks
-            if step % args.resample_every == 0 or split == 'test': # if in test, cycle masks every time
+            if step % args.resample_every == 0 or split == 'test':  # if in test, cycle masks every time
                 model.update_masks()
             # forward the model
             xbhat += model(xb)
+        # input('')
         xbhat /= nsamples
 
         # evaluate the binary cross entropy loss
-        loss = F.binary_cross_entropy_with_logits(xbhat, xb, size_average=False) / B
+        loss = F.binary_cross_entropy_with_logits(xbhat, xb, reduction='sum')
         lossf = loss.data.item()
         lossfs.append(lossf)
+        _total_batch += _n_batch
 
         # backward/update
         if split == 'train':
@@ -49,16 +57,53 @@ def run_epoch(split, upto=None):
             loss.backward()
             opt.step()
 
-    print("%s epoch average loss: %f" % (split, np.mean(lossfs)))
+    print("%s epoch average loss: %f" % (split, np.sum(lossfs) / _total_batch))
+    # input('!')
+
 # ------------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data-path', required=True, type=str, help="Path to binarized_mnist.npz")
-    parser.add_argument('-q', '--hiddens', type=str, default='500', help="Comma separated sizes for hidden layers, e.g. 500, or 500,500")
-    parser.add_argument('-n', '--num-masks', type=int, default=1, help="Number of orderings for order/connection-agnostic training")
-    parser.add_argument('-r', '--resample-every', type=int, default=20, help="For efficiency we can choose to resample orders/masks only once every this many steps")
-    parser.add_argument('-s', '--samples', type=int, default=1, help="How many samples of connectivity/masks to average logits over during inference")
+    parser.add_argument(
+        '-d',
+        '--data-path',
+        required=True,
+        type=str,
+        help="Path to binarized_mnist.npz")
+    parser.add_argument(
+        '-q',
+        '--hiddens',
+        type=str,
+        default='500',
+        help="Comma separated sizes for hidden layers, e.g. 500, or 500,500")
+    parser.add_argument(
+        '-n',
+        '--num-masks',
+        type=int,
+        default=1,
+        help="Number of orderings for order/connection-agnostic training")
+    parser.add_argument(
+        '-r',
+        '--resample-every',
+        type=int,
+        default=20,
+        help=
+        "For efficiency we can choose to resample orders/masks only once every this many steps"
+    )
+    parser.add_argument(
+        '-s',
+        '--samples',
+        type=int,
+        default=1,
+        help=
+        "How many samples of connectivity/masks to average logits over during inference"
+    )
+    parser.add_argument(
+        '--sparsity_normalization',
+        # default=True,
+        default=False,
+        help="")
     args = parser.parse_args()
     # --------------------------------------------------------------------------
 
@@ -76,8 +121,14 @@ if __name__ == '__main__':
 
     # construct model and ship to GPU
     hidden_list = list(map(int, args.hiddens.split(',')))
-    model = MADE(xtr.size(1), hidden_list, xtr.size(1), num_masks=args.num_masks)
-    print("number of model parameters:",sum([np.prod(p.size()) for p in model.parameters()]))
+    model = MADE(
+        xtr.size(1),
+        hidden_list,
+        xtr.size(1),
+        num_masks=args.num_masks,
+        sparsity_normalization=args.sparsity_normalization)
+    print("number of model parameters:",
+          sum([np.prod(p.size()) for p in model.parameters()]))
     model.cuda()
 
     # set up the optimizer
@@ -88,7 +139,9 @@ if __name__ == '__main__':
     for epoch in range(100):
         print("epoch %d" % (epoch, ))
         scheduler.step(epoch)
-        run_epoch('test', upto=5) # run only a few batches for approximate test accuracy
+        run_epoch(
+            'test',
+            upto=5)  # run only a few batches for approximate test accuracy
         run_epoch('train')
 
     print("optimization done. full test set eval:")

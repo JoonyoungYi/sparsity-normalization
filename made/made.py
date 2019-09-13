@@ -15,12 +15,25 @@ import torch.nn.functional as F
 class MaskedLinear(nn.Linear):
     """ same as Linear except has a configurable mask on the weights """
 
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 bias=True,
+                 sparsity_normalization=False):
         super().__init__(in_features, out_features, bias)
         self.register_buffer('mask', torch.ones(out_features, in_features))
 
+        self.sparsity_normalization = sparsity_normalization
+
     def set_mask(self, mask):
-        self.mask.data.copy_(torch.from_numpy(mask.astype(np.uint8).T))
+        # mask = mask.astype(np.uint8).T
+        mask = mask.astype(np.float32).T
+
+        if self.sparsity_normalization:
+            divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
+            mask = mask * np.mean(divider) / divider
+
+        self.mask.data.copy_(torch.from_numpy(mask))
 
     def forward(self, input):
         return F.linear(input, self.mask * self.weight, self.bias)
@@ -32,7 +45,8 @@ class MADE(nn.Module):
                  hidden_sizes,
                  nout,
                  num_masks=1,
-                 natural_ordering=False):
+                 natural_ordering=False,
+                 sparsity_normalization=False):
         """
         nin: integer; number of inputs
         hidden sizes: a list of integers; number of units in hidden layers
@@ -56,7 +70,8 @@ class MADE(nn.Module):
         hs = [nin] + hidden_sizes + [nout]
         for h0, h1 in zip(hs, hs[1:]):
             self.net.extend([
-                MaskedLinear(h0, h1),
+                MaskedLinear(
+                    h0, h1, sparsity_normalization=sparsity_normalization),
                 nn.ReLU(),
             ])
         self.net.pop()  # pop the last ReLU for the output layer
@@ -71,6 +86,8 @@ class MADE(nn.Module):
         self.update_masks()  # builds the initial self.m connectivity
         # note, we could also precompute the masks and cache them, but this
         # could get memory expensive for large number of masks.
+
+        self.sparsity_normalization = sparsity_normalization
 
     def update_masks(self):
         if self.m and self.num_masks == 1:
@@ -106,6 +123,19 @@ class MADE(nn.Module):
             l.set_mask(m)
 
     def forward(self, x):
+        # TODO: handle sparsity normalization
+        # print(x)
+        # print(x.shape)
+
+        if self.sparsity_normalization:
+            l0 = (torch.abs(x).detach() > 1e-20).sum(
+                dim=1).type(torch.FloatTensor)
+            l0 = torch.max(l0, torch.ones_like(l0))
+            print('l0:', l0.mean())
+            input('!')
+            K_prime = 100.0
+            x = x * (K_prime / l0).unsqueeze(1).cuda()
+        # input('!')
         return self.net(x)
 
 
