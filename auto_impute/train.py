@@ -18,13 +18,12 @@ def main():
     #     for masking_percentage in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
     #         for seed in range(1, 11):
     for masking_percentage, sparsity_normalization, seeds in [
-        (10, False, [3, 4, 5, 7, 8]),
-        (10, True, [2, 5, 6, 7]),
-        (20, False, [6, 7, 8, 9, 10]),
-
-        # (20, True, [1, 3, 8, 9, 10]),
-        # (30, False, [6, 7, 8, 9, 10]),
-        # (30, True, [4, 7, 8, 9, 10]),
+        # (10, False, [3, 4, 5, 7, 8]),
+        # (10, True, [2, 5, 6, 7]),
+        # (20, False, [6, 7, 8, 9, 10]),
+        (20, True, [1, 3, 8, 9, 10]),
+        (30, False, [6, 7, 8, 9, 10]),
+        (30, True, [4, 7, 8, 9, 10]),
 
         # (40, False, [4, 6, 7, 9, 10]),
         # (40, True, [5, 6, 7, 8, 10]),
