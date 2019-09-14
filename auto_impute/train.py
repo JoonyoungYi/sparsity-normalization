@@ -25,41 +25,17 @@ def main():
     #         for lambda_val in lambda_vals:
     #             seed = 1
 
-    for masking_percentage, sparsity_normalization, seeds in [
-        (50, True, [2, 4, 7]),
-        (60, False, [1, 2, 3, 4, 5, 7, 8, 9, 10]),
-        (60, True, [1, 2, 3, 6, 8, 9, 10]),
-        (70, False, [1, 2, 3, 5, 6, 7, 9, 10]),
-        (70, True, [3, 4, 5, 6, 8, 9, 10]),
-        (80, False, [1, 2, 3, 4, 5, 7, 8, 9]),
-        (80, True, [4, 5, 8, 10]),
-        (90, False, [2, 3, 4, 5, 6, 7, 8, 9]),
-        (90, True, [3, 4, 5, 6, 7, 8, 9, 10]),
-            # (10, False, [1]),
-            # (10, True, [1, 5, 8, 9]),
-            # (20, False, [1, 2, 3, 4]),
-            # (20, True, [5, 6, 9]),
-            # (30, False, [1, 2, 4]),
-            # (30, True, [2, 3]),
-            # (40, False, [1, 3]),
-            # (40, True, [1, 4]),
-            # (50, False, [1, 2, 3, 4, 5]),
-            # (50, True, [1, 3]),
-            # (60, False, [2, 3, 7, 8]),
-            # (60, True, [7, 9]),
-            # (70, False, [1, 3, 5, 6, 7]),
-            # (70, True, [1, 2, 3, 5]),
-            # (80, False, [1, 2, 5, 8, 10]),
-            # (80, True, [5, 6]),
-            # (90, False, [1, 2, 3, 6, 7, 8]),
-            # (90, True, [2, 4, 6, 8]),
-    ]:
-        for seed in seeds:
+    seed = 1
+    sparsity_normalization = True
+    for masking_percentage in [10, 30, 50, 70, 90]:
+        for lambda_val in [2000, 3000, 4000, 5000, 7000, 10000]:
             base_command = 'python3 -m auto_impute.trainer '
             if DATASET == 'blakeley':
                 base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001'
             elif DATASET == 'jurkat':
-                base_command += '--dataset=jurkat --lambda_val=1000 --hidden_units=4000 --learning_rate=0.001'
+                # 1000이었음 원래 lambda
+                base_command += '--dataset=jurkat --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.001'.format(
+                    lambda_val=lambda_val)
             elif DATASET == 'kolodziejczyk':
                 base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
             elif DATASET == 'preimplantation':
