@@ -125,7 +125,9 @@ def _train(args):
     print("[info] Genes : {0}, Cells : {1}".format(genes, cells))
 
     K_prime = np.sum(matrix_mask) / cells
+    args.K_prime = K_prime
     print("K_prime:", K_prime)
+    # input('!')
 
     # placeholder definitions
     X = tf.placeholder("float32", [None, genes], name="X")

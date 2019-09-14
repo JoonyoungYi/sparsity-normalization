@@ -3,10 +3,10 @@ import os
 from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
-DATASET = 'jurkat'
-
+# DATASET = 'jurkat'
 # DATASET = 'kolodziejczyk'
-# DATASET = 'preimplantation'
+DATASET = 'preimplantation'
+
 # DATASET = 'quake'
 # DATASET = 'usoskin'
 # DATASET = 'zeisel'
@@ -14,52 +14,43 @@ DATASET = 'jurkat'
 
 def main():
     commands = []
-    # for sparsity_normalization in [True]:
-    #     for masking_percentage, lambda_vals in [
-    #         (50, list(range(5, 20))),
-    #         (60, list(range(5, 20))),
-    #         (70, list(range(1, 11))),
-    #         (80, list(range(1, 11))),
-    #         (90, list(range(1, 11))),
-    #     ]:
-    #         for lambda_val in lambda_vals:
-    #             seed = 1
+    for sparsity_normalization, lambda_val in [
+        (True, 20),
+        (False, 2000),
+    ]:
+        for masking_percentage in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
+            for seed in range(1, 11):
+                base_command = 'python3 -m auto_impute.trainer '
+                if DATASET == 'blakeley':
+                    base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001'
+                elif DATASET == 'jurkat':
+                    # 1000이었음 원래 lambda
+                    base_command += '--dataset=jurkat --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.001'.format(
+                        lambda_val=lambda_val)
+                elif DATASET == 'kolodziejczyk':
+                    base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
+                elif DATASET == 'preimplantation':
+                    # base_command += '--dataset=preimplantation --lambda_val=2000 --hidden_units=4000 --learning_rate=0.001'
+                    base_command += '--dataset=preimplantation --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.0005'.format(
+                        lambda_val=lambda_val)
+                elif DATASET == 'quake':
+                    base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001'
+                elif DATASET == 'usoskin':
+                    base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001'
+                elif DATASET == 'zeisel':
+                    base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001'
+                else:
+                    raise NotImplementedError()
 
-    seed = 1
-    sparsity_normalization = True
-    for masking_percentage in [10, 30, 50, 70, 90]:
-        for lambda_val in [2000, 3000, 4000, 5000, 7000, 10000]:
-            base_command = 'python3 -m auto_impute.trainer '
-            if DATASET == 'blakeley':
-                base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001'
-            elif DATASET == 'jurkat':
-                # 1000이었음 원래 lambda
-                base_command += '--dataset=jurkat --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.001'.format(
-                    lambda_val=lambda_val)
-            elif DATASET == 'kolodziejczyk':
-                base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
-            elif DATASET == 'preimplantation':
-                # base_command += '--dataset=preimplantation --lambda_val=2000 --hidden_units=4000 --learning_rate=0.001'
-                base_command += '--dataset=preimplantation --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.001'.format(
-                    lambda_val=lambda_val)
-            elif DATASET == 'quake':
-                base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001'
-            elif DATASET == 'usoskin':
-                base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001'
-            elif DATASET == 'zeisel':
-                base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001'
-            else:
-                raise NotImplementedError()
+                commands.append(
+                    base_command +
+                    ' --sparsity_normalization={sparsity_normalization} --seed={seed} --dataset_seed={seed} --masking_percentage={masking_percentage}'.
+                    format(
+                        sparsity_normalization=sparsity_normalization,
+                        seed=seed,
+                        masking_percentage=masking_percentage))
 
-            commands.append(
-                base_command +
-                ' --sparsity_normalization={sparsity_normalization} --seed={seed} --dataset_seed={seed} --masking_percentage={masking_percentage}'.
-                format(
-                    sparsity_normalization=sparsity_normalization,
-                    seed=seed,
-                    masking_percentage=masking_percentage))
-
-    run_parallel(commands, n_worker=15)
+    run_parallel(commands, n_worker=22)
 
 
 if __name__ == '__main__':
