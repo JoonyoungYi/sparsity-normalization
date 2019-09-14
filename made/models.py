@@ -30,7 +30,7 @@ class MaskedLinear(nn.Linear):
         mask = mask.astype(np.float32).T
 
         if self.sparsity_normalization:
-            divider = np.maximum(np.sum(mask, axis=0, keepdims=True), 1.0)
+            divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
             mask = mask * np.mean(divider) / divider
 
         self.mask.data.copy_(torch.from_numpy(mask))
@@ -83,44 +83,52 @@ class MADE(nn.Module):
         self.seed = 0  # for cycling through num_masks orderings
 
         self.m = {}
+        self.mask_dict = {}
         self.update_masks()  # builds the initial self.m connectivity
         # note, we could also precompute the masks and cache them, but this
         # could get memory expensive for large number of masks.
 
         self.sparsity_normalization = sparsity_normalization
 
+
     def update_masks(self):
         if self.m and self.num_masks == 1:
             return  # only a single seed, skip for efficiency
-        L = len(self.hidden_sizes)
 
         # fetch the next seed and construct a random stream
         rng = np.random.RandomState(self.seed)
-        self.seed = (self.seed + 1) % self.num_masks
+        masks = self.mask_dict.get(self.seed, None)
+        if masks is None:
+            L = len(self.hidden_sizes)
+            # sample the order of the inputs and the connectivity of all neurons
+            self.m[-1] = np.arange(
+                self.nin) if self.natural_ordering else rng.permutation(
+                    self.nin)
+            for l in range(L):
+                self.m[l] = rng.randint(
+                    self.m[l - 1].min(),
+                    self.nin - 1,
+                    size=self.hidden_sizes[l])
 
-        # sample the order of the inputs and the connectivity of all neurons
-        self.m[-1] = np.arange(
-            self.nin) if self.natural_ordering else rng.permutation(self.nin)
-        for l in range(L):
-            self.m[l] = rng.randint(
-                self.m[l - 1].min(), self.nin - 1, size=self.hidden_sizes[l])
+            # construct the mask matrices
+            masks = [
+                self.m[l - 1][:, None] <= self.m[l][None, :] for l in range(L)
+            ]
+            masks.append(self.m[L - 1][:, None] < self.m[-1][None, :])
 
-        # construct the mask matrices
-        masks = [
-            self.m[l - 1][:, None] <= self.m[l][None, :] for l in range(L)
-        ]
-        masks.append(self.m[L - 1][:, None] < self.m[-1][None, :])
-
-        # handle the case where nout = nin * k, for integer k > 1
-        if self.nout > self.nin:
-            k = int(self.nout / self.nin)
-            # replicate the mask across the other outputs
-            masks[-1] = np.concatenate([masks[-1]] * k, axis=1)
+            # handle the case where nout = nin * k, for integer k > 1
+            if self.nout > self.nin:
+                k = int(self.nout / self.nin)
+                # replicate the mask across the other outputs
+                masks[-1] = np.concatenate([masks[-1]] * k, axis=1)
+            self.masks = masks
 
         # set the masks in all MaskedLinear layers
         layers = [l for l in self.net.modules() if isinstance(l, MaskedLinear)]
         for l, m in zip(layers, masks):
             l.set_mask(m)
+
+        self.seed = (self.seed + 1) % self.num_masks
 
     def forward(self, x):
         # TODO: handle sparsity normalization
@@ -131,8 +139,8 @@ class MADE(nn.Module):
             l0 = (torch.abs(x).detach() > 1e-20).sum(
                 dim=1).type(torch.FloatTensor)
             l0 = torch.max(l0, torch.ones_like(l0))
-            print('l0:', l0.mean())
-            input('!')
+            # print('l0:', l0.mean())
+            # input('!')
             K_prime = 100.0
             x = x * (K_prime / l0).unsqueeze(1).cuda()
         # input('!')

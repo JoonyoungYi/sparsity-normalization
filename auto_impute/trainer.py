@@ -125,6 +125,7 @@ def _train(args):
     print("[info] Genes : {0}, Cells : {1}".format(genes, cells))
 
     K_prime = np.sum(matrix_mask) / cells
+    print("K_prime:", K_prime)
 
     # placeholder definitions
     X = tf.placeholder("float32", [None, genes], name="X")
@@ -262,6 +263,8 @@ def _train(args):
     results.append(args.max_epoch)
     results.append(args.learning_rate)
     results.append(args.seed)
+    results.append(args.lambda_val)
+    results.append(args.hidden_units)
     results.append(args.dataset_seed)
     results.append(last_mae)
     results.append(last_rmse)
@@ -291,7 +294,7 @@ def main():
         help="Size of hidden layer or latent space dimensions.")
     parser.add_argument(
         '--lambda_val',
-        type=int,
+        type=float,
         default=1,
         help=
         "Regularization coefficient, to control the contribution of regularization term in the cost function."
@@ -310,7 +313,7 @@ def main():
         help="Number of max_epoch to train the model for.")
     parser.add_argument(
         '--threshold',
-        type=int,
+        type=float,
         # default=0.0001, # original
         # 바꾼 이유 원래 threshold는 underfit 되는 것 같아 늘렸더니 저자보다 좋은 성능!
         # default=0.00001,
@@ -333,9 +336,7 @@ def main():
             'usoskin',
             'zeisel',
         ],
-        help=
-        "Dataset to run the script on."
-    )
+        help="Dataset to run the script on.")
 
     # Run the masked matrix recovery test
     parser.add_argument(
