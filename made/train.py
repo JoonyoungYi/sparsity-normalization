@@ -8,7 +8,7 @@ def main():
     for num_masks in range(1, 128):
         for seed in range(1, 6):
             for sparsity_normalization in [True, False]:
-                command = 'python3 -m made.trainer --num_masks={num_masks} --samples={num_masks} --learning_rate=5e-3 --seed={seed} --sparsity_normalization={sparsity_normalization}'.format(
+                command = 'python3 -m made.trainer --num_masks={num_masks} --samples={num_masks} --learning_rate=1e-3 --seed={seed} --sparsity_normalization={sparsity_normalization}'.format(
                     num_masks=num_masks,
                     seed=seed,
                     sparsity_normalization=sparsity_normalization)
