@@ -11,6 +11,8 @@ import torch.nn.functional as F
 
 # ------------------------------------------------------------------------------
 
+K_PRIME = 102.36082
+
 
 class MaskedLinear(nn.Linear):
     """ same as Linear except has a configurable mask on the weights """
@@ -32,6 +34,7 @@ class MaskedLinear(nn.Linear):
         if self.sparsity_normalization:
             divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
             mask = mask * np.mean(divider) / divider
+            # print('!')
 
         self.mask.data.copy_(torch.from_numpy(mask))
 
@@ -68,14 +71,17 @@ class MADE(nn.Module):
         # define a simple MLP neural net
         self.net = []
         hs = [nin] + hidden_sizes + [nout]
-        for h0, h1 in zip(hs, hs[1:]):
+        for layer_idx, (h0, h1) in enumerate(zip(hs, hs[1:])):
             self.net.extend([
                 MaskedLinear(
                     h0, h1, sparsity_normalization=sparsity_normalization),
                 nn.ReLU(),
             ])
+        # print(self.net)
+        # input('!')
         self.net.pop()  # pop the last ReLU for the output layer
-        self.net = nn.Sequential(*self.net)
+        self.net = nn.ModuleList(self.net)
+        # self.net = nn.Sequential(*self.net)
 
         # seeds for orders/connectivities of the model ensemble
         self.natural_ordering = natural_ordering
@@ -89,7 +95,6 @@ class MADE(nn.Module):
         # could get memory expensive for large number of masks.
 
         self.sparsity_normalization = sparsity_normalization
-
 
     def update_masks(self):
         if self.m and self.num_masks == 1:
@@ -124,7 +129,7 @@ class MADE(nn.Module):
             self.masks = masks
 
         # set the masks in all MaskedLinear layers
-        layers = [l for l in self.net.modules() if isinstance(l, MaskedLinear)]
+        layers = [l for l in self.net if isinstance(l, MaskedLinear)]
         for l, m in zip(layers, masks):
             l.set_mask(m)
 
@@ -141,10 +146,18 @@ class MADE(nn.Module):
             l0 = torch.max(l0, torch.ones_like(l0))
             # print('l0:', l0.mean())
             # input('!')
-            K_prime = 100.0
+            K_prime = K_PRIME
             x = x * (K_prime / l0).unsqueeze(1).cuda()
         # input('!')
-        return self.net(x)
+
+        out = x
+        for layer_idx, layer in enumerate(self.net):
+            # print(layer_idx, layer)
+            # input('')
+            # if isinstance(layer, MaskedLinear):
+            #     pass
+            out = layer(out)
+        return out
 
 
 # ------------------------------------------------------------------------------

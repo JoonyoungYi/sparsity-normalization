@@ -9,6 +9,7 @@ from tqdm import tqdm
 from .models import MADE
 from common.utils import str2bool
 from common.utils import set_seed
+from common.utils import append_text_results
 
 
 def __evaluate(model, xte, args=None):
@@ -82,6 +83,7 @@ def _train(args):
     mnist = np.load(args.data_path)
     train_data, valid_data, test_data = mnist['train_data'], mnist[
         'valid_data'], mnist['test_data']
+
     train_data = torch.from_numpy(train_data).cuda()
     valid_data = torch.from_numpy(valid_data).cuda()
     test_data = torch.from_numpy(test_data).cuda()
@@ -134,6 +136,24 @@ def _train(args):
 
     print("optimization done. full test set eval:")
 
+    results = []
+    results.append(args.seed)
+    results.append(args.max_epoch)
+    results.append(args.hiddens)
+    results.append(args.num_masks)
+    results.append(args.samples)
+    results.append(args.learning_rate)
+    results.append(args.early_stop_epoch)
+    results.append(args.sparsity_normalization)
+    results.append(train_nll)
+    results.append(min_valid_nll)
+    results.append(min_valid_epoch_idx)
+    results.append(final_test_nll)
+    results.append(min_test_nll)
+    results.append(min_test_epoch_idx)
+    append_text_results('made', 'binarized_mnist', 'results', 'default',
+                        '\t'.join([str(r) for r in results]))
+
 
 def main():
     import argparse
@@ -151,7 +171,7 @@ def main():
         type=int,
         default=1,
         help="Number of orderings for order/connection-agnostic training")
-    parser.add_argument('--seed', type=int, default=42, help="")
+    parser.add_argument('--seed', type=int, default=1, help="")
     parser.add_argument(
         '-s',
         '--samples',
@@ -160,9 +180,14 @@ def main():
         help=
         "How many samples of connectivity/masks to average logits over during inference"
     )
-    parser.add_argument('--max_epoch', type=int, default=1000000, help="")
+    parser.add_argument(
+        '--max_epoch',
+        type=int,
+        # default=1,
+        default=1000000,
+        help="")
     parser.add_argument('--early_stop_epoch', type=int, default=30, help="")
-    parser.add_argument('--learning_rate', type=float, default=1e-1, help="")
+    parser.add_argument('--learning_rate', type=float, default=5e-3, help="")
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,

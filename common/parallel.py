@@ -17,8 +17,6 @@ def run_parallel(commands, n_worker=1):
 
                 command = commands.pop(random.randrange(len(commands)))
                 result_code = os.system(command)
-                if result_code != 0:
-                    _failed_commands.append(command)
 
             except KeyboardInterrupt:
                 break
