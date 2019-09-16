@@ -5,7 +5,7 @@ from common.parallel import run_parallel
 
 def main():
     commands = []
-    for num_masks in range(1, 128):
+    for num_masks in range(5, 128, 4):
         for seed in range(1, 6):
             for sparsity_normalization in [True, False]:
                 command = 'python3 -m made.trainer --num_masks={num_masks} --samples={num_masks} --learning_rate=1e-3 --seed={seed} --sparsity_normalization={sparsity_normalization}'.format(
