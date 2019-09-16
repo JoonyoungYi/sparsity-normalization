@@ -4,11 +4,10 @@ from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
 # DATASET = 'jurkat'
-# DATASET = 'kolodziejczyk'
+DATASET = 'kolodziejczyk'
 # DATASET = 'preimplantation'
 # DATASET = 'quake'
-DATASET = 'usoskin'
-
+# DATASET = 'usoskin'
 # DATASET = 'zeisel'
 
 
@@ -45,6 +44,7 @@ def main():
                 base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001 --threshold={threshold}'.format(
                     threshold=threshold)
             elif DATASET == 'zeisel':
+                threshold = 1e-4
                 base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001 --threshold={threshold}'.format(
                     threshold=threshold)
             else:
@@ -58,7 +58,7 @@ def main():
                     seed=seed,
                     masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=23)
+    run_parallel(commands, n_worker=10)
 
 
 if __name__ == '__main__':
