@@ -23,6 +23,7 @@ cd ../home/server02/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVI
 cd ../home/server03/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 cd ../home/server04/sparsity-normalization
 cd ../home/server05/joonyoung_workspace/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
+cd ../home/server06/joonyoung_workspace/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 cd ../home/joonyoung/ml/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 cd ../home/server09/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 cd ../home/server10/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0

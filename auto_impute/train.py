@@ -3,10 +3,10 @@ import os
 from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
-DATASET = 'jurkat'
-
+# DATASET = 'jurkat'
 # DATASET = 'kolodziejczyk'
-# DATASET = 'preimplantation'
+DATASET = 'preimplantation'
+
 # DATASET = 'quake'
 # DATASET = 'usoskin'
 # DATASET = 'zeisel'
@@ -15,7 +15,6 @@ DATASET = 'jurkat'
 def main():
     commands = []
     sparsity_normalization = False
-    threshold = 1e-3
     for masking_percentage in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
         for seed in range(1, 11):
             base_command = 'python3 -m auto_impute.trainer '
@@ -23,14 +22,16 @@ def main():
                 base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001'
             elif DATASET == 'jurkat':
                 lambda_val = 1000
+                threshold = 1e-3
                 base_command += '--dataset=jurkat --lambda_val=1000 --hidden_units=4000 --learning_rate=0.001 --threshold={threshold}'.format(
                     lambda_val=lambda_val, threshold=threshold)
             elif DATASET == 'kolodziejczyk':
                 base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
             elif DATASET == 'preimplantation':
-                # base_command += '--dataset=preimplantation --lambda_val=2000 --hidden_units=4000 --learning_rate=0.001'
+                lambda_val = 2000
+                threshold = 1e-3
                 base_command += '--dataset=preimplantation --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.0005'.format(
-                    lambda_val=lambda_val)
+                    lambda_val=lambda_val, threshold=threshold)
             elif DATASET == 'quake':
                 base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001'
             elif DATASET == 'usoskin':
@@ -48,7 +49,7 @@ def main():
                     seed=seed,
                     masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=15)
+    run_parallel(commands, n_worker=23)
 
 
 if __name__ == '__main__':
