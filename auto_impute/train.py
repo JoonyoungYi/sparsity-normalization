@@ -4,9 +4,8 @@ from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
 # DATASET = 'jurkat'
-# DATASET = 'kolodziejczyk'
-DATASET = 'preimplantation'
-
+DATASET = 'kolodziejczyk'
+# DATASET = 'preimplantation'
 # DATASET = 'quake'
 # DATASET = 'usoskin'
 # DATASET = 'zeisel'
@@ -19,6 +18,7 @@ def main():
         for seed in range(1, 11):
             base_command = 'python3 -m auto_impute.trainer '
             if DATASET == 'blakeley':
+                threshold = 1e-4
                 base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001 --threshold={threshold}'.format(
                     threshold=threshold)
             elif DATASET == 'jurkat':
@@ -27,6 +27,7 @@ def main():
                 base_command += '--dataset=jurkat --lambda_val=1000 --hidden_units=4000 --learning_rate=0.001 --threshold={threshold}'.format(
                     lambda_val=lambda_val, threshold=threshold)
             elif DATASET == 'kolodziejczyk':
+                threshold = 1e-4
                 base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001 --threshold={threshold}'.format(
                     threshold=threshold)
             elif DATASET == 'preimplantation':
@@ -54,7 +55,7 @@ def main():
                     seed=seed,
                     masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=23)
+    run_parallel(commands, n_worker=15)
 
 
 if __name__ == '__main__':
