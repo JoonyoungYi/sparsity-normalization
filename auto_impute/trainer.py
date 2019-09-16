@@ -154,8 +154,10 @@ def _train(args):
     }
 
     def encoder(x):
-        layer_1 = tf.nn.sigmoid(
-            tf.add(tf.matmul(x, weights['encoder_h']), biases['encoder_b']))
+        layer_1 = tf.add(
+            tf.matmul(x, weights['encoder_h']), biases['encoder_b'])
+        layer_1 = tf.nn.sigmoid(layer_1)
+        # layer_1 = tf.nn.relu(layer_1)
         return layer_1
 
     def decoder(x):
