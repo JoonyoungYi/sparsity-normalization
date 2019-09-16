@@ -19,25 +19,30 @@ def main():
         for seed in range(1, 11):
             base_command = 'python3 -m auto_impute.trainer '
             if DATASET == 'blakeley':
-                base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001'
+                base_command += '--dataset=blakeley --lambda_val=1 --hidden_units=2000 --learning_rate=0.0001 --threshold={threshold}'.format(
+                    threshold=threshold)
             elif DATASET == 'jurkat':
                 lambda_val = 1000
                 threshold = 1e-3
                 base_command += '--dataset=jurkat --lambda_val=1000 --hidden_units=4000 --learning_rate=0.001 --threshold={threshold}'.format(
                     lambda_val=lambda_val, threshold=threshold)
             elif DATASET == 'kolodziejczyk':
-                base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001'
+                base_command += '--dataset=kolodziejczyk --lambda_val=0 --hidden_units=8000 --learning_rate=0.0001 --threshold={threshold}'.format(
+                    threshold=threshold)
             elif DATASET == 'preimplantation':
                 lambda_val = 2000
                 threshold = 1e-3
-                base_command += '--dataset=preimplantation --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.0005'.format(
+                base_command += '--dataset=preimplantation --lambda_val={lambda_val} --hidden_units=4000 --learning_rate=0.001 --threshold={threshold}'.format(
                     lambda_val=lambda_val, threshold=threshold)
             elif DATASET == 'quake':
-                base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001'
+                base_command += '--dataset=quake --lambda_val=2000 --hidden_units=1500 --learning_rate=0.0001 --threshold={threshold}'.format(
+                    threshold=threshold)
             elif DATASET == 'usoskin':
-                base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001'
+                base_command += '--dataset=usoskin --lambda_val=2000 --hidden_units=3000 --learning_rate=0.0001 --threshold={threshold}'.format(
+                    threshold=threshold)
             elif DATASET == 'zeisel':
-                base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001'
+                base_command += '--dataset=zeisel --lambda_val=1000 --hidden_units=1500 --learning_rate=0.0001 --threshold={threshold}'.format(
+                    threshold=threshold)
             else:
                 raise NotImplementedError()
 
