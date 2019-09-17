@@ -3,8 +3,9 @@ import os
 from common.parallel import run_parallel
 
 # DATASET = 'blakeley'
-# DATASET = 'jurkat'
-DATASET = 'kolodziejczyk'
+DATASET = 'jurkat'
+
+# DATASET = 'kolodziejczyk'
 # DATASET = 'preimplantation'
 # DATASET = 'quake'
 # DATASET = 'usoskin'
@@ -15,7 +16,7 @@ def main():
     commands = []
     sparsity_normalization = False
     for masking_percentage in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
-        for seed in range(1, 11):
+        for seed in range(1, 6):
             base_command = 'python3 -m auto_impute.trainer '
             if DATASET == 'blakeley':
                 threshold = 1e-4
@@ -58,7 +59,7 @@ def main():
                     seed=seed,
                     masking_percentage=masking_percentage))
 
-    run_parallel(commands, n_worker=10)
+    run_parallel(commands, n_worker=15)
 
 
 if __name__ == '__main__':
