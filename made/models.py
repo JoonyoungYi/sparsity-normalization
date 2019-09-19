@@ -31,9 +31,9 @@ class MaskedLinear(nn.Linear):
         # mask = mask.astype(np.uint8).T
         mask = mask.astype(np.float32).T
 
-        if self.sparsity_normalization:
-            divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
-            mask = mask * np.mean(divider) / divider
+        # if self.sparsity_normalization:
+        #     divider = np.maximum(np.sum(mask, axis=1, keepdims=True), 1.0)
+        #     mask = mask * np.mean(divider) / divider
             # print('!')
 
         self.mask.data.copy_(torch.from_numpy(mask))
@@ -140,13 +140,17 @@ class MADE(nn.Module):
         # print(x)
         # print(x.shape)
 
+        # p = 0.1
+        # x = torch.nn.Dropout(p)(x)
+        # out = x
+
         if self.sparsity_normalization:
             l0 = (torch.abs(x).detach() > 1e-20).sum(
                 dim=1).type(torch.FloatTensor)
             l0 = torch.max(l0, torch.ones_like(l0))
             # print('l0:', l0.mean())
             # input('!')
-            K_prime = K_PRIME
+            K_prime = K_PRIME # * (1 - p)
             x = x * (K_prime / l0).unsqueeze(1).cuda()
         # input('!')
 
