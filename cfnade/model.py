@@ -36,7 +36,8 @@ def _forward(x_hot, weights, biases, args, training, x=None, n_class=None):
     if args.parameter_sharing:
         # QUESTION: I think this part is author's mistake.
         # reverse=False should be added in cumsum function.
-        _x_hot = tf.cumsum(x_hot, axis=2, reverse=True)
+        # _x_hot = tf.cumsum(x_hot, axis=2, reverse=True)
+        _x_hot = tf.cumsum(x_hot, axis=2, reverse=False)
     else:
         _x_hot = x_hot
 
@@ -46,27 +47,32 @@ def _forward(x_hot, weights, biases, args, training, x=None, n_class=None):
     for i, (weight, bias) in enumerate(zip(weights, biases)):
         layer = tf.matmul(layer, weight)
         if i == 0:
-            if args.normalize_input:
-                if args.parameter_sharing:
-                    assert x is not None
-                    # parameter sharing을 하는 경우에는 5개 별점으로 보고 별점의 합으로 나눠줘야 한다.
-                    divider = tf.cast(
-                        tf.reduce_sum(x, axis=1, keepdims=True), tf.float32)
-                    divider = tf.maximum(divider, 1.0)
+            if args.sparsity_normalization:
+                # if args.parameter_sharing:
+                #     assert x is not None
+                #     # parameter sharing을 하는 경우에는 5개 별점으로 보고 별점의 합으로 나눠줘야 한다.
+                #     divider = tf.cast(
+                #         tf.reduce_sum(
+                #             tf.reduce_sum(_x_hot, axis=2),
+                #             axis=1,
+                #             keepdims=True), tf.float32)
+                #     divider = tf.maximum(divider, 1.0)
+                #
+                #     if n_class != 5:
+                #         raise NotImplementedError()
+                # else:
 
-                    if n_class != 5:
-                        raise NotImplementedError()
-                else:
-                    # parameter sharing을 하지 않는 경우에는 그냥 observed entries 수로 나눠주면 됨.
-                    divider = tf.reduce_sum(x_hot, axis=2)
-                    divider = tf.reduce_sum(divider, axis=1, keepdims=True)
-                    divider = tf.reshape(tf.maximum(divider, 1.0), [-1, 1])
-                layer *= (args.n_hidden_unit / divider)
+                # parameter sharing을 하지 않는 경우에는 그냥 observed entries 수로 나눠주면 됨.
+                divider = tf.reduce_sum(x_hot, axis=2)
+                divider = tf.reduce_sum(divider, axis=1, keepdims=True)
+                divider = tf.reshape(tf.maximum(divider, 1.0), [-1, 1])
+                layer *= (args.K / divider)
 
         layer = layer + bias
 
         if i < len(biases) - 1:
             layer = tf.nn.tanh(layer)
+            # layer = tf.nn.leaky_relu(layer)
 
     layer = tf.reshape(layer, tf.shape(x_hot))
     if args.parameter_sharing:
@@ -89,8 +95,14 @@ def _get_loss(x_hot, y_hot, y_hat, v, weights, args):
         mask_1k = tf.clip_by_value(
             tf.cumsum(y_hot, reverse=True, axis=2), 0, 1)
         mask_k1 = tf.clip_by_value(tf.cumsum(y_hot, axis=2), 0, 1)
+
         y_prob_1k = tf.cumsum(y_prob, axis=2)
         y_prob_k1 = tf.cumsum(y_prob, reverse=True, axis=2)
+
+        epsilon = 1e-6
+        y_prob_1k = tf.maximum(y_prob_1k, epsilon)
+        y_prob_k1 = tf.maximum(y_prob_k1, epsilon)
+        y_prob = tf.maximum(y_prob, epsilon)
 
         ordinal_costs_1k = -tf.reduce_sum(
             (tf.log(y_prob) - tf.log(y_prob_1k)) * mask_1k, axis=2)
@@ -142,7 +154,7 @@ def _get_y_hat_from_y_hat_hot(y_hat_hot, n_class):
     elif n_class == 10:
         y_hat = tf.tensordot(
             tf.nn.softmax(y_hat_hot),
-            [1., 2., 3., 4., 5., 6., 7., 8., 9., 10.], [[2], [0]])
+            [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.], [[2], [0]])
         return y_hat
     else:
         raise NotImplementedError()
@@ -151,6 +163,7 @@ def _get_y_hat_from_y_hat_hot(y_hat_hot, n_class):
 def init_models(n_col, n_class, args):
     x = tf.placeholder(tf.int64, [None, n_col], name="x")
     y = tf.placeholder(tf.int64, [None, n_col], name="y")
+    learning_rate = tf.placeholder(tf.float32, name="learning_rate")
     training = tf.placeholder(tf.bool, name="training")
 
     x_hot = tf.one_hot(x - 1, n_class)
@@ -163,7 +176,7 @@ def init_models(n_col, n_class, args):
         x_hot, weights, biases, args, training, x=x, n_class=n_class)
     loss = _get_loss(x_hot, y_hot, y_hat_hot, v, weights, args)
 
-    optimizer = tf.train.AdamOptimizer(args.learning_rate)
+    optimizer = tf.train.AdamOptimizer(learning_rate)
     train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     y_hat = _get_y_hat_from_y_hat_hot(y_hat_hot, n_class)
@@ -172,6 +185,7 @@ def init_models(n_col, n_class, args):
     return {
         'x': x,
         'y': y,
+        'learning_rate': learning_rate,
         'training': training,
         'loss': loss,
         'train_op': train_op,

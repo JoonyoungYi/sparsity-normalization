@@ -9,22 +9,27 @@ class BatchManager:
         print('BatchManager indexing...')
         self.train_x = train_x
         self.n_batch = args.n_batch
-        self.normalize_input = args.normalize_input
-        self.parameter_sharing = args.parameter_sharing
+
+        self.averaging_possible_choices = args.averaging_possible_choices
 
     def get_batch(self):
         n_batch = self.n_batch
         train_x = self.train_x
-        parameter_sharing = self.parameter_sharing
-        normalize_input = self.normalize_input
+        averaging_possible_choices = self.averaging_possible_choices
 
-        batch_x = train_x[np.random.randint(0, train_x.shape[0] - 1,
-                                            n_batch), :]
-        m = np.zeros(batch_x.shape)
-        for i in range(n_batch):
-            p = random.random()
-            m[i][np.random.random(batch_x.shape[1]) < p] = 1
+        batch_x = train_x[np.random.randint(0, train_x.shape[0], n_batch), :]
+        if averaging_possible_choices:
+            m = np.zeros(batch_x.shape)
+            for i in range(n_batch):
+                p = random.random()
+                m[i][np.random.random(batch_x.shape[1]) < p] = 1
 
-        x = np.multiply(batch_x, m)
-        y = np.multiply(batch_x, 1 - m)
-        return x, y
+            x = np.multiply(batch_x, m)
+            y = np.multiply(batch_x, 1 - m)
+
+            # print(np.mean(np.sum(x > 0.25, axis=1)))
+            # input('!')
+            return x, y
+            # return x, batch_x
+        else:
+            return batch_x, batch_x
