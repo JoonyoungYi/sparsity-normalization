@@ -170,6 +170,7 @@ def _plot(normalize_input,
     plt.scatter(xs, ys, s=1, label='w/ SN' if normalize_input else 'w/o SN')
     plt.axhline(y=target_rating, color='g', linestyle='-')
 
+    samples = np.array([item for key, item in sorted(d.items())])
     results = np.array([[key, sum(item) / len(item)]
                         for key, item in sorted(d.items())])
     plt.plot(results[:, 0], results[:, 1], "r-")
@@ -188,6 +189,17 @@ def _plot(normalize_input,
             target_idx=target_idx).lower(),
         format='png')
     plt.close()
+
+    np.save(
+        'autorec/vsp/samples-T{T}_usevec{use_user_vector}-target{target_idx}-act{activation_fn}-clip{clipping}-sn{sn}-kprime{k_prime}.npy'.
+        format(
+            T=T,
+            sn=normalize_input,
+            activation_fn=activation_fn,
+            clipping=clipping,
+            use_user_vector=use_user_vector,
+            k_prime=K_prime,
+            target_idx=target_idx).lower(), samples)
 
 
 def main():
@@ -232,151 +244,151 @@ def main():
     #         target_idx=target_idx,
     #         clipping=False)
 
-    for target_idx in range(10):
-        activation_fn = 'identity'
-        _plot(
-            False,
-            False,
-            lambda_w=2000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=8000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=800.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-
-        activation_fn = 'leaky_relu'
-        _plot(
-            False,
-            False,
-            lambda_w=2000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=8000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=900.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-
-        activation_fn = 'relu'
-        _plot(
-            False,
-            False,
-            lambda_w=2000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=8000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=900.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-
-        activation_fn = 'relu6'
-        _plot(
-            False,
-            False,
-            lambda_w=2000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=7000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=800.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-
-        activation_fn = 'elu'
-        _plot(
-            False,
-            False,
-            lambda_w=2000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=800.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=1000.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
+    for target_idx in range(1):
+        # activation_fn = 'identity'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=2000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=8000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=800.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        #
+        # activation_fn = 'leaky_relu'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=2000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=8000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=900.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        #
+        # activation_fn = 'relu'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=2000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=8000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=900.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        #
+        # activation_fn = 'relu6'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=2000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=7000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=800.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        #
+        # activation_fn = 'elu'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=2000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=800.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=1000.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
 
         activation_fn = 'sigmoid'
         _plot(
@@ -388,15 +400,15 @@ def main():
             use_user_vector=True,
             target_idx=target_idx,
             clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=500.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=500.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
         _plot(
             True,
             False,
@@ -407,63 +419,63 @@ def main():
             target_idx=target_idx,
             clipping=True)
 
-        activation_fn = 'tanh'
-        _plot(
-            False,
-            False,
-            lambda_w=800.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=1000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=500.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-
-        activation_fn = 'softplus'
-        _plot(
-            False,
-            False,
-            lambda_w=1000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=7000.0,
-            K_prime=500.0,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
-        _plot(
-            True,
-            False,
-            lambda_w=700.0,
-            K_prime=52.44,
-            activation_fn=activation_fn,
-            use_user_vector=True,
-            target_idx=target_idx,
-            clipping=True)
+        # activation_fn = 'tanh'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=800.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=1000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=500.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        #
+        # activation_fn = 'softplus'
+        # _plot(
+        #     False,
+        #     False,
+        #     lambda_w=1000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=7000.0,
+        #     K_prime=500.0,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
+        # _plot(
+        #     True,
+        #     False,
+        #     lambda_w=700.0,
+        #     K_prime=52.44,
+        #     activation_fn=activation_fn,
+        #     use_user_vector=True,
+        #     target_idx=target_idx,
+        #     clipping=True)
 
         # break
 
