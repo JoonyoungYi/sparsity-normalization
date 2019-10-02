@@ -5,12 +5,9 @@ import torch.nn.parallel
 from sklearn import linear_model
 import matplotlib.pyplot as plt
 
-from cfrbm import dataset
-from cfrbm import utils
-from cfrbm import rbm
-from cfrbm import RBM_symm_utils
-
-###########################################################################
+from . import dataset
+from . import utils
+from .models import RBM
 
 if __name__ == "__main__":
 
@@ -42,7 +39,7 @@ if __name__ == "__main__":
             train_tensor, train_tensor_neg = train_tensor_u, train_tensor_neg_u
             nb_rows, nv = nb_users, nb_movies
 
-        rbm_model = rbm.RBM(nv, nh).cuda()
+        rbm_model = RBM(nv, nh).cuda()
         rbm_model.params_init()
 
         ##开始迭代之前先初始化前一次迭代的梯度
@@ -122,38 +119,38 @@ if __name__ == "__main__":
         item_based=True)
     utils.show_min_loss(l_mae_train3_i, l_mae_test3_i)
 
-    assert False
-
-    ##作图观察误差走势
-    x = range(0, 400)
-    y = l_mae_train3_u
-    plt.figure()
-    plt.plot(x, y, "-", label="nh=100,k_gibbs=10", color="red")
-    plt.xlabel("iteration")
-    plt.ylabel("mse")
-    plt.title("User based RBM(Train set)")
-    plt.legend()
-    plt.show()
-
-    ##基于uRBM和iRBM构建sRBM，并输出误差
-    RBM_symm_utils.RBM_symm(rbm_model3_u, rbm_model3_i, train_tensor_u,
-                            train_tensor_i, training_set, test_set)
-
-    ##将表现最好的RBM模型重构的打分结果储存在本地
-    rbm_model_best_100k = rbm_model3_u
-    recons_100k = utils.predict(
-        train_tensor_u, rbm_model_best_100k, do_round=True, range_15=True)
-    l_recons_100k = recons_100k.numpy().flatten().tolist()
-    ##定义对应的行与列的id
-
-    ##将rbm的打分转化成dataframe输出到本地储存
-    iid_list = list(range(1, 1683)) * 943
-    uid_list = []
-    for i in range(1, 944):
-        for j in range(1682):
-            uid_list.append(i)
-
-    data_pre_100k = {'iid': iid_list, 'uid': uid_list, 'pre': l_recons_100k}
-    df_pre_100k = pd.DataFrame(data_pre_100k)
-    df_pre_100k.to_csv(
-        "/Users/baifrank/Desktop/recomm_output/pre_best_100k.csv", index=False)
+    # assert False
+    #
+    # ##作图观察误差走势
+    # x = range(0, 400)
+    # y = l_mae_train3_u
+    # plt.figure()
+    # plt.plot(x, y, "-", label="nh=100,k_gibbs=10", color="red")
+    # plt.xlabel("iteration")
+    # plt.ylabel("mse")
+    # plt.title("User based RBM(Train set)")
+    # plt.legend()
+    # plt.show()
+    #
+    # ##基于uRBM和iRBM构建sRBM，并输出误差
+    # RBM_symm_utils.RBM_symm(rbm_model3_u, rbm_model3_i, train_tensor_u,
+    #                         train_tensor_i, training_set, test_set)
+    #
+    # ##将表现最好的RBM模型重构的打分结果储存在本地
+    # rbm_model_best_100k = rbm_model3_u
+    # recons_100k = utils.predict(
+    #     train_tensor_u, rbm_model_best_100k, do_round=True, range_15=True)
+    # l_recons_100k = recons_100k.numpy().flatten().tolist()
+    # ##定义对应的行与列的id
+    #
+    # ##将rbm的打分转化成dataframe输出到本地储存
+    # iid_list = list(range(1, 1683)) * 943
+    # uid_list = []
+    # for i in range(1, 944):
+    #     for j in range(1682):
+    #         uid_list.append(i)
+    #
+    # data_pre_100k = {'iid': iid_list, 'uid': uid_list, 'pre': l_recons_100k}
+    # df_pre_100k = pd.DataFrame(data_pre_100k)
+    # df_pre_100k.to_csv(
+    #     "/Users/baifrank/Desktop/recomm_output/pre_best_100k.csv", index=False)
