@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from common.datasets.movielens import Dataset
 from .batch import BatchManager
@@ -62,8 +63,7 @@ def _validate(
 
 
 def _train(args):
-    dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
+    dataset = Dataset(args.dataset, args.dataset_split, seed=args.dataset_seed)
     dataset.init_full_matrices()
 
     set_seed(args.seed)
@@ -104,6 +104,8 @@ def _train(args):
     }
 
     batch_manager = BatchManager(train_x, args)
+    args.K = np.sum(train_x > 0.25) / train_x.shape[0] / 2 * args.K_multiplier
+    assert args.K is not None
 
     gpu_options = tf.GPUOptions()
     gpu_options.allow_growth = True
@@ -121,12 +123,8 @@ def _train(args):
     epoch_tolerance = 0
     learning_rate = args.learning_rate
 
-    # _Ks = []
-    # for _t in range(1000000):
-    #     batch_x, batch_y = batch_manager.get_batch()
-    #     _K = np.mean(np.sum(batch_x > 0.25, axis=1))
-    #     _Ks.append(_K)
-    #     print(_t, sum(_Ks) / len(_Ks))
+    # saver = tf.train.Saver()
+    # model_file_path = '.models/cfnade/test-seed2'
 
     train_losses = []
     for epoch_idx in range(1, args.max_epoch):
@@ -154,6 +152,7 @@ def _train(args):
             final_train_rmse = train_rmse
             min_valid_rmse_epoch_idx = epoch_idx
             epoch_tolerance = 0
+            # saver.save(session, model_file_path)
         else:
             epoch_tolerance += 1
 
@@ -185,6 +184,7 @@ def _train(args):
                     # learning rate가 min보다 작으면 stop합니다.
                     break
                 else:
+                    # saver.restore(session, model_file_path)
                     # min learning rate보다 크면, learrning rate를 줄입니다.
                     learning_rate *= args.learning_rate_decay
                     epoch_tolerance = 0
@@ -198,10 +198,12 @@ def _train(args):
     results.append(args.use_user_vector)
     results.append(args.sparsity_normalization)
     results.append(args.parameter_sharing)
+    results.append(args.activation_fn)
     results.append(args.use_ordinal_cost)
     results.append(args.averaging_possible_choices)
     results.append(args.lambda_1)
     results.append(args.lambda_2)
+    results.append(args.K_multiplier)
     results.append(args.K)
     results.append(args.seed)
     results.append(args.dataset_seed)
@@ -212,7 +214,12 @@ def _train(args):
     results.append(args.min_learning_rate)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
-    save_results_to_file('cfnade', args.dataset, results)
+    save_results_to_file(
+        'cfnade',
+        args.dataset,
+        results,
+        filename='{}_{}_{}'.format(args.use_user_vector, args.activation_fn,
+                                   args.dataset_split))
 
 
 def main():
@@ -239,7 +246,16 @@ def main():
             'default-10-percent',
             '5-fold',
         ],
-        help='Specify dataset spkut.')
+        help='Specify dataset split.')
+    parser.add_argument(
+        '--activation_fn',
+        type=str,
+        default='tanh',
+        choices=[
+            'tanh',
+            # 'relu',
+        ],
+        help='')
     parser.add_argument(
         '--max_epoch', type=int, default=10000000, help='Max Iteration')
     parser.add_argument(
@@ -249,6 +265,7 @@ def main():
         default=500,
         # default=1000,
         help='The number of hidden unit')
+    parser.add_argument('--K_multiplier', type=float, default=2, help='')
     parser.add_argument(
         '--parameter_sharing',
         type=str2bool,
@@ -260,15 +277,15 @@ def main():
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='whether normalize input')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        default=0.001,
+        # default=0.001,
         # default=0.0005,
-        # default=0.0002,
+        default=0.0002,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--use_ordinal_cost',
@@ -279,8 +296,8 @@ def main():
     parser.add_argument(
         '--use_tqdm',
         type=str2bool,
-        default=False,
         # default=True,
+        default=False,
         help='Whether use tqdm library.')
     parser.add_argument(
         '--use_user_vector',
@@ -312,11 +329,13 @@ def main():
         type=int,
         # default=30,
         default=60,
+        # default=100,
         help='the number of iteration for early stop.')
     parser.add_argument(
         '--learning_rate_decay',
         type=float,
         default=0.25,
+        # default=0.5,
         help='epoch early stop 만큼 개선 안되면 깎는 learning rate')
     parser.add_argument(
         '--min_learning_rate',
@@ -328,6 +347,7 @@ def main():
         '--dataset_seed',
         type=int,
         default=None,
+        # default=1,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--print_train_rmse',
@@ -344,19 +364,6 @@ def main():
         args.tqdm = tqdm
     else:
         args.tqdm = lambda x: x
-
-    if args.dataset == Dataset.KIND_MOVIELENS_100k:
-        if args.use_user_vector:
-            args.K = 46.8
-        else:
-            args.K = 26.2
-    elif args.dataset == Dataset.KIND_MOVIELENS_1M:
-        if args.use_user_vector:
-            args.K = 73.05
-        else:
-            args.K = 117
-    else:
-        raise NotImplementedError()
 
     if args.dataset_seed is None:
         args.dataset_seed = args.seed
