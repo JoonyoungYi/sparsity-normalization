@@ -34,16 +34,16 @@ def _dropout(x,
 
 
 class MLP(nn.Module):
-    def __init__(self, n_input_unit, n_hidden_unit, n_hidden_layer,
+    def __init__(self, n_input_unit, n_output_unit, n_hidden_unit, n_hidden_layer,
                  dropout_rate, dropout_mode, activation_fn):
         super().__init__()
 
         linears = [nn.Linear(n_input_unit, n_hidden_unit)]
         for _ in range(n_hidden_layer - 1):
             linears.append(nn.Linear(n_hidden_unit, n_hidden_unit))
-        linears.append(nn.Linear(n_hidden_unit, 1))
+        linears.append(nn.Linear(n_hidden_unit, n_output_unit))
 
-        self.n_input_unit = n_input_unit
+        # self.n_input_unit = n_input_unit
         self.n_hidden_unit = n_hidden_unit
         self.n_hidden_layer = n_hidden_layer
         self.dropout_rate = dropout_rate

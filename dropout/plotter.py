@@ -1,155 +1,129 @@
-import os
-
 import numpy as np
 from matplotlib import pyplot as plt
-
-from .logger import get_file_name
-
-
-def _get_data(file_name):
-    f = open('.results/dropout/boston/epoch/{}.txt'.format(file_name))
-    rows = []
-    for line in f:
-        cols = line.strip().split('\t')
-        assert len(cols) == 5
-        rows.append([float(c) for c in cols])
-    f.close()
-    return np.array(rows)
+from tqdm import tqdm
 
 
-def _plot(dropout_rate, activation_fn, folder_name, n_batch, optimizer,
-          learning_rate, n_hidden_layer, n_hidden_unit):
+def _plot_mean_and_confidence_interval(ax, x, mean, ci, color=None,
+                                       label=None):
+    (_, caps, _) = ax.errorbar(
+        x,
+        mean,
+        yerr=ci,
+        color=color,
+        barsabove=True,
+        fmt='o',
+        # markersize=8,
+        capsize=4)
+    # for cap in caps:
+    #     cap.set_markeredgewidth(1)
+
+    # plot the mean on top
+    ax.plot(x, mean, label=label, color=color)
+
+
+def _plot(ax, dataset):
+    f = open('dropout/results/{}.tsv'.format(dataset), 'r')
     results = []
-    for dropout_mode in ['default', 'sparsity-normalization']:
-        file_name = get_file_name(
-            n_hidden_layer=n_hidden_layer,
-            n_hidden_unit=n_hidden_unit,
-            activation_fn=activation_fn,
-            optimizer=optimizer,
-            learning_rate=learning_rate,
-            dropout_rate=dropout_rate,
-            dropout_mode=dropout_mode,
-            max_epoch=100000,
-            n_batch=n_batch,
-            input_normalization='standardization',
-            seed=1)
+    for line in f:
+        line = line.strip()
+        cols = line.split("\t")
+        results.append([float(c) for c in cols])
+    results = np.array(results)
+    assert results.shape == (8, 9)
 
-        d = _get_data(file_name)
+    drop_rates = np.array([i * 0.1 for i in range(1, 10)])
 
-        epoch_idx = d[:, 0]
-        train_rmse = d[:, 2]
-        valid_rmse = d[:, 3]
-        test_rmse = d[:, 4]
+    _plot_mean_and_confidence_interval(
+        ax,
+        drop_rates,
+        results[0, :],
+        results[1, :],
+        label="w/o SN",
+        color="#FF343A")
+    _plot_mean_and_confidence_interval(
+        ax,
+        drop_rates,
+        results[4, :],
+        results[5, :],
+        label="w/ SN",
+        color="#008EFD")
+    ax.set_title(dataset)
+    # ax.xlabel('# train / # total')
+    # plt.ylabel('RMSE')
+    ax.set_xlim([0.05, .95])
 
-        results.append(test_rmse[np.argmin(valid_rmse)])
 
-        # plt.plot(epoch_idx, train_rmse, label='{}-train'.format(dropout_mode))
-        # plt.plot(epoch_idx, valid_rmse, label='{}-valid'.format(dropout_mode))
-        plt.plot(epoch_idx, test_rmse, label='{}-test'.format(dropout_mode))
-        plt.legend()
+def main():
+    fig, axs = plt.subplots(1, 3, figsize=(8.1875, 2))
+    plt.subplots_adjust(wspace=0.25)
 
-    file_name = get_file_name(
-        n_hidden_layer=n_hidden_layer,
-        n_hidden_unit=n_hidden_unit,
-        activation_fn=activation_fn,
-        optimizer=optimizer,
-        learning_rate=learning_rate,
-        dropout_rate=dropout_rate,
-        dropout_mode='all',
-        max_epoch=100000,
-        n_batch=n_batch,
-        input_normalization='standardization',
-        seed=1)
-    plt.ylim([1.5, max(results) * 2])
+    for j, dataset in enumerate(['boston', 'diabetes', 'california']):
+        _plot(axs[j], dataset)
+    # _plot(dataset='blakeley')
+    # _plot(dataset='usoskin')
+    # _plot(dataset='zeisel')
+    # _plot(dataset='quake')
+    # _plot(dataset='kolodziejczyk')
+    # _plot(dataset='preimplantation')
+    # _plot(dataset='jurkat')
+
+    # axs[1].legend(loc='upper center', bbox_to_anchor=(-0.2, -0.3), ncol=2, edgecolor='none')
+    axs[0].set_ylabel('RMSE')
+    axs[1].legend(
+        loc='upper center',
+        bbox_to_anchor=(+0.5, -0.2),
+        ncol=2,
+        edgecolor='none')
+    # axs[1].set_xlabel('# train / # total')
+
     plt.savefig(
-        '.results/dropout/boston/figures/learning-curve/{}/{}.png'.format(
-            folder_name, file_name),
-        format='png')
-    plt.close()
-    return results
-
-
-def _mkdir_if_not_exists(folder_path):
-    if not os.path.exists(folder_path):
-        os.mkdir(folder_path)
-
-
-def _init_folders(folder_name):
-    _mkdir_if_not_exists('.results')
-    _mkdir_if_not_exists('.results/dropout')
-    _mkdir_if_not_exists('.results/dropout/boston')
-    _mkdir_if_not_exists('.results/dropout/boston/figures')
-    _mkdir_if_not_exists('.results/dropout/boston/figures/learning-curve')
-    _mkdir_if_not_exists('.results/dropout/boston/figures/learning-curve/{}'.
-                         format(folder_name))
-    _mkdir_if_not_exists('.results/dropout/boston/figures/test-rmse')
-
-
-def main(activation_fn='relu',
-         n_batch=128,
-         optimizer='adam',
-         learning_rate=1e-3,
-         n_hidden_layer=2,
-         n_hidden_unit=50):
-    file_name = get_file_name(
-        n_hidden_layer=n_hidden_layer,
-        n_hidden_unit=n_hidden_unit,
-        activation_fn=activation_fn,
-        optimizer=optimizer,
-        learning_rate=learning_rate,
-        dropout_rate='all',
-        dropout_mode='all',
-        max_epoch=100000,
-        n_batch=n_batch,
-        input_normalization='standardization',
-        seed=1)
-    _init_folders(file_name)
-
-    test_rmses = []
-    for dropout_rate in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-        rmse_default, rmse_sparsity_normalization = _plot(
-            dropout_rate=dropout_rate,
-            activation_fn=activation_fn,
-            folder_name=file_name,
-            n_batch=n_batch,
-            optimizer=optimizer,
-            n_hidden_layer=n_hidden_layer,
-            n_hidden_unit=n_hidden_unit,
-            learning_rate=learning_rate)
-        test_rmses.append(
-            [dropout_rate, rmse_default, rmse_sparsity_normalization])
-        print(dropout_rate, rmse_default, rmse_sparsity_normalization)
-    test_rmses = np.array(test_rmses)
-
-    plt.plot(test_rmses[:, 0], test_rmses[:, 1])
-    plt.plot(test_rmses[:, 0], test_rmses[:, 2])
-    plt.ylim([1.5, 4.5])
+        'dropout/results/summary.png',
+        format='png',
+        bbox_inches='tight',
+        pad_inches=0)
     plt.savefig(
-        '.results/dropout/boston/figures/test-rmse/{}.png'.format(file_name),
-        format='png')
+        'dropout/results/summary.pdf',
+        format='pdf',
+        bbox_inches='tight',
+        pad_inches=0)
     plt.close()
 
+
+# def sub():
+#     fig, axs = plt.subplots(1, 3, figsize=(11, 2.7))
+#     plt.subplots_adjust(wspace=0.25)
+#
+#     for j, dataset in enumerate(['quake', 'preimplantation', 'jurkat']):
+#         _plot(axs[j], dataset)
+#     # _plot(dataset='blakeley')
+#     # _plot(dataset='usoskin')
+#     # _plot(dataset='zeisel')
+#     # _plot(dataset='quake')
+#     # _plot(dataset='kolodziejczyk')
+#     # _plot(dataset='preimplantation')
+#     # _plot(dataset='jurkat')
+#
+#     # axs[1].legend(loc='upper center', bbox_to_anchor=(-0.2, -0.3), ncol=2, edgecolor='none')
+#     axs[0].set_ylabel('RMSE')
+#     axs[1].legend(
+#         loc='upper center',
+#         bbox_to_anchor=(+0.5, -0.2),
+#         ncol=2,
+#         edgecolor='none')
+#     # axs[1].set_xlabel('# train / # total')
+#
+#     plt.savefig(
+#         'auto_impute/imputation_performances/summary-sub.png',
+#         format='png',
+#         bbox_inches='tight',
+#         pad_inches=0)
+#     plt.savefig(
+#         'auto_impute/imputation_performances/summary-sub.pdf',
+#         format='pdf',
+#         bbox_inches='tight',
+#         pad_inches=0)
+#     plt.close()
 
 if __name__ == '__main__':
-    main(
-        activation_fn='relu',
-        # activation_fn='leaky_relu',
-        # activation_fn='elu',
-        # activation_fn='sigmoid',
-        # activation_fn='tanh',
-        # n_hidden_layer=1,
-        n_hidden_layer=2,
-        # n_hidden_layer=3,
-        # n_hidden_layer=4,
-        # n_hidden_unit=n_hidden_unit,
-        n_hidden_unit=50,
-        # n_batch=128,
-        n_batch=128,
-        optimizer='adam',
-        # optimizer='sgd',
-        # optimizer='momentum',
-        # learning_rate=1e-2,
-        # learning_rate=1e-3,
-        learning_rate=1e-4,
-        # learning_rate=1e-5,
-    )
+    main()
+    # sub()

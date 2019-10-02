@@ -42,7 +42,7 @@ def _get_commands(args):
             command = _make_command(
                 dropout_mode=dropout_mode,
                 dropout_rate=dropout_rate,
-                optimizer=optimizer, 
+                optimizer=optimizer,
                 learning_rate=learning_rate,
                 activation_fn=activation_fn,
                 n_hidden_layer=n_hidden_layer,
@@ -54,18 +54,16 @@ def _get_commands(args):
 
 def _train(args):
     # commands = _get_commands(args)
-    commands = [
-        'python3 -m dropout.trainer --dropout_mode=default                --n_hidden_layer=2 --seed=1 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=sparsity-normalization --n_hidden_layer=2 --seed=1 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=default                --n_hidden_layer=2 --seed=2 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=sparsity-normalization --n_hidden_layer=2 --seed=2 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=default                --n_hidden_layer=2 --seed=3 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=sparsity-normalization --n_hidden_layer=2 --seed=3 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=default                --n_hidden_layer=2 --seed=4 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=sparsity-normalization --n_hidden_layer=2 --seed=4 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=default                --n_hidden_layer=2 --seed=5 --dataset_seed=1',
-        'python3 -m dropout.trainer --dropout_mode=sparsity-normalization --n_hidden_layer=2 --seed=5 --dataset_seed=1',
-    ]
+    commands = []
+    for dropout_mode in ['default', 'sparsity-normalization']:
+        for dropout_rate in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+            for seed in [1, 2, 3, 4, 5]:
+                commands.append(
+                    'python3 -m dropout.trainer --dropout_mode={dropout_mode} --seed={seed} --dataset_seed=1 --dropout_rate={dropout_rate} --dataset=wine --learning_rate=1e-4'.
+                    format(
+                        dropout_mode=dropout_mode,
+                        dropout_rate=dropout_rate,
+                        seed=seed))
     run_parallel(commands, n_worker=10)
 
 
@@ -88,7 +86,6 @@ def main():
 # python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=256
 # [torch-14] python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=512
 # python3 -m dropout.train --optimizer=adam --activation_fn=relu --n_hidden_layer=2 --learning_rate=1e-3 --n_batch=0
-
 
 if __name__ == '__main__':
     main()

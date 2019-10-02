@@ -1,7 +1,6 @@
 from common.utils import append_text_results
 from common.utils import init_file
 
-
 def get_file_name(n_hidden_layer, n_hidden_unit, activation_fn, optimizer,
                   learning_rate, dropout_rate, dropout_mode, max_epoch,
                   n_batch, input_normalization, seed):
