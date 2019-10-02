@@ -1,3 +1,4 @@
+import json
 import random
 import os
 import zipfile
@@ -25,13 +26,39 @@ def _get_data_from_user_dict(user_dict,
     return np.array(data)
 
 
+def _get_data_from_file(original_filepath, user_converter_dict,
+                        item_converter_dict, split_token):
+    lines = []
+    with open(original_filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            cols = [float(c) for c in line.split(split_token)]
+
+            user_id = str(int(cols[0]))
+            item_id = str(int(cols[1]))
+
+            u = user_converter_dict[user_id]
+            i = item_converter_dict[item_id]
+
+            lines.append([u, i, cols[2], cols[3]])
+
+    data = np.array(lines)
+    return data
+
+
 class Dataset:
     KIND_MOVIELENS_100k = 'movielens-100k'
     KIND_MOVIELENS_1M = 'movielens-1m'
     KIND_MOVIELENS_10M = 'movielens-10m'
 
-    # test with random. train:valid:test = 0.882:0.018:0.1
+    # test with random. train:valid:test = 0.855:0.045:0.1
     SPLIT_DEFAULT_10_PERCENT = 'default-10-percent'
+
+    # 5 fold cross validation. train:test = 0.8:0.2
+    # movielens 100k를 위한 split. 미리 나눠둔 split이 있어서 그 데이터를 사용한다.
+    # dataset seed는 1부터 5까지만 받을 수 있고, 미리 나눠둔 split에 의해 confidence interval도 계산된다.
+    SPLIT_5_FOLD = '5-fold'
+
     # user 기준으로 20%를 test로 자르고, test user에 대해서 50%를 트레이닝 셋으로 줌.
     # train user 중 10%를 validation으로 사용.
     SPLIT_NEW_20_50 = 'new-20-50'
@@ -125,6 +152,9 @@ class Dataset:
         item_dict = {}
         current_u = 0
         current_i = 0
+
+        user_converter_dict = {}
+        item_converter_dict = {}
         with open(original_filepath, 'r') as f:
             for line in f:
                 line = line.strip()
@@ -145,10 +175,21 @@ class Dataset:
                     i = current_i
                     current_i += 1
 
+                user_converter_dict[user_id] = u
+                item_converter_dict[item_id] = i
+
                 lines.append([u, i, cols[2], cols[3]])
 
         data = np.array(lines)
         np.save(filepath, data)
+
+        with open(os.path.join(DATA_PATH, self.kind, 'index-user.json'),
+                  'w') as f:
+            f.write(json.dumps(user_converter_dict))
+
+        with open(os.path.join(DATA_PATH, self.kind, 'index-item.json'),
+                  'w') as f:
+            f.write(json.dumps(item_converter_dict))
 
         print(current_u, current_i)
         # input('should complete get_n_user_and_n_item function.')
@@ -156,6 +197,9 @@ class Dataset:
 
     def __split_npy(self):
         if self.split == self.SPLIT_DEFAULT_10_PERCENT:
+            # 10%를 test를 떼고, training 중 5%를 validation으로 뗀다.
+            # 이건 CF-NADE 에서 쓴 방법.
+            # AutoRec은 validation을 10% 떼는 데... 우리는 그냥 5% 떼는 걸로 통일하자.
             train_filepath = os.path.join(DATA_PATH, self.kind,
                                           'data.{}.{}.train.npy'.format(
                                               self.split, self.seed))
@@ -175,13 +219,71 @@ class Dataset:
             # print(data[0])
 
             n_row = data.shape[0]
-            train_data = data[:int(n_row * 0.882)]
-            valid_data = data[int(n_row * 0.882):int(n_row * 0.9)]
+            train_data = data[:int(n_row * 0.855)]
+            valid_data = data[int(n_row * 0.855):int(n_row * 0.9)]
             test_data = data[int(n_row * 0.9):]
             np.save(train_filepath, train_data)
             np.save(valid_filepath, valid_data)
             np.save(test_filepath, test_data)
             return True
+
+        elif self.split == self.SPLIT_5_FOLD:
+            # 10M과 100K만 가능한 방식이나, 100K만 일단 구현해두었습니다.
+            assert self.kind in [
+                self.KIND_MOVIELENS_100k, self.KIND_MOVIELENS_10M
+            ]
+            assert self.seed in [1, 2, 3, 4, 5]
+
+            if self.kind == self.KIND_MOVIELENS_100k:
+                raw_train_filepath = os.path.join(DATA_PATH, self.kind,
+                                                  'ml-100k',
+                                                  'u{}.base'.format(self.seed))
+                raw_test_filepath = os.path.join(DATA_PATH, self.kind,
+                                                 'ml-100k',
+                                                 'u{}.test'.format(self.seed))
+
+                train_filepath = os.path.join(DATA_PATH, self.kind,
+                                              'data.{}.{}.train.npy'.format(
+                                                  self.split, self.seed))
+                valid_filepath = os.path.join(DATA_PATH, self.kind,
+                                              'data.{}.{}.valid.npy'.format(
+                                                  self.split, self.seed))
+                test_filepath = os.path.join(DATA_PATH, self.kind,
+                                             'data.{}.{}.test.npy'.format(
+                                                 self.split, self.seed))
+
+                with open(
+                        os.path.join(DATA_PATH, self.kind, 'index-user.json'),
+                        'r') as f:
+                    user_converter_dict = json.loads(f.read())
+
+                with open(
+                        os.path.join(DATA_PATH, self.kind, 'index-item.json'),
+                        'r') as f:
+                    item_converter_dict = json.loads(f.read())
+
+                train_data = _get_data_from_file(
+                    raw_train_filepath,
+                    user_converter_dict,
+                    item_converter_dict,
+                    split_token='\t')
+                test_data = _get_data_from_file(
+                    raw_test_filepath,
+                    user_converter_dict,
+                    item_converter_dict,
+                    split_token='\t')
+
+                np.random.seed(self.seed)
+                np.random.shuffle(train_data)
+
+                n_row = train_data.shape[0]
+                valid_data = train_data[int(n_row * 0.8):]
+                train_data = train_data[:int(n_row * 0.8)]
+                np.save(train_filepath, train_data)
+                np.save(valid_filepath, valid_data)
+                np.save(test_filepath, test_data)
+            else:
+                raise NotImplementedError()
 
         elif self.split == self.SPLIT_NEW_20_50:
             train_filepath = os.path.join(DATA_PATH, self.kind,
@@ -270,7 +372,7 @@ class Dataset:
         self.__init_data_npy()
         self.__split_npy()
 
-        if self.split == self.SPLIT_DEFAULT_10_PERCENT:
+        if self.split == self.SPLIT_DEFAULT_10_PERCENT or self.split == self.SPLIT_5_FOLD:
             train_filepath = os.path.join(DATA_PATH, self.kind,
                                           'data.{}.{}.train.npy'.format(
                                               self.split, self.seed))
@@ -305,6 +407,9 @@ class Dataset:
             self.valid_data_test = np.load(valid_test_filepath)
             self.test_data_train = np.load(test_train_filepath)
             self.test_data_test = np.load(test_test_filepath)
+
+        else:
+            raise NotImplementedError()
 
     def __init_full_matrix(self, data):
         n_user, n_item = self.get_n_user_and_n_item()

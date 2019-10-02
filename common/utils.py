@@ -65,9 +65,9 @@ def make_folder_if_not_exist(path):
     return _make_folder_if_not_exist(path)
 
 
-def save_results_to_file(code_name, dataset_name, results):
+def save_results_to_file(code_name, dataset_name, results, filename='default'):
     line = '\t'.join([str(datetime.now())] + [str(r) for r in results])
-    return append_text_results(code_name, dataset_name, 'results', 'default',
+    return append_text_results(code_name, dataset_name, 'results', filename,
                                line)
 
 
