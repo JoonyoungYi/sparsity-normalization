@@ -312,7 +312,8 @@ def main():
         '--max_epoch',
         type=int,
         # default=0,
-        default=7000,
+        # default=7000,
+        default=70000,
         # default=100000,
         help="Number of max_epoch to train the model for.")
     parser.add_argument(
