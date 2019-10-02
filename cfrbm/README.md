@@ -1,4 +1,5 @@
-# collaborative-recommender-RBM-
-CF based on RBM ,MovieLens 100k and 1m
+# CF-RBM
 
-include ：user based RBM,item based RBM,symmetrical RBM,muli-layer RBM,conditional RBM,RBM with auxiliary rating,real-value RBM,Binary RBM
+* Most of the codes are adopted from [https://github.com/baizhongliu/collaborative-recommender-RBM](https://github.com/baizhongliu/collaborative-recommender-RBM)
+* Pytorch implementation of CF-RBM.
+* Conditional RBM and multi-layer RBM are not considered for simplicity.
