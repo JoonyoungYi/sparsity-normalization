@@ -78,8 +78,8 @@ def data_input(train_path, test_path):
     R_test = continuous_id(ua_test, df_uid_transform, df_iid_transform)
 
     ##将DataFrame转化成user*item的矩阵形式
-    training_set = convert(R_train.as_matrix(), nb_users, nb_movies)
-    test_set = convert(R_test.as_matrix(), nb_users, nb_movies)
+    training_set = convert(R_train.values, nb_users, nb_movies)
+    test_set = convert(R_test.values, nb_users, nb_movies)
 
     ##最终转化成torch评分矩阵
     training_set = torch.FloatTensor(training_set)

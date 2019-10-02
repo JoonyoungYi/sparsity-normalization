@@ -39,7 +39,7 @@ if __name__ == "__main__":
             train_tensor, train_tensor_neg = train_tensor_u, train_tensor_neg_u
             nb_rows, nv = nb_users, nb_movies
 
-        rbm_model = rbm.RBM(nv, nh)
+        rbm_model = rbm.RBM(nv, nh).cuda()
         rbm_model.params_init()
 
         ##开始迭代之前先初始化前一次迭代的梯度//initialize the previous gradient before the first iteration
@@ -94,57 +94,57 @@ if __name__ == "__main__":
 
         return rbm_model, l_mae_train, l_mse_train, l_mae_test, l_mse_test
 
-    ##再以h_btm为可见层，建立RBM_layer1_u/biuld the 2 layer based on the bottom layer RBM
-    ##定义只有bianry值的RBM(与k无关)：user/item based##
-    def rbm_run_binary(data_input, nh, nb_epoch, k_gibbs, batch_size, decay,
-                       momentum):
-
-        ##用来储存重构误差//store the reconstruction error
-        l_mae = []
-        nb_rows, nv = data_input.shape[0], data_input.shape[1]
-        rbm_model = rbm.RBM(nv, nh, k=1)
-        rbm_model.params_init()
-
-        ##开始迭代之前先初始化前一次迭代的梯度//get the previous gradient before start the next iteration
-        prev_gw = torch.randn(rbm_model.dim)
-        prev_gbv = torch.randn(1, rbm_model.num_visible)
-        prev_gbh = torch.randn(1, rbm_model.num_hidden)
-
-        ##Training the RBM
-        for epoch in range(1, nb_epoch + 1):
-            print("Calculating:" + str(epoch) + '/' + str(nb_epoch))
-            for id_start in range(0, nb_rows - batch_size, batch_size):
-                v0 = data_input[id_start:id_start + batch_size]
-                vk = data_input[id_start:id_start + batch_size]
-                ##Gibbs Sampling
-                ph0, h0 = rbm_model.sample_hidden(v0)
-                for k in range(k_gibbs):
-                    _, hk = rbm_model.sample_hidden(vk)
-                    _, vk = rbm_model.sample_visible_binary(hk)
-                phk, _ = rbm_model.sample_hidden(vk)
-
-                rbm_model.train(
-                    v0,
-                    vk,
-                    ph0,
-                    phk,
-                    prev_gw,
-                    prev_gbv,
-                    prev_gbh,
-                    w_lr=0.01,
-                    v_lr=0.01,
-                    h_lr=0.01,
-                    decay=decay,
-                    momentum=momentum)
-                prev_gw, prev_gvb, prev_gvh = rbm_model.gradient(
-                    v0, vk, ph0, phk)
-            ##重构之后计算误差//reconstruction error
-            data_recons, _ = rbm_model.sample_vhv_binary(data_input)
-            mae = torch.mean(torch.abs(data_input - data_recons))
-            print(mae)
-            l_mae.append(mae)
-
-        return rbm_model, l_mae
+    # ##再以h_btm为可见层，建立RBM_layer1_u/biuld the 2 layer based on the bottom layer RBM
+    # ##定义只有bianry值的RBM(与k无关)：user/item based##
+    # def rbm_run_binary(data_input, nh, nb_epoch, k_gibbs, batch_size, decay,
+    #                    momentum):
+    #
+    #     ##用来储存重构误差//store the reconstruction error
+    #     l_mae = []
+    #     nb_rows, nv = data_input.shape[0], data_input.shape[1]
+    #     rbm_model = rbm.RBM(nv, nh, k=1)
+    #     rbm_model.params_init()
+    #
+    #     ##开始迭代之前先初始化前一次迭代的梯度//get the previous gradient before start the next iteration
+    #     prev_gw = torch.randn(rbm_model.dim)
+    #     prev_gbv = torch.randn(1, rbm_model.num_visible)
+    #     prev_gbh = torch.randn(1, rbm_model.num_hidden)
+    #
+    #     ##Training the RBM
+    #     for epoch in range(1, nb_epoch + 1):
+    #         print("Calculating:" + str(epoch) + '/' + str(nb_epoch))
+    #         for id_start in range(0, nb_rows - batch_size, batch_size):
+    #             v0 = data_input[id_start:id_start + batch_size]
+    #             vk = data_input[id_start:id_start + batch_size]
+    #             ##Gibbs Sampling
+    #             ph0, h0 = rbm_model.sample_hidden(v0)
+    #             for k in range(k_gibbs):
+    #                 _, hk = rbm_model.sample_hidden(vk)
+    #                 _, vk = rbm_model.sample_visible_binary(hk)
+    #             phk, _ = rbm_model.sample_hidden(vk)
+    #
+    #             rbm_model.train(
+    #                 v0,
+    #                 vk,
+    #                 ph0,
+    #                 phk,
+    #                 prev_gw,
+    #                 prev_gbv,
+    #                 prev_gbh,
+    #                 w_lr=0.01,
+    #                 v_lr=0.01,
+    #                 h_lr=0.01,
+    #                 decay=decay,
+    #                 momentum=momentum)
+    #             prev_gw, prev_gvb, prev_gvh = rbm_model.gradient(
+    #                 v0, vk, ph0, phk)
+    #         ##重构之后计算误差//reconstruction error
+    #         data_recons, _ = rbm_model.sample_vhv_binary(data_input)
+    #         mae = torch.mean(torch.abs(data_input - data_recons))
+    #         print(mae)
+    #         l_mae.append(mae)
+    #
+    #     return rbm_model, l_mae
 
     ##误差输出：l_mae_train, l_mse_train, l_mae_test,l_mse_test//output of error
     ##从底层至顶层隐藏层个数：100-200-100//100-200-100 units in hidden layers
@@ -166,26 +166,26 @@ if __name__ == "__main__":
     _, h_btm = rbm_btm_u.sample_hidden(train_tensor_u)
 
     ###############################构建第二层的RBM//build the second RBM###################################
-    rbm_layer1_u, l_mae_layer1 = rbm_run_binary(
-        h_btm,
-        nh=200,
-        nb_epoch=200,
-        k_gibbs=10,
-        batch_size=100,
-        decay=0,
-        momentum=0)
-    ##获得layer1层的隐藏层:h_layer1
-    _, h_layer1 = rbm_layer1_u.sample_hidden(h_btm)
-    ##建立到第二层RBM的时候，计算到最底层的重构误差
-    _, h_btm_recons = rbm_layer1_u.sample_visible_binary(h_layer1)
-    p_v_btm_recons, _ = rbm_btm_u.sample_visible(h_btm_recons)
-    v_btm_recons_revert = utils.revert_expected_value(p_v_btm_recons)
-    v_btm_recons_revert[v_btm_recons_revert > 5] = 5
-
-    mae_train_multi_2, mse_train_multi_2 = utils.calculate_error(
-        training_set, v_btm_recons_revert)
-    mae_test_multi_2, mse_test_multi_2 = utils.calculate_error(
-        test_set, v_btm_recons_revert)
+    # rbm_layer1_u, l_mae_layer1 = rbm_run_binary(
+    #     h_btm,
+    #     nh=200,
+    #     nb_epoch=200,
+    #     k_gibbs=10,
+    #     batch_size=100,
+    #     decay=0,
+    #     momentum=0)
+    # ##获得layer1层的隐藏层:h_layer1
+    # _, h_layer1 = rbm_layer1_u.sample_hidden(h_btm)
+    # ##建立到第二层RBM的时候，计算到最底层的重构误差
+    # _, h_btm_recons = rbm_layer1_u.sample_visible_binary(h_layer1)
+    # p_v_btm_recons, _ = rbm_btm_u.sample_visible(h_btm_recons)
+    # v_btm_recons_revert = utils.revert_expected_value(p_v_btm_recons)
+    # v_btm_recons_revert[v_btm_recons_revert > 5] = 5
+    #
+    # mae_train_multi_2, mse_train_multi_2 = utils.calculate_error(
+    #     training_set, v_btm_recons_revert)
+    # mae_test_multi_2, mse_test_multi_2 = utils.calculate_error(
+    #     test_set, v_btm_recons_revert)
 
     ###############################构建第三层的RBM（顶层）############################
     rbm_layer2_u, l_mae_layer2 = rbm_run_binary(

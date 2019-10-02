@@ -1,30 +1,38 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 ##建立RBM的类，声明模型中所有的参数，参数更新公式
-class RBM(object):
+class RBM(nn.Module):
     def __init__(self, num_visible, num_hidden, k=5):
+        super().__init__()
         self.dim = (k * num_visible, num_hidden)
         self.num_visible = num_visible
         self.num_hidden = num_hidden
         self.k = k
 
+        self.params_init()
+
     def params_init(self):
         ##torch.randn:从N(0,1)中随机抽取
-        self.weights = torch.randn(self.dim)
-        self.vbias = torch.randn(1, self.k * self.num_visible)
-        self.hbias = torch.randn(1, self.num_hidden)
+        self.weights = torch.randn(self.dim).cuda()
+        self.vbias = torch.randn(1, self.k * self.num_visible).cuda()
+        self.hbias = torch.randn(1, self.num_hidden).cuda()
         self.D = torch.randn(self.num_visible,
-                             self.num_hidden)  ##conditional RBM的权重
+                             self.num_hidden).cuda()  ##conditional RBM的权重
 
     def sample_hidden(self, vis):
-
+        # print(vis)
+        vis = vis.cuda()
+        # print(self.weights)
         wx = torch.mm(vis, self.weights)
         activation = wx + self.hbias.expand_as(wx)
         p_h_given_v = torch.sigmoid(activation)
         ##torch.rand:从[0,1]均匀分布中抽取一组随机数
         h1_sample = torch.sign(
-            p_h_given_v - torch.rand(p_h_given_v.shape))  ##如果是nan那么sign之后为0
+            p_h_given_v -
+            torch.rand(p_h_given_v.shape).cuda())  ##如果是nan那么sign之后为0
         h1_sample[h1_sample == -1] = 0
 
         return p_h_given_v, h1_sample
@@ -53,7 +61,7 @@ class RBM(object):
         activation_exp[activation_exp == float('inf')] = max_activation_exp
         activation_exp_sum = torch.mm(activation_exp,
                                       torch.ones(self.k, self.k).view(
-                                          -1, self.k))
+                                          -1, self.k).cuda())
         max_activation_exp_sum = activation_exp_sum[activation_exp_sum !=
                                                     float('inf')].max()
         activation_exp_sum[activation_exp_sum == float(
@@ -64,7 +72,8 @@ class RBM(object):
         p_v_given_h = torch.div(activation_exp, activation_exp_sum).view(
             -1, self.k * self.num_visible)
         p_v_given_h[p_v_given_h == float('inf')] = 1
-        v1_sample = torch.sign(p_v_given_h - torch.rand(p_v_given_h.shape))
+        v1_sample = torch.sign(p_v_given_h -
+                               torch.rand(p_v_given_h.shape).cuda())
         v1_sample[v1_sample == -1] = 0
 
         return p_v_given_h, v1_sample

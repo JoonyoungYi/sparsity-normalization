@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # path = '/Users/baifrank/Desktop/ml-100k'
     path = '.datasets/movielens-100k/ml-100k'
-    train_path, test_path = path + '/ua.base', path + '/ua.test'
+    train_path, test_path = path + '/u1.base', path + '/u1.test'
 
     ##导入用户数量，电影数量，torch形式的原始评分矩阵(train+test)
     nb_users, nb_movies, training_set, test_set = dataset.data_input(
@@ -42,22 +42,24 @@ if __name__ == "__main__":
             train_tensor, train_tensor_neg = train_tensor_u, train_tensor_neg_u
             nb_rows, nv = nb_users, nb_movies
 
-        rbm_model = rbm.RBM(nv, nh)
+        rbm_model = rbm.RBM(nv, nh).cuda()
         rbm_model.params_init()
 
         ##开始迭代之前先初始化前一次迭代的梯度
-        prev_gw = torch.randn(rbm_model.dim)
-        prev_gbv = torch.randn(1, rbm_model.k * rbm_model.num_visible)
-        prev_gbh = torch.randn(1, rbm_model.num_hidden)
+        prev_gw = torch.randn(rbm_model.dim).cuda()
+        prev_gbv = torch.randn(1, rbm_model.k * rbm_model.num_visible).cuda()
+        prev_gbh = torch.randn(1, rbm_model.num_hidden).cuda()
 
-        ##Training the RBM
+        # Training the RBM
         for epoch in range(1, nb_epoch + 1):
             print("Calculating:" + str(epoch) + '/' + str(nb_epoch))
             for id_start in range(0, nb_rows - batch_size, batch_size):
-                v0 = train_tensor[id_start:id_start + batch_size]
-                vk = train_tensor[id_start:id_start + batch_size]
-                v0_neg = train_tensor_neg[id_start:id_start + batch_size]
-                ##Gibbs Sampling
+                v0 = train_tensor[id_start:id_start + batch_size].cuda()
+                vk = train_tensor[id_start:id_start + batch_size].cuda()
+                v0_neg = train_tensor_neg[id_start:
+                                          id_start + batch_size].cuda()
+
+                # Gibbs Sampling
                 ph0, h0 = rbm_model.sample_hidden(v0)
                 for k in range(k_gibbs):
                     _, hk = rbm_model.sample_hidden(vk)
@@ -99,16 +101,16 @@ if __name__ == "__main__":
 
     ##输出
     "l_mae_train, l_mse_train, l_mae_test,l_mse_test"
-    ##user_based
-    rbm_model3_u, l_mae_train3_u, l_mse_train3_u, l_mae_test3_u, l_mse_test3_u = rbm_run(
-        nh=100,
-        nb_epoch=400,
-        k_gibbs=10,
-        batch_size=100,
-        decay=0,
-        momentum=0,
-        item_based=False)
-    utils.show_min_loss(l_mae_train3_u, l_mae_test3_u)
+    # ##user_based
+    # rbm_model3_u, l_mae_train3_u, l_mse_train3_u, l_mae_test3_u, l_mse_test3_u = rbm_run(
+    #     nh=100,
+    #     nb_epoch=400,
+    #     k_gibbs=10,
+    #     batch_size=100,
+    #     decay=0,
+    #     momentum=0,
+    #     item_based=False)
+    # utils.show_min_loss(l_mae_train3_u, l_mae_test3_u)
     ##item_based
     rbm_model3_i, l_mae_train3_i, l_mse_train3_i, l_mae_test3_i, l_mse_test3_i = rbm_run(
         nh=100,
@@ -119,6 +121,8 @@ if __name__ == "__main__":
         momentum=0,
         item_based=True)
     utils.show_min_loss(l_mae_train3_i, l_mae_test3_i)
+
+    assert False
 
     ##作图观察误差走势
     x = range(0, 400)

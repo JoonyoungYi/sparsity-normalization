@@ -38,9 +38,9 @@ def revert_expected_value(m, k=5, do_round=True):  ##由Binary的矩阵返回实
     nb_rows = m.shape[0]
 
     if do_round:
-        expected_rt = torch.round(torch.mm(m.view(-1, 5), mask))
+        expected_rt = torch.round(torch.mm(m.view(-1, 5).cuda(), mask.cuda()))
     else:
-        expected_rt = torch.mm(m.view(-1, 5), mask)
+        expected_rt = torch.mm(m.view(-1, 5).cuda(), mask.cuda())
     return expected_rt.view(nb_rows, -1)
 
 
@@ -55,7 +55,7 @@ def predict(input_data, rbm_input, do_round=True, range_15=True):
 
 ##定义函数：输入真实评分矩阵和重构评分矩阵，输出mae、mse(输入的需要是实值的评分矩阵)
 def calculate_error(data_real, data_recons):
-    mat_dif = torch.abs(data_real - data_recons)
+    mat_dif = torch.abs(data_real.cuda() - data_recons.cuda())
     mae = torch.mean(mat_dif[data_real > 0])
     mse = torch.mean(torch.pow(mat_dif[data_real > 0], 2))
     return mae, mse
