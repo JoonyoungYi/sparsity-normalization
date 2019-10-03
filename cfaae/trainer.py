@@ -201,7 +201,6 @@ def main():
         help='0 for full batch. integer for batch number.')
 
     args = parser.parse_args()
-    args.use_user_vector = False
     args.K_denominator = 500
 
     if args.n_batch == 0:

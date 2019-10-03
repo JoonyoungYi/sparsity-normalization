@@ -25,12 +25,6 @@ def _sparse__normalize(x, c, n_col):
     return x
 
 
-def _sparse__standardize(x):
-    for i in range(x.shape[0]):
-        x[i][2] = (x[i][2] - 3.533424036281179)
-    return x
-
-
 def _sparse__tensor(x, n_row, n_col):
     return (x[:, :2], x[:, 2], (n_row, n_col))
 
@@ -51,25 +45,15 @@ class Batch:
         test_x = np.concatenate([dataset.train_data, dataset.valid_data])
         test_y = dataset.test_data
 
-        if args.use_user_vector:
-            n_row = n_user
-            n_col = n_item
-        else:
-            n_row = n_item
-            n_col = n_user
+        n_row = n_user
+        n_col = n_item
 
-            train_x = _sparse__swith_row_col(train_x)
-            train_y = _sparse__swith_row_col(train_y)
-            valid_y = _sparse__swith_row_col(valid_y)
-            test_x = _sparse__swith_row_col(test_x)
-            test_y = _sparse__swith_row_col(test_y)
 
         row_indices = list(range(n_row))
         random.shuffle(row_indices)
         self.row_indices = row_indices
 
         if args.normalize_input:
-            # n_mutiplier = n_col
             if args.K_denominator:
                 n_mutiplier = args.K_denominator
             else:
