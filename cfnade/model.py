@@ -11,12 +11,12 @@ def _init_weights(n_col, args):
 
     n_units = [n_col, args.n_hidden_unit, n_col]
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
-        # limit = math.sqrt(3 / n_in_unit)
-        # weight = tf.Variable(
-        #     tf.random_uniform([n_in_unit, n_out_unit], -limit, limit))
+        limit = math.sqrt(3 / n_in_unit)
         weight = tf.Variable(
-            tf.random.truncated_normal(
-                [n_in_unit, n_out_unit], mean=0, stddev=1 / n_in_unit))
+            tf.random_uniform([n_in_unit, n_out_unit], -limit, limit))
+        # weight = tf.Variable(
+        #     tf.random.truncated_normal(
+        #         [n_in_unit, n_out_unit], mean=0, stddev=1 / n_in_unit))
         bias = tf.Variable(tf.zeros([n_out_unit]))
         weights.append(weight)
         biases.append(bias)
