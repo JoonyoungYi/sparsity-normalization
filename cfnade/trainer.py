@@ -105,6 +105,8 @@ def _train(args):
 
     batch_manager = BatchManager(train_x, args)
     args.K = np.sum(train_x > 0.25) / train_x.shape[0] / 2 * args.K_multiplier
+    # print(args.K)
+    # input('!')
     assert args.K is not None
 
     gpu_options = tf.GPUOptions()
@@ -229,8 +231,8 @@ def main():
     parser.add_argument(
         '--dataset',
         type=str,
-        default=Dataset.KIND_MOVIELENS_100k,
-        # default=Dataset.KIND_MOVIELENS_1M,
+        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_1M,
         choices=[
             Dataset.KIND_MOVIELENS_100k,
             Dataset.KIND_MOVIELENS_1M,
@@ -240,8 +242,8 @@ def main():
     parser.add_argument(
         '--dataset_split',
         type=str,
-        # default='default-10-percent',
-        default='5-fold',
+        default='default-10-percent',
+        # default='5-fold',
         choices=[
             'default-10-percent',
             '5-fold',
@@ -277,15 +279,15 @@ def main():
     parser.add_argument(
         '--sparsity_normalization',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='whether normalize input')
     parser.add_argument(
         '--learning_rate',
         type=float,
-        # default=0.001,
+        default=0.001,
         # default=0.0005,
-        default=0.0002,
+        # default=0.0002,
         help='learning rate for optimizer.')
     parser.add_argument(
         '--use_ordinal_cost',
