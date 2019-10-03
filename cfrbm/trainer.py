@@ -1,156 +1,133 @@
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn.parallel
-from sklearn import linear_model
-import matplotlib.pyplot as plt
+import torch.utils.data
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
+from tqdm import tqdm
 
-from . import dataset
-from . import utils
+from common.datasets.movielens import Dataset
+from common.utils import set_torch_seed
+from common.utils import str2bool
 from .models import RBM
 
-if __name__ == "__main__":
 
-    # path = '/Users/baifrank/Desktop/ml-100k'
-    path = '.datasets/movielens-100k/ml-100k'
-    train_path, test_path = path + '/u1.base', path + '/u1.test'
+def __expand(x, n_class=5):
+    x = x.astype(np.int64)
+    new_x = np.eye(n_class + 1)[x][:, :, 1:]
+    new_x = new_x.reshape([-1, n_class * x.shape[1]])
+    return new_x.astype(np.float32)
 
-    ##导入用户数量，电影数量，torch形式的原始评分矩阵(train+test)
-    nb_users, nb_movies, training_set, test_set = dataset.data_input(
-        train_path, test_path)
-    k = 5
 
-    ##实值矩阵Binary化，列数*5
-    train_tensor_u = utils.expand(training_set, k, neg=0)
-    train_tensor_i = utils.expand(training_set.t(), k, neg=0)
-    train_tensor_neg_u = utils.expand(training_set, k, neg=1)
-    train_tensor_neg_i = utils.expand(training_set.t(), k, neg=1)
+# def __get_rmse()
 
-    ##user/item based##
-    def rbm_run(nh, nb_epoch, k_gibbs, batch_size, decay, momentum,
-                item_based):
+def _train(args):
+    dataset = Dataset(args.dataset, args.dataset_split, seed=args.dataset_seed)
+    dataset.init_full_matrices()
 
-        l_mae_train, l_mse_train, l_mae_test, l_mse_test = [], [], [], []
-        ##初始化一个rbm的class
-        if item_based == True:
-            train_tensor, train_tensor_neg = train_tensor_i, train_tensor_neg_i
-            nb_rows, nv = nb_movies, nb_users
-        else:
-            train_tensor, train_tensor_neg = train_tensor_u, train_tensor_neg_u
-            nb_rows, nv = nb_users, nb_movies
+    n_user, n_item = dataset.get_n_user_and_n_item()
+    n_class = dataset.n_class
 
-        rbm_model = RBM(nv, nh).cuda()
-        rbm_model.params_init()
+    train_x = dataset.train_matrix
+    valid_x = dataset.train_matrix
+    valid_y = dataset.valid_matrix
+    test_x = (dataset.train_matrix + dataset.valid_matrix)
+    # test_x = dataset.train_matrix
+    test_y = dataset.test_matrix
 
-        ##开始迭代之前先初始化前一次迭代的梯度
-        prev_gw = torch.randn(rbm_model.dim).cuda()
-        prev_gbv = torch.randn(1, rbm_model.k * rbm_model.num_visible).cuda()
-        prev_gbh = torch.randn(1, rbm_model.num_hidden).cuda()
+    if args.dataset == Dataset.KIND_MOVIELENS_10M:
+        train_x = train_x * 2
+        valid_x = valid_x * 2
+        valid_y = valid_y * 2
+        test_x = test_x * 2
+        test_y = test_y * 2
 
-        # Training the RBM
-        for epoch in range(1, nb_epoch + 1):
-            print("Calculating:" + str(epoch) + '/' + str(nb_epoch))
-            for id_start in range(0, nb_rows - batch_size, batch_size):
-                v0 = train_tensor[id_start:id_start + batch_size].cuda()
-                vk = train_tensor[id_start:id_start + batch_size].cuda()
-                v0_neg = train_tensor_neg[id_start:
-                                          id_start + batch_size].cuda()
+    if args.use_user_vector:
+        n_row = n_user
+        n_col = n_item
+    else:
+        train_x = train_x.T
+        valid_x = valid_x.T
+        valid_y = valid_y.T
+        test_x = test_x.T
+        test_y = test_y.T
 
-                # Gibbs Sampling
-                ph0, h0 = rbm_model.sample_hidden(v0)
-                for k in range(k_gibbs):
-                    _, hk = rbm_model.sample_hidden(vk)
-                    _, vk = rbm_model.sample_visible(hk)
-                    vk[v0_neg == -1] = 0
-                phk, _ = rbm_model.sample_hidden(vk)
+        n_row = n_item
+        n_col = n_user
 
-                rbm_model.train(
-                    v0,
-                    vk,
-                    ph0,
-                    phk,
-                    prev_gw,
-                    prev_gbv,
-                    prev_gbh,
-                    w_lr=0.01,
-                    v_lr=0.01,
-                    h_lr=0.01,
-                    decay=decay,
-                    momentum=momentum)
-                prev_gw, prev_gvb, prev_gvh = rbm_model.gradient(
-                    v0, vk, ph0, phk)
-            ##重构之后计算误差
-            data_recons = utils.predict(
-                train_tensor, rbm_model, do_round=True, range_15=True)
-            if item_based == True:
-                data_recons = data_recons.t()
-            mae_train, mse_train = utils.calculate_error(
-                training_set, data_recons)
-            mae_test, mse_test = utils.calculate_error(test_set, data_recons)
-            print(mae_train, mse_train, mae_test, mse_test)
+    train_x = __expand(train_x, n_class=n_class)
+    valid_x = __expand(valid_x, n_class=n_class)
+    valid_y = __expand(valid_y, n_class=n_class)
+    test_x = __expand(test_x, n_class=n_class)
+    test_y = __expand(test_y, n_class=n_class)
 
-            l_mae_train.append(mae_train)
-            l_mse_train.append(mse_train)
-            l_mae_test.append(mae_test)
-            l_mse_test.append(mse_test)
+    set_torch_seed(args.seed)
 
-        return rbm_model, l_mae_train, l_mse_train, l_mae_test, l_mse_test
+    rbm = RBM(n_vis=train_x.shape[1], k=1).cuda()
 
-    ##输出
-    "l_mae_train, l_mse_train, l_mae_test,l_mse_test"
-    # ##user_based
-    # rbm_model3_u, l_mae_train3_u, l_mse_train3_u, l_mae_test3_u, l_mse_test3_u = rbm_run(
-    #     nh=100,
-    #     nb_epoch=400,
-    #     k_gibbs=10,
-    #     batch_size=100,
-    #     decay=0,
-    #     momentum=0,
-    #     item_based=False)
-    # utils.show_min_loss(l_mae_train3_u, l_mae_test3_u)
-    ##item_based
-    rbm_model3_i, l_mae_train3_i, l_mse_train3_i, l_mae_test3_i, l_mse_test3_i = rbm_run(
-        nh=100,
-        nb_epoch=400,
-        k_gibbs=10,
-        batch_size=100,
-        decay=0,
-        momentum=0,
-        item_based=True)
-    utils.show_min_loss(l_mae_train3_i, l_mae_test3_i)
+    train_op = optim.SGD(rbm.parameters(), 0.0001)
 
-    # assert False
-    #
-    # ##作图观察误差走势
-    # x = range(0, 400)
-    # y = l_mae_train3_u
-    # plt.figure()
-    # plt.plot(x, y, "-", label="nh=100,k_gibbs=10", color="red")
-    # plt.xlabel("iteration")
-    # plt.ylabel("mse")
-    # plt.title("User based RBM(Train set)")
-    # plt.legend()
-    # plt.show()
-    #
-    # ##基于uRBM和iRBM构建sRBM，并输出误差
-    # RBM_symm_utils.RBM_symm(rbm_model3_u, rbm_model3_i, train_tensor_u,
-    #                         train_tensor_i, training_set, test_set)
-    #
-    # ##将表现最好的RBM模型重构的打分结果储存在本地
-    # rbm_model_best_100k = rbm_model3_u
-    # recons_100k = utils.predict(
-    #     train_tensor_u, rbm_model_best_100k, do_round=True, range_15=True)
-    # l_recons_100k = recons_100k.numpy().flatten().tolist()
-    # ##定义对应的行与列的id
-    #
-    # ##将rbm的打分转化成dataframe输出到本地储存
-    # iid_list = list(range(1, 1683)) * 943
-    # uid_list = []
-    # for i in range(1, 944):
-    #     for j in range(1682):
-    #         uid_list.append(i)
-    #
-    # data_pre_100k = {'iid': iid_list, 'uid': uid_list, 'pre': l_recons_100k}
-    # df_pre_100k = pd.DataFrame(data_pre_100k)
-    # df_pre_100k.to_csv(
-    #     "/Users/baifrank/Desktop/recomm_output/pre_best_100k.csv", index=False)
+    for epoch in range(10):
+        data = torch.from_numpy(train_x).cuda()
+        sample_data = data.bernoulli()
+
+        v, v1, vp = rbm(sample_data)
+        loss = rbm.free_energy(v) - rbm.free_energy(v1)
+        print(loss)
+        print(vp.shape)
+        train_op.zero_grad()
+        loss.backward()
+        train_op.step()
+        # break
+
+    # print(np.mean(loss_))
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description='CFRBM-tensorflow')
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_1M,
+        choices=[
+            Dataset.KIND_MOVIELENS_100k,
+            Dataset.KIND_MOVIELENS_1M,
+            Dataset.KIND_MOVIELENS_10M,
+        ],
+        help='Specify dataset.')
+    parser.add_argument(
+        '--dataset_split',
+        type=str,
+        # default='default-10-percent',
+        default='5-fold',
+        choices=[
+            'default-10-percent',
+            '5-fold',
+        ],
+        help='Specify dataset split.')
+    parser.add_argument(
+        '--n_batch', type=int, default=512, help='the batch size')
+    parser.add_argument('--seed', type=int, default=1, help='the seed')
+    parser.add_argument(
+        '--use_user_vector',
+        type=str2bool,
+        # default=True,
+        default=False,
+        help='Whether use user vector')
+    parser.add_argument(
+        '--dataset_seed',
+        type=int,
+        # default=None,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    args = parser.parse_args()
+
+    _train(args)
+
+
+if __name__ == '__main__':
+    main()
