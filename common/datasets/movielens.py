@@ -197,7 +197,7 @@ class Dataset:
 
     def __split_npy(self):
         if self.split == self.SPLIT_DEFAULT_10_PERCENT:
-            # 10%를 test를 떼고, training 중 2.5%를 validation으로 뗀다.
+            # 10%를 test를 떼고, training 중 2%를 validation으로 뗀다.
             # AutoRec은 validation을 10% 떼고, CF-NADE는 5%를 떼는 데 우리는 더 조금 뗀다.
             train_filepath = os.path.join(DATA_PATH, self.kind,
                                           'data.{}.{}.train.npy'.format(
@@ -218,8 +218,8 @@ class Dataset:
             # print('!', data[0])
 
             n_row = data.shape[0]
-            train_data = data[:int(n_row * 0.8775)]
-            valid_data = data[int(n_row * 0.8775):int(n_row * 0.9)]
+            train_data = data[:int(n_row * 0.882)]
+            valid_data = data[int(n_row * 0.882):int(n_row * 0.9)]
             test_data = data[int(n_row * 0.9):]
             np.save(train_filepath, train_data)
             np.save(valid_filepath, valid_data)
@@ -276,8 +276,8 @@ class Dataset:
                 np.random.shuffle(train_data)
 
                 n_row = train_data.shape[0]
-                valid_data = train_data[int(n_row * 0.8):]
-                train_data = train_data[:int(n_row * 0.8)]
+                valid_data = train_data[int(n_row * 0.9):]
+                train_data = train_data[:int(n_row * 0.9)]
                 np.save(train_filepath, train_data)
                 np.save(valid_filepath, valid_data)
                 np.save(test_filepath, test_data)
