@@ -147,15 +147,6 @@ def conv_first(x, means, covs, p, gamma, weights, biases, args):
 # Building the encoder
 def encoder(x, means, covs, p, gamma, weights, biases, args):
     layer_1 = conv_first(x, means, covs, p, gamma, weights, biases, args)
-
-    # # Encoder Hidden layer with sigmoid activation
-    # layer_2 = tf.nn.sigmoid(
-    #     tf.add(
-    #         tf.matmul(layer_1, weights['encoder_h2']), biases['encoder_b2']))
-    # layer_3 = tf.nn.sigmoid(
-    #     tf.add(
-    #         tf.matmul(layer_2, weights['encoder_h3']), biases['encoder_b3']))
-    # return layer_3
     return layer_1
 
 
@@ -267,49 +258,8 @@ def _train(args):
     # Initialize the variables (i.e. assign their default value)
     init = tf.global_variables_initializer()
 
-    # trn_summary = [[] for _ in range(5)]
-    # trn_imgs = [[] for _ in range(2)]
-    # with tf.name_scope('train'):
-    #     trn_summary[0] = tf.summary.scalar('loss', loss)
-    #     trn_summary[1] = tf.summary.histogram("p", tf.nn.softmax(p, axis=0))
-    #     for i in range(n_distribution):
-    #         trn_summary[2].append(
-    #             tf.summary.histogram("mean/{:d}".format(i), means[i]))
-    #         trn_summary[3].append(
-    #             tf.summary.histogram("cov/{:d}".format(i), tf.abs(covs[i])))
-    #     trn_summary[4] = tf.summary.scalar('gamma', tf.abs(gamma)[0])
-    #     image_grid = tf.contrib.gan.eval.image_grid(
-    #         tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
-    #     trn_imgs[0] = tf.summary.image('input', image_grid, 1)
-    #     image_grid = tf.contrib.gan.eval.image_grid(
-    #         tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
-    #     trn_imgs[1] = tf.summary.image('output', image_grid, 1)
-    #
-    # tst_summary = [[] for _ in range(3)]
-    # with tf.name_scope('test'):
-    #     tst_summary[0] = tf.summary.scalar('loss', loss)
-    #     image_grid = tf.contrib.gan.eval.image_grid(
-    #         tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
-    #     tst_summary[1] = tf.summary.image('input', image_grid, 1)
-    #     image_grid = tf.contrib.gan.eval.image_grid(
-    #         tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
-    #     tst_summary[2] = tf.summary.image('output', image_grid, 1)
-
-    # current_date = datetime.now()
-    # current_date = current_date.strftime('%d%b_%H%M%S')
-
     with tf.Session() as sess:
-        # train_writer = tf.summary.FileWriter('./log/{}'.format(current_date),
-        #                                      sess.graph)
         sess.run(init)  # run the initializer
-
-        # res = sess.run([*trn_summary], feed_dict={X: data_test[:25]})
-
-        # train_writer.add_summary(res[1], -1)
-        # for i in range(n_distribution):
-        #     train_writer.add_summary(res[2][i], -1)
-        #     train_writer.add_summary(res[3][i], -1)
-        # train_writer.add_summary(res[4], -1)
 
         epoch_tqdm = tqdm(range(1, n_epochs + 1), desc="Loss", leave=False)
         for epoch in epoch_tqdm:
@@ -318,29 +268,9 @@ def _train(args):
                 batch_x = data_train[(iteration * batch_size):((
                     iteration + 1) * batch_size), :]
 
-                # Run optimization op (backprop) and cost op (to get loss value)
                 res = sess.run([train_op, loss], feed_dict={X: batch_x})
 
-                # train_writer.add_summary(res[-2],
-                #                          n_batch * (epoch - 1) + iteration)
-                # train_writer.add_summary(res[-1],
-                #                          n_batch * (epoch - 1) + iteration)
-                # train_writer.add_summary(res[2], n_batch * (epoch - 1) + iteration)
-                # train_writer.add_summary(res[3], n_batch * (epoch - 1) + iteration)
-                # for i in range(n_distribution):
-                #     train_writer.add_summary(res[4][i],
-                #                              n_batch * (epoch - 1) + iteration)
-                #     train_writer.add_summary(res[5][i],
-                #                              n_batch * (epoch - 1) + iteration)
-                # train_writer.add_summary(res[6], n_batch * (epoch - 1) + iteration)
-
                 epoch_tqdm.set_description("Loss: {:.5f}".format(res[1]))
-
-            # tst_loss, tst_input, tst_output = sess.run(
-            #     [*tst_summary], feed_dict={X: data_test[:25]})
-            # train_writer.add_summary(tst_loss, epoch)
-            # train_writer.add_summary(tst_input, epoch)
-            # train_writer.add_summary(tst_output, epoch)
 
 
 def main():
