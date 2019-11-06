@@ -41,66 +41,91 @@ def _get_commands():
 
 
 def main():
-    commands = [
-        # # identity
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=identity --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=identity --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=identity --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=identity --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=identity --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=identity --clipping=True",
-        # # leaky_relu
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
-        # # relu
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=6000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu --clipping=True",
-        # # relu6
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=relu6 --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu6 --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu6 --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=relu6 --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu6 --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu6 --clipping=True",
-        # # sigmoid
-        # "python3 -m autorec.trainer --lambda_w=300 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=sigmoid --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=600 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=sigmoid --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=100 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=sigmoid --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=300 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=sigmoid --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=sigmoid --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=200 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=sigmoid --clipping=True",
-        # # tanh
-        # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=tanh --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=3000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=tanh --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=tanh --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=tanh --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=tanh --clipping=True",
-        # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=tanh --clipping=True",
-        # elu
-        "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=elu --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=elu --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=elu --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=elu --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=800 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=elu --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=elu --clipping=True",
-        # softplus
-        "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=softplus --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=6000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=softplus --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=600 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=softplus --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=softplus --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=softplus --clipping=True",
-        "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=softplus --clipping=True",
-    ]
+    # commands = [
+    #     # # identity
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=identity --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=identity --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=identity --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=identity --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=identity --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=identity --clipping=True",
+    #     # # leaky_relu
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=leaky_relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=leaky_relu --clipping=True",
+    #     # # relu
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=6000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=8000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu --clipping=True",
+    #     # # relu6
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=relu6 --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu6 --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=relu6 --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=relu6 --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu6 --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=relu6 --clipping=True",
+    #     # # sigmoid
+    #     # "python3 -m autorec.trainer --lambda_w=300 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=sigmoid --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=600 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=sigmoid --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=100 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=sigmoid --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=300 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=sigmoid --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=sigmoid --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=200 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=sigmoid --clipping=True",
+    #     # # tanh
+    #     # "python3 -m autorec.trainer --lambda_w=900 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=tanh --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=3000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=tanh --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=tanh --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=800 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=tanh --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=tanh --clipping=True",
+    #     # "python3 -m autorec.trainer --lambda_w=500 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=tanh --clipping=True",
+    #     # elu
+    #     "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=elu --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=elu --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=elu --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=elu --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=800 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=elu --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=elu --clipping=True",
+    #     # softplus
+    #     "python3 -m autorec.trainer --lambda_w=2000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=False --activation_fn=softplus --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=6000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=softplus --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=600 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=False --activation_fn=softplus --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=1000 --K_denominator=500 --save_weights=True --normalize_input=False --use_user_vector=True --activation_fn=softplus --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=7000 --K_denominator=500 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=softplus --clipping=True",
+    #     "python3 -m autorec.trainer --lambda_w=700 --K_denominator=52.44 --save_weights=True --normalize_input=True --use_user_vector=True --activation_fn=softplus --clipping=True",
+    # ]
     # commands = _get_commands()
-    run_parallel(commands, n_worker=10)
+
+    commands = []
+
+    # imputation = 'mean'
+    # imputation = 'median'
+    # imputation = 'knn'
+    imputation = 'mice'
+    # imputation = 'soft-impute'
+
+    # use_user_vector = True
+    use_user_vector = False
+    # for use_user_vector in [True, False]:
+
+    for lambda_w in [
+            0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
+            600, 700, 800, 900, 1000
+    ]:
+        for seed in [1]:
+            command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                lambda_w=lambda_w,
+                use_user_vector=use_user_vector,
+                imputation=imputation,
+                seed=seed)
+            commands.append(command)
+
+    run_parallel(commands, n_worker=15)
 
 
 if __name__ == '__main__':

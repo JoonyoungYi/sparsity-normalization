@@ -25,7 +25,8 @@ def get_name_from_args(args):
         K_prime=args.K_denominator,
         use_user_vector=args.use_user_vector,
         clipping=args.clipping,
-        activation_fn=args.activation_fn)
+        activation_fn=args.activation_fn,
+        imputation=args.imputation, )
 
 
 def __get_test_y_hat(session, models, batch):
@@ -192,12 +193,13 @@ def _train(args):
         'autorec',
         args.dataset,
         args.activation_fn,
-        'uservec{use_user_vector}_Kprime{K_denominator}_clip{clipping}_sn{normalize_input}'.
+        'uservec{use_user_vector}_Kprime{K_denominator}_clip{clipping}_sn{normalize_input}_imputation{imputation}'.
         format(
             normalize_input=args.normalize_input,
             use_user_vector=args.use_user_vector,
             K_denominator=args.K_denominator,
-            clipping=args.clipping),
+            clipping=args.clipping,
+            imputation=args.imputation),
         '\t'.join([str(r) for r in results]), )
 
 
@@ -229,8 +231,8 @@ def main():
     parser.add_argument(
         '--normalize_input',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether normalize input.')
     parser.add_argument(
         '--standardization',
@@ -264,19 +266,40 @@ def main():
     parser.add_argument(
         '--dataset_seed',
         type=int,
-        default=None,
+        # default=None,
+        default=1,
         help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
     parser.add_argument(
         '--epoch_early_stop',
         type=int,
         default=1000,
         help='the number of epochation for early stop.')
+    parser.add_argument(
+        '--imputation',
+        type=str,
+        # default='zero',
+        default='mean',
+        # default='median',
+        # default='knn',
+        # default='mice',
+        # default='soft-impute', # matrix
+        # default='miss-forest',
+        choices=[
+            'zero',
+            'mean',
+            'median',
+            'knn',
+            'mice',
+            'soft-impute',
+            # 'miss-forest',
+        ],
+        help='')
 
     parser.add_argument(
         '--lambda_w',
         type=float,
-        default=600.0,
-        help='lambda for weight decay.')
+        default=0.0,
+        help='lambda for weight decay.', )
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -323,13 +346,14 @@ def main():
     parser.add_argument(
         '--sparse_tensor',
         type=str2bool,
-        default=True,
+        # default=True,
+        default=False,
         help='whether use sparse tensor.')
     parser.add_argument(
         '--save_weights',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='')
     parser.add_argument(
         '--n_batch',
@@ -352,6 +376,10 @@ def main():
     if args.sparse_tensor:
         # RProp optimizer can be used only for dense tensor.
         assert args.optimizer != 'rprop'
+        assert args.imputation == 'zero'
+
+    if args.imputation != 'zero':
+        assert not args.normalize_input
 
     if not args.normalize_input:
         assert args.K_denominator == 500

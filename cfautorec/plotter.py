@@ -27,15 +27,16 @@ def _get_count_dict(count_dict, train_data, use_user_vector=False):
 
 
 def get_name(normalize_input, standardization, lambda_w, K_prime,
-             activation_fn, use_user_vector, clipping):
-    return '{}_{}_{}_{}_{}_{}_clip{clipping}'.format(
+             activation_fn, use_user_vector, clipping, imputation):
+    return '{}_{}_{}_{}_{}_{}_clip{clipping}_imputation{imputation}'.format(
         normalize_input,
         standardization,
         lambda_w,
         K_prime,
         activation_fn,
         use_user_vector,
-        clipping=clipping)
+        clipping=clipping,
+        imputation=imputation)
 
 
 def _plot_dataset(use_user_vector=False):
