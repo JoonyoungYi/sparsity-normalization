@@ -8,6 +8,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.mixture import GaussianMixture
 from tqdm import tqdm
 
+from common.utils import set_seed
+
 
 def random_mask(width_window, margin=0):
     margin_left = margin
@@ -51,7 +53,7 @@ def nr(mu, sigma):
     return nr_values
 
 
-def conv_first(x, means, covs, p, gamma):
+def conv_first(x, means, covs, p, gamma, weights, biases, args):
     gamma_ = tf.abs(gamma)
     # gamma_ = tf.cond(tf.less(gamma_[0], 1.), lambda: gamma_, lambda: tf.square(gamma_))
     covs_ = tf.abs(covs)
@@ -77,8 +79,8 @@ def conv_first(x, means, covs, p, gamma):
     weights2 = tf.square(weights['encoder_h1'])
 
     # Collect distributions
-    distributions = tf.TensorArray(dtype=x.dtype, size=n_distribution)
-    q_collector = tf.TensorArray(dtype=x.dtype, size=n_distribution)
+    distributions = tf.TensorArray(dtype=x.dtype, size=args.n_distribution)
+    q_collector = tf.TensorArray(dtype=x.dtype, size=args.n_distribution)
 
     # Each loop iteration calculates all per component
     def calculate_component(i, collect1, collect2):
@@ -122,7 +124,7 @@ def conv_first(x, means, covs, p, gamma):
 
     i = tf.constant(0)
     _, final_distributions, final_q = tf.while_loop(
-        lambda i, c1, c2: i < n_distribution,
+        lambda i, c1, c2: i < args.n_distribution,
         calculate_component,
         loop_vars=(i, distributions, q_collector),
         swap_memory=True,
@@ -143,8 +145,8 @@ def conv_first(x, means, covs, p, gamma):
 
 
 # Building the encoder
-def encoder(x, means, covs, p, gamma):
-    layer_1 = conv_first(x, means, covs, p, gamma)
+def encoder(x, means, covs, p, gamma, weights, biases, args):
+    layer_1 = conv_first(x, means, covs, p, gamma, weights, biases, args)
 
     # Encoder Hidden layer with sigmoid activation
     layer_2 = tf.nn.sigmoid(
@@ -157,7 +159,7 @@ def encoder(x, means, covs, p, gamma):
 
 
 # Building the decoder
-def decoder(x):
+def decoder(x, weights, biases):
     layer_1 = tf.nn.sigmoid(
         tf.add(tf.matmul(x, weights['decoder_h1']), biases['decoder_b1']))
     layer_2 = tf.nn.sigmoid(
@@ -178,9 +180,8 @@ def prep_x(x):
     return tf.concat((x, x_miss), axis=0)
 
 
-def main():
-    RANDOM_SEED = 42
-    tf.set_random_seed(RANDOM_SEED)
+def _train(args):
+    set_seed(args.seed)
 
     # Training Parameters
     learning_rate = 0.01
@@ -192,8 +193,6 @@ def main():
     num_hidden_2 = 128  # 2nd layer num features (the latent dim)
     num_hidden_3 = 64  # 3nd layer num features (the latent dim)
     num_input = 784  # MNIST data_rbfn input (img shape: 28*28)
-
-    n_distribution = 5  # number of n_distribution
 
     width_mask = 13  # size of window mask
 
@@ -259,7 +258,7 @@ def main():
 
     t0 = time()
     gmm = GaussianMixture(
-        n_components=n_distribution, covariance_type='diag').fit(data)
+        n_components=args.n_distribution, covariance_type='diag').fit(data)
     print("GMM done in %0.3fs." % (time() - t0))
 
     p = tf.Variable(
@@ -272,8 +271,8 @@ def main():
     del data, gmm
 
     # Construct model
-    encoder_op = encoder(X, means, covs, p, gamma)
-    decoder_op = decoder(encoder_op)
+    encoder_op = encoder(X, means, covs, p, gamma, weights, biases, args)
+    decoder_op = decoder(encoder_op, weights, biases)
 
     y_pred = decoder_op  # prediction
     y_true = prep_x(X)  # Targets (Labels) are the input data_rbfn.
@@ -289,43 +288,43 @@ def main():
     # Initialize the variables (i.e. assign their default value)
     init = tf.global_variables_initializer()
 
-    trn_summary = [[] for _ in range(5)]
-    trn_imgs = [[] for _ in range(2)]
-    with tf.name_scope('train'):
-        trn_summary[0] = tf.summary.scalar('loss', loss)
-        trn_summary[1] = tf.summary.histogram("p", tf.nn.softmax(p, axis=0))
-        for i in range(n_distribution):
-            trn_summary[2].append(
-                tf.summary.histogram("mean/{:d}".format(i), means[i]))
-            trn_summary[3].append(
-                tf.summary.histogram("cov/{:d}".format(i), tf.abs(covs[i])))
-        trn_summary[4] = tf.summary.scalar('gamma', tf.abs(gamma)[0])
-        image_grid = tf.contrib.gan.eval.image_grid(
-            tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
-        trn_imgs[0] = tf.summary.image('input', image_grid, 1)
-        image_grid = tf.contrib.gan.eval.image_grid(
-            tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
-        trn_imgs[1] = tf.summary.image('output', image_grid, 1)
+    # trn_summary = [[] for _ in range(5)]
+    # trn_imgs = [[] for _ in range(2)]
+    # with tf.name_scope('train'):
+    #     trn_summary[0] = tf.summary.scalar('loss', loss)
+    #     trn_summary[1] = tf.summary.histogram("p", tf.nn.softmax(p, axis=0))
+    #     for i in range(n_distribution):
+    #         trn_summary[2].append(
+    #             tf.summary.histogram("mean/{:d}".format(i), means[i]))
+    #         trn_summary[3].append(
+    #             tf.summary.histogram("cov/{:d}".format(i), tf.abs(covs[i])))
+    #     trn_summary[4] = tf.summary.scalar('gamma', tf.abs(gamma)[0])
+    #     image_grid = tf.contrib.gan.eval.image_grid(
+    #         tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
+    #     trn_imgs[0] = tf.summary.image('input', image_grid, 1)
+    #     image_grid = tf.contrib.gan.eval.image_grid(
+    #         tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
+    #     trn_imgs[1] = tf.summary.image('output', image_grid, 1)
+    #
+    # tst_summary = [[] for _ in range(3)]
+    # with tf.name_scope('test'):
+    #     tst_summary[0] = tf.summary.scalar('loss', loss)
+    #     image_grid = tf.contrib.gan.eval.image_grid(
+    #         tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
+    #     tst_summary[1] = tf.summary.image('input', image_grid, 1)
+    #     image_grid = tf.contrib.gan.eval.image_grid(
+    #         tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
+    #     tst_summary[2] = tf.summary.image('output', image_grid, 1)
 
-    tst_summary = [[] for _ in range(3)]
-    with tf.name_scope('test'):
-        tst_summary[0] = tf.summary.scalar('loss', loss)
-        image_grid = tf.contrib.gan.eval.image_grid(
-            tf.gather(prep_x(X), np.arange(25)), (5, 5), (28, 28), 1)
-        tst_summary[1] = tf.summary.image('input', image_grid, 1)
-        image_grid = tf.contrib.gan.eval.image_grid(
-            tf.gather(decoder_op, np.arange(25)), (5, 5), (28, 28), 1)
-        tst_summary[2] = tf.summary.image('output', image_grid, 1)
-
-    current_date = datetime.now()
-    current_date = current_date.strftime('%d%b_%H%M%S')
+    # current_date = datetime.now()
+    # current_date = current_date.strftime('%d%b_%H%M%S')
 
     with tf.Session() as sess:
         # train_writer = tf.summary.FileWriter('./log/{}'.format(current_date),
         #                                      sess.graph)
         sess.run(init)  # run the initializer
 
-        res = sess.run([*trn_summary], feed_dict={X: data_test[:25]})
+        # res = sess.run([*trn_summary], feed_dict={X: data_test[:25]})
 
         # train_writer.add_summary(res[1], -1)
         # for i in range(n_distribution):
@@ -341,9 +340,7 @@ def main():
                     iteration + 1) * batch_size), :]
 
                 # Run optimization op (backprop) and cost op (to get loss value)
-                res = sess.run(
-                    [optimizer, loss, *trn_summary, *trn_imgs],
-                    feed_dict={X: batch_x})
+                res = sess.run([optimizer, loss], feed_dict={X: batch_x})
 
                 # train_writer.add_summary(res[-2],
                 #                          n_batch * (epoch - 1) + iteration)
@@ -360,11 +357,20 @@ def main():
 
                 epoch_tqdm.set_description("Loss: {:.5f}".format(res[1]))
 
-            tst_loss, tst_input, tst_output = sess.run(
-                [*tst_summary], feed_dict={X: data_test[:25]})
+            # tst_loss, tst_input, tst_output = sess.run(
+            #     [*tst_summary], feed_dict={X: data_test[:25]})
             # train_writer.add_summary(tst_loss, epoch)
             # train_writer.add_summary(tst_input, epoch)
             # train_writer.add_summary(tst_output, epoch)
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='AutoRec')
+    parser.add_argument('--n_distribution', type=int, default=5, help='')
+    parser.add_argument('--seed', type=int, default=1, help='')
+    args = parser.parse_args()
+    _train(args)
 
 
 if __name__ == '__main__':
