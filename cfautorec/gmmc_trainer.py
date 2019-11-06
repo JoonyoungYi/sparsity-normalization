@@ -196,31 +196,16 @@ def _train(args):
 
     weights = {
         'encoder_h1': tf.Variable(initializer([num_input, num_hidden_1])),
-        # 'encoder_h2': tf.Variable(initializer([num_hidden_1, num_hidden_2])),
-        # 'encoder_h3': tf.Variable(initializer([num_hidden_2, num_hidden_3])),
-        # 'decoder_h1': tf.Variable(initializer([num_hidden_3, num_hidden_2])),
-        # 'decoder_h2': tf.Variable(initializer([num_hidden_2, num_hidden_1])),
         'decoder_h3': tf.Variable(initializer([num_hidden_1, num_input])),
     }
     biases = {
         'encoder_b1': tf.Variable(tf.random_normal([num_hidden_1])),
-        # 'encoder_b2': tf.Variable(tf.random_normal([num_hidden_2])),
-        # 'encoder_b3': tf.Variable(tf.random_normal([num_hidden_3])),
-        # 'decoder_b1': tf.Variable(tf.random_normal([num_hidden_2])),
-        # 'decoder_b2': tf.Variable(tf.random_normal([num_hidden_1])),
         'decoder_b3': tf.Variable(tf.random_normal([num_input])),
     }
 
-    t0 = time()
     mnist = tf.keras.datasets.mnist
-    try:
-        with np.load('./data/mnist.npz') as f:
-            x_train, y_train = f['x_train'], f['y_train']
-            x_test, y_test = f['x_test'], f['y_test']
-    except FileNotFoundError:
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train, x_test = x_train / 255.0, x_test / 255.0
-    print("Read data done in %0.3fs." % (time() - t0))
 
     x_train = x_train[:10000]  # TODO: trainin sample 줄이기.
 
@@ -276,7 +261,8 @@ def _train(args):
 
     # Define loss and optimizer, minimize the squared error
     loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-    optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(loss)
+    optimizer = tf.train.AdamOptimizer(learning_rate)
+    train_op = optimizer.minimize(loss)
 
     # Initialize the variables (i.e. assign their default value)
     init = tf.global_variables_initializer()
@@ -333,7 +319,7 @@ def _train(args):
                     iteration + 1) * batch_size), :]
 
                 # Run optimization op (backprop) and cost op (to get loss value)
-                res = sess.run([optimizer, loss], feed_dict={X: batch_x})
+                res = sess.run([train_op, loss], feed_dict={X: batch_x})
 
                 # train_writer.add_summary(res[-2],
                 #                          n_batch * (epoch - 1) + iteration)
