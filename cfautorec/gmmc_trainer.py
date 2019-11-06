@@ -1,6 +1,4 @@
 import os
-from datetime import datetime
-from time import time
 
 import numpy as np
 import tensorflow as tf
@@ -9,34 +7,6 @@ from sklearn.mixture import GaussianMixture
 from tqdm import tqdm
 
 from common.utils import set_seed
-
-
-def random_mask(width_window, margin=0):
-    margin_left = margin
-    margin_righ = margin
-    margin_top = margin
-    margin_bottom = margin
-    start_width = margin_top + np.random.randint(28 - width_window - margin_top
-                                                 - margin_bottom)
-    start_height = margin_left + np.random.randint(28 - width_window -
-                                                   margin_left - margin_righ)
-
-    return np.concatenate(
-        [
-            28 * i + np.arange(start_height, start_height + width_window)
-            for i in np.arange(start_width, start_width + width_window)
-        ],
-        axis=0).astype(np.int32)
-
-
-def data_with_mask(x, width_window=10):
-    h = width_window
-    for i in range(x.shape[0]):
-        if width_window <= 0:
-            h = np.random.randint(8, 20)
-        maska = random_mask(h)
-        x[i, maska] = np.nan
-    return x
 
 
 def nr(mu, sigma):
@@ -68,15 +38,14 @@ def conv_first(x, means, covs, p, gamma, weights, biases, args):
                                 [-1]))  # data_rbfn without missing values
 
     # data_rbfn without missing
-    layer_1 = tf.nn.relu(
-        tf.add(tf.matmul(x, weights['encoder_h1']), biases['encoder_b1']))
+    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['0']), biases['0']))
 
     # data_rbfn with missing
     where_isnan = tf.is_nan(x_miss)
     where_isfinite = tf.is_finite(x_miss)
     size = tf.shape(x_miss)
 
-    weights2 = tf.square(weights['encoder_h1'])
+    weights2 = tf.square(weights['0'])
 
     # Collect distributions
     distributions = tf.TensorArray(dtype=x.dtype, size=args.n_distribution)
@@ -94,8 +63,7 @@ def conv_first(x, means, covs, p, gamma, weights, biases, args):
                                                                   size[1]]),
                             tf.zeros([size[0], size[1]]))
 
-        layer_1_m = tf.add(
-            tf.matmul(data_miss, weights['encoder_h1']), biases['encoder_b1'])
+        layer_1_m = tf.add(tf.matmul(data_miss, weights['0']), biases['0'])
         layer_1_m = nr(layer_1_m, tf.matmul(miss_cov, weights2))
 
         norm = tf.subtract(data_miss, means[i, :])
@@ -146,89 +114,42 @@ def conv_first(x, means, covs, p, gamma, weights, biases, args):
 
 # Building the encoder
 def encoder(x, means, covs, p, gamma, weights, biases, args):
-    layer_1 = conv_first(x, means, covs, p, gamma, weights, biases, args)
-    return layer_1
+    return conv_first(x, means, covs, p, gamma, weights, biases, args)
 
 
 # Building the decoder
 def decoder(x, weights, biases):
-    layer_3 = tf.add(tf.matmul(x, weights['decoder_h3']), biases['decoder_b3'])
-    # return layer_3
-    return layer_3
+    return tf.add(tf.matmul(x, weights['1']), biases['1'])
 
 
-def prep_x(x):
+def prep_x(x, y):
     check_isnan = tf.is_nan(x)
     check_isnan = tf.reduce_sum(tf.cast(check_isnan, tf.int32), 1)
 
-    x_miss = tf.gather(x, tf.reshape(tf.where(check_isnan > 0), [-1]))
-    x = tf.gather(x, tf.reshape(tf.where(tf.equal(check_isnan, 0)), [-1]))
-    return tf.concat((x, x_miss), axis=0)
+    y_miss = tf.gather(y, tf.reshape(tf.where(check_isnan > 0), [-1]))
+    y_valid = tf.gather(y, tf.reshape(
+        tf.where(tf.equal(check_isnan, 0)), [-1]))
+    return tf.concat((y_valid, y_miss), axis=0)
 
 
-def _train(args):
-    set_seed(args.seed)
-
-    # Training Parameters
-    learning_rate = 1e-3
-    n_epochs = 250
-    batch_size = 64
-
-    # Network Parameters
-    num_hidden_1 = 500  # 1st layer num features
-    num_input = 784  # MNIST data_rbfn input (img shape: 28*28)
-
-    width_mask = 13  # size of window mask
-
-    # tf Graph input (only pictures)
-    X = tf.placeholder("float", [None, num_input])
-
-    initializer = tf.contrib.layers.variance_scaling_initializer()
-
-    weights = {
-        'encoder_h1': tf.Variable(initializer([num_input, num_hidden_1])),
-        'decoder_h3': tf.Variable(initializer([num_hidden_1, num_input])),
-    }
-    biases = {
-        'encoder_b1': tf.Variable(tf.random_normal([num_hidden_1])),
-        'decoder_b3': tf.Variable(tf.random_normal([num_input])),
-    }
-
+def _load_data(args):
     mnist = tf.keras.datasets.mnist
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    x_train, x_test = x_train / 255.0, x_test / 255.0
-
-    x_train = x_train[:10000]  # TODO: trainin sample 줄이기.
-
-    data_train = x_train
-
-    # choose test images nn * 10
-    nn = 100
-    data_test = x_test[np.where(y_test == 0)[0][:nn], :]
-    for i in range(1, 10):
-        data_test = np.concatenate(
-            [data_test, x_test[np.where(y_test == i)[0][:nn], :]], axis=0)
-    data_test = np.random.permutation(data_test)
-
+    (train_x, _), (_, _) = mnist.load_data()
+    train_x = 1 - train_x / 255.0
+    train_x = train_x[:1000]
     del mnist
+    train_x = train_x.reshape([-1, 784])
 
-    # change background to white
-    data_train = 1. - data_train.reshape(-1, num_input)
-    data_test = 1. - data_test.reshape(-1, num_input)
+    train_x[np.random.random(train_x.shape) < 0.9] = np.nan
+    return train_x
 
-    # create missing data_rbfn train
-    data_train = data_with_mask(data_train, width_mask)
 
-    # create missing data_rbfn test
-    data_test = data_with_mask(data_test, width_mask)
-
+def _init_gmm(data_train, args):
     imp = SimpleImputer(missing_values=np.nan, strategy='mean')
     data = imp.fit_transform(data_train)
 
-    t0 = time()
     gmm = GaussianMixture(
         n_components=args.n_distribution, covariance_type='diag').fit(data)
-    print("GMM done in %0.3fs." % (time() - t0))
 
     p = tf.Variable(
         initial_value=np.log(gmm.weights_.reshape((-1, 1))), dtype=tf.float32)
@@ -238,46 +159,93 @@ def _train(args):
         initial_value=tf.random_normal(shape=(1, ), mean=1., stddev=1.),
         dtype=tf.float32)
     del data, gmm
+    return {
+        'means': means,
+        'covs': covs,
+        'p': p,
+        'gamma': gamma,
+    }
+
+
+def _init_models(gmm, args):
+    # init tensor
+    x = tf.placeholder("float", [None, args.n_input_unit])
+    y = tf.placeholder("float", [None, args.n_input_unit])
+    initializer = tf.contrib.layers.variance_scaling_initializer()
+    weights = {
+        '0': tf.Variable(initializer([args.n_input_unit, args.n_hidden_unit])),
+        '1': tf.Variable(initializer([args.n_hidden_unit, args.n_input_unit])),
+    }
+    biases = {
+        '0': tf.Variable(tf.random_normal([args.n_hidden_unit])),
+        '1': tf.Variable(tf.random_normal([args.n_input_unit])),
+    }
 
     # Construct model
-    encoder_op = encoder(X, means, covs, p, gamma, weights, biases, args)
-    decoder_op = decoder(encoder_op, weights, biases)
-
-    y_pred = decoder_op  # prediction
-    y_true = prep_x(X)  # Targets (Labels) are the input data_rbfn.
+    h = encoder(
+        x,
+        gmm['means'],
+        gmm['covs'],
+        gmm['p'],
+        gmm['gamma'],
+        weights,
+        biases,
+        args=args)
+    y_pred = decoder(h, weights, biases)
+    y_true = prep_x(x, y)  # Targets (Labels) are the input data_rbfn.
 
     where_isnan = tf.is_nan(y_true)
     y_pred = tf.where(where_isnan, tf.zeros_like(y_pred), y_pred)
     y_true = tf.where(where_isnan, tf.zeros_like(y_true), y_true)
 
     # Define loss and optimizer, minimize the squared error
-    loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-    optimizer = tf.train.AdamOptimizer(learning_rate)
+    loss = tf.reduce_sum(tf.pow(y_true - y_pred, 2))
+    rmse = tf.sqrt(loss / tf.reduce_sum(
+        tf.where(where_isnan, tf.zeros_like(y_pred), tf.ones_like(y_pred))))
+    optimizer = tf.train.AdamOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss)
+    return {
+        'x': x,
+        'y': y,
+        'loss': loss,
+        'rmse': rmse,
+        'train_op': train_op,
+    }
 
-    # Initialize the variables (i.e. assign their default value)
-    init = tf.global_variables_initializer()
+
+def _train(args):
+    set_seed(args.seed)
+
+    train_x = _load_data(args)
+    gmm = _init_gmm(train_x, args)
+
+    models = _init_models(gmm, args)
 
     with tf.Session() as sess:
-        sess.run(init)  # run the initializer
+        sess.run(tf.global_variables_initializer())
 
-        epoch_tqdm = tqdm(range(1, n_epochs + 1), desc="Loss", leave=False)
-        for epoch in epoch_tqdm:
-            n_batch = data_train.shape[0] // batch_size
-            for iteration in tqdm(range(n_batch), desc="Batches", leave=False):
-                batch_x = data_train[(iteration * batch_size):((
-                    iteration + 1) * batch_size), :]
+        for epoch_idx in range(1, args.max_epoch + 1):
+            print('>> EPOCH:', epoch_idx)
 
-                res = sess.run([train_op, loss], feed_dict={X: batch_x})
-
-                epoch_tqdm.set_description("Loss: {:.5f}".format(res[1]))
+            _, train_rmse = sess.run(
+                (models['train_op'], models['rmse']),
+                feed_dict={
+                    models['x']: train_x,
+                    models['y']: train_x,
+                })
+            print('%.6f' % train_rmse)
 
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='AutoRec')
+    parser = argparse.ArgumentParser(description='AutoRecGMMC')
     parser.add_argument('--n_distribution', type=int, default=5, help='')
+    parser.add_argument('--n_batch', type=int, default=2000, help='')
+    parser.add_argument('--max_epoch', type=int, default=100000, help='')
+    parser.add_argument('--n_hidden_unit', type=int, default=500, help='')
+    parser.add_argument('--n_input_unit', type=int, default=784, help='')
     parser.add_argument('--seed', type=int, default=1, help='')
+    parser.add_argument('--learning_rate', type=float, default=1e-3, help='')
     args = parser.parse_args()
     _train(args)
 
