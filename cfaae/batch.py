@@ -4,31 +4,6 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-def _sparse__swith_row_col(_x):
-    x = _x.copy()
-    x[:, 0] = _x[:, 1]
-    x[:, 1] = _x[:, 0]
-    return x
-
-
-def _sparse__get_count(x, n_row):
-    c = np.zeros(n_row)
-    for i in range(x.shape[0]):
-        row = x[i]
-        c[int(row[0])] += 1
-    return c
-
-
-def _sparse__normalize(x, c, n_col):
-    for i in range(x.shape[0]):
-        x[i][2] = (x[i][2]) * (n_col / c[int(x[i][0])])
-    return x
-
-
-def _sparse__tensor(x, n_row, n_col):
-    return (x[:, :2], x[:, 2], (n_row, n_col))
-
-
 def _sparse__csr_matrix(x, n_row, n_col):
     return csr_matrix((x[:, 2], (x[:, 0], x[:, 1])), shape=(n_row, n_col))
 
@@ -37,93 +12,137 @@ class Batch:
     def __init__(self, dataset, args):
         self.n_batch = args.n_batch
 
-        n_user, n_item = dataset.get_n_user_and_n_item()
+        self.n_user, self.n_item = dataset.get_n_user_and_n_item()
 
-        train_x = dataset.train_data
-        train_y = train_x.copy()
-        valid_y = dataset.valid_data
-        test_x = np.concatenate([dataset.train_data, dataset.valid_data])
-        test_y = dataset.test_data
-
-        n_row = n_user
-        n_col = n_item
-
-
-        row_indices = list(range(n_row))
-        random.shuffle(row_indices)
-        self.row_indices = row_indices
+        train_mat = dataset.train_data
+        test_mat = np.concatenate([dataset.train_data, dataset.valid_data])
+        self.train_csr_umat = _sparse__csr_matrix(train_mat, self.n_user,
+                                                  self.n_item)
+        self.test_csr_umat = _sparse__csr_matrix(test_mat, self.n_user,
+                                                 self.n_item)
+        self.train_csr_imat = self.train_csr_umat.T.copy()
+        self.test_csr_imat = self.test_csr_umat.T.copy()
 
         if args.normalize_input:
-            if args.K_denominator:
-                n_mutiplier = args.K_denominator
-            else:
-                n_mutiplier = n_col
+            user_c = csr_matrix.sum(self.train_csr_umat > 0, axis=1)
+            user_c_mean = np.mean(user_c)
+            # print(user_c[:10])
+            self.train_ucount = np.maximum(user_c, 1.0) / user_c_mean
+            # print(self.train_ucount.shape)
+            # print(self.train_ucount[:10])
+            # print(np.mean(self.train_ucount))
+            # input('!')
 
-            train_c = np.clip(
-                _sparse__get_count(train_x, n_row), a_min=1, a_max=None)
-            train_x = _sparse__normalize(train_x, train_c, n_mutiplier)
-            # train_x *= n_col
+            item_c = csr_matrix.sum(self.train_csr_imat > 0, axis=1)
+            item_c_mean = np.mean(item_c)
+            self.train_icount = np.maximum(item_c, 1.0) / item_c_mean
 
-            test_c = np.clip(
-                _sparse__get_count(test_x, n_row), a_min=1, a_max=None)
-            test_x = _sparse__normalize(test_x, test_c, n_mutiplier)
-            # train_x *= n_col
+            self.test_ucount = np.maximum(
+                csr_matrix.sum(self.test_csr_umat > 0, axis=1),
+                1.0) / user_c_mean
+            self.test_icount = np.maximum(
+                csr_matrix.sum(self.test_csr_imat > 0, axis=1),
+                1.0) / item_c_mean
 
-        # self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-        self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-        self.train_csr_y = _sparse__csr_matrix(train_y, n_row, n_col)
-        self.valid_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-        self.valid_csr_y = _sparse__csr_matrix(valid_y, n_row, n_col)
-        self.test_csr_x = _sparse__csr_matrix(test_x, n_row, n_col)
-        self.test_csr_y = _sparse__csr_matrix(test_y, n_row, n_col)
+            # print(np.mean(self.test_ucount))
+            # print(np.mean(self.test_ucount))
+            # input('!')
+        else:
+            self.train_ucount = np.ones([self.n_user, 1])
+            self.train_icount = np.ones([self.n_item, 1])
+            self.test_ucount = np.ones([self.n_user, 1])
+            self.test_icount = np.ones([self.n_item, 1])
 
-        self.train_x = _sparse__tensor(train_x, n_row, n_col)
-        self.train_y = _sparse__tensor(train_y, n_row, n_col)
-        self.valid_x = _sparse__tensor(train_x, n_row, n_col)
-        self.valid_y = _sparse__tensor(valid_y, n_row, n_col)
-        self.test_x = _sparse__tensor(test_x, n_row, n_col)
-        self.test_y = _sparse__tensor(test_y, n_row, n_col)
+        train_data = dataset.train_data
+        self.train_u = train_data[:, 0].astype(np.int64)
+        self.train_i = train_data[:, 1].astype(np.int64)
+        self.train_y = train_data[:, 2].astype(np.float32)
+        self.n_train = train_data.shape[0]
 
-        self.n_row = n_row
-        self.n_col = n_col
+        valid_data = dataset.valid_data
+        self.valid_u = valid_data[:, 0].astype(np.int64)
+        self.valid_i = valid_data[:, 1].astype(np.int64)
+        self.valid_y = valid_data[:, 2].astype(np.float32)
+        self.n_valid = valid_data.shape[0]
+
+        test_data = dataset.test_data
+        self.test_u = test_data[:, 0].astype(np.int64)
+        self.test_i = test_data[:, 1].astype(np.int64)
+        self.test_y = test_data[:, 2].astype(np.float32)
+        self.n_test = test_data.shape[0]
 
     def batch_train(self, iter_idx=None):
         return self._batch(
-            self.train_x,
+            self.train_u,
+            self.train_i,
             self.train_y,
-            self.train_csr_x,
-            self.train_csr_y,
+            self.train_csr_umat,
+            self.train_csr_imat,
+            self.train_ucount,
+            self.train_icount,
+            self.n_train,
             iter_idx=iter_idx)
 
     def batch_valid(self, iter_idx=None):
         return self._batch(
-            self.valid_x,
+            self.valid_u,
+            self.valid_i,
             self.valid_y,
-            self.valid_csr_x,
-            self.valid_csr_y,
+            self.train_csr_umat,
+            self.train_csr_imat,
+            self.train_ucount,
+            self.train_icount,
+            self.n_valid,
             iter_idx=iter_idx)
 
     def batch_test(self, iter_idx=None):
         return self._batch(
-            self.test_x,
+            self.test_u,
+            self.test_i,
             self.test_y,
-            self.test_csr_x,
-            self.test_csr_y,
+            self.test_csr_umat,
+            self.test_csr_imat,
+            self.test_ucount,
+            self.test_icount,
+            self.n_test,
             iter_idx=iter_idx)
 
-    def _batch(self, x, y, csr_x, csr_y, iter_idx=None):
-        if iter_idx is None:
-            return x, y
-        else:
-            assert type(self.n_batch) == int
-            start_idx = iter_idx * self.n_batch
-            end_idx = min((iter_idx + 1) * self.n_batch, self.n_row)
+    def _batch(self,
+               u,
+               i,
+               y,
+               csr_umat,
+               csr_imat,
+               ucount,
+               icount,
+               n_data,
+               iter_idx=None):
+        assert type(self.n_batch) == int
+        assert iter_idx is not None
 
-            batch_x = csr_x[self.row_indices[start_idx:end_idx]].tocoo()
-            batch_y = csr_y[self.row_indices[start_idx:end_idx]].tocoo()
+        start_idx = iter_idx
+        end_idx = min(iter_idx + self.n_batch, n_data)
 
-            _x = (np.mat([batch_x.row, batch_x.col]).transpose(), batch_x.data,
-                  (end_idx - start_idx, self.n_col))
-            _y = (np.mat([batch_y.row, batch_y.col]).transpose(), batch_y.data,
-                  (end_idx - start_idx, self.n_col))
-            return _x, _y
+        _u = u[start_idx:end_idx]
+        _i = i[start_idx:end_idx]
+        _y = y[start_idx:end_idx]
+
+        _ucount = ucount[_u]
+        _icount = icount[_i]
+        # print(_ucount.shape)
+        # print(_icount.shape)
+        # input('!')
+
+        user_x = csr_umat[_u]
+        # user_x[range(_i.shape[0]), _i] = 0
+        user_x = user_x.tocoo()
+        _user_x = (np.mat([user_x.row, user_x.col]).transpose(), user_x.data,
+                   (end_idx - start_idx, self.n_item))
+
+        item_x = csr_imat[_i]
+        # item_x[range(_u.shape[0]), _u] = 0
+        item_x = item_x.tocoo()
+        _item_x = (np.mat([item_x.row, item_x.col]).transpose(), item_x.data,
+                   (end_idx - start_idx, self.n_user))
+
+        return _user_x, _item_x, _ucount, _icount, _y
