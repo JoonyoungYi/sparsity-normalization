@@ -143,11 +143,9 @@ def run_experiment(args):
         num_hots=N_stars,
         share_params=share_params,
         nonlinearity=None,
+        sparsity_normalization=args.sparsity_normalization,
+        K=66,
         name='Dense-l_enc_u_h')
-    if args.sparsity_normalization:
-        # l_enc_u_h = l_enc_u_h
-        # print()
-        pass
     l_enc_u_h = ll.NonlinearityLayer(
         l_enc_u_h, nonlinearity=nonlin_enc, name='Nonlin-l_enc_u_h')
 
@@ -159,10 +157,10 @@ def run_experiment(args):
         num_hots=N_stars,
         share_params=share_params,
         nonlinearity=None,
+        sparsity_normalization=args.sparsity_normalization,
+        K=110,
         name='Dense-l_enc_v_h')
-    if args.sparsity_normalization:
-        # l_enc_v_h = l_enc_v_h
-        pass
+
     l_enc_v_h = ll.NonlinearityLayer(
         l_enc_v_h, nonlinearity=nonlin_enc, name='Nonlin-l_enc_v_h')
 
@@ -364,6 +362,9 @@ def run_experiment(args):
 #----------------------------------------------------------------
 # Training
 
+# k_us = []
+# k_vs = []
+
     best_valid_result = np.inf
     best_model = None
     n_epocs_without_improvement = 0
@@ -430,6 +431,15 @@ def run_experiment(args):
             uid_origin_train = u_batch_ids_train[uid_minibatch_train]
             vid_origin_train = v_batch_ids_train[vid_minibatch_train]
 
+            # k_u = np.sum(Ru_minibatch_train > 0) / Ru_minibatch_train.shape[0] * (
+            #     1 - dr_Ru)
+            # k_v = np.sum(Rv_minibatch_train > 0) / Rv_minibatch_train.shape[0] * (
+            #     1 - dr_Rv)
+            # k_us.append(k_u)
+            # k_vs.append(k_v)
+            # print('%9.6f' % (sum(k_us) / len(k_us)),
+            #       '%9.6f' % (sum(k_vs) / len(k_vs)))
+
             # update parameters and calculate likelihood and RMSE
             LL_step_train, SE_step_train = train_model(
                 lr, uid_origin_train, uid_minibatch_train, vid_origin_train,
@@ -462,6 +472,9 @@ def run_experiment(args):
                     l_r,
                 ], trainable=True)
             logger.debug("New best model found!")
+
+            RMSE_test = predict('test')
+
         else:
             n_epocs_without_improvement += 1
             if n_epocs_without_improvement >= lookahead:
@@ -478,6 +491,7 @@ def run_experiment(args):
                     break
 
         logger.debug("lookahead: %d" % lookahead)
+        logger.debug("final %.9f" % RMSE_test)
 
 #----------------------------------------------------------------
 # Test
@@ -566,8 +580,10 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '-sparsity_normalization',
-        action='store_true',
-        default=False,
+        type=str,
+        default='y',
+        # default='n',
+        choices=['y', 'n'],
         help="Whether use sparsity normalization")
 
     #----------------------------------------------------------------

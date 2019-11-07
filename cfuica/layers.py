@@ -59,6 +59,8 @@ class OneHotEncodeLayer(lasagne.layers.Layer):
                  P=lasagne.init.GlorotUniform(),
                  c=lasagne.init.Constant(0.),
                  nonlinearity=lasagne.nonlinearities.rectify,
+                 sparsity_normalization=False,
+                 K=None,
                  **kwargs):
         super(OneHotEncodeLayer, self).__init__(incoming, **kwargs)
         self.nonlinearity = (lasagne.nonlinearities.identity
@@ -80,6 +82,11 @@ class OneHotEncodeLayer(lasagne.layers.Layer):
             self.c = self.add_param(
                 c, (num_units, ), name='c', regularizable=False)
 
+        self.K = K
+        self.sparsity_normalization = True if sparsity_normalization == 'y' else False
+        if self.sparsity_normalization:
+            assert self.K
+
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], self.num_units)
 
@@ -87,11 +94,20 @@ class OneHotEncodeLayer(lasagne.layers.Layer):
         base_matrix = T.eye(self.num_hots + 1)
         if self.share_params:
             base_matrix = T.extra_ops.cumsum(base_matrix, axis=0)
+
         base_matrix = base_matrix[:, 1:]
         input_one_hot = base_matrix[input]
+
         y = T.tensordot(input_one_hot, self.W, [[1, 2], [1, 2]])
+        if self.sparsity_normalization:
+            count_m = T.maximum(T.sum(input > 0.1, axis=1, keepdims=True), 1.0)
+            y = T.true_div(y * self.K, count_m)
+
+        # theano.printing.debugprint(y)
         if self.P is not None:
             y = y.dot(self.P)
+
+        # theano.printing.debugprint(y)
         y = y + self.c.dimshuffle('x', 0)
         y = self.nonlinearity(y)
         return y
