@@ -144,6 +144,10 @@ def run_experiment(args):
         share_params=share_params,
         nonlinearity=None,
         name='Dense-l_enc_u_h')
+    if args.sparsity_normalization:
+        # l_enc_u_h = l_enc_u_h
+        # print()
+        pass
     l_enc_u_h = ll.NonlinearityLayer(
         l_enc_u_h, nonlinearity=nonlin_enc, name='Nonlin-l_enc_u_h')
 
@@ -156,6 +160,9 @@ def run_experiment(args):
         share_params=share_params,
         nonlinearity=None,
         name='Dense-l_enc_v_h')
+    if args.sparsity_normalization:
+        # l_enc_v_h = l_enc_v_h
+        pass
     l_enc_v_h = ll.NonlinearityLayer(
         l_enc_v_h, nonlinearity=nonlin_enc, name='Nonlin-l_enc_v_h')
 
@@ -556,6 +563,12 @@ if __name__ == "__main__":
         action='store_true',
         default=False,
         help="Remove share parameters in one hot weights")
+
+    parser.add_argument(
+        '-sparsity_normalization',
+        action='store_true',
+        default=False,
+        help="Whether use sparsity normalization")
 
     #----------------------------------------------------------------
 
