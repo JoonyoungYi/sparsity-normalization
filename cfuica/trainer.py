@@ -490,8 +490,8 @@ def run_experiment(args):
                     logger.warning("Training finished.")
                     break
 
-        logger.debug("lookahead: %d" % lookahead)
-        logger.debug("final %.9f" % RMSE_test)
+        logger.debug("n_epocs_without_improvement: %d" % n_epocs_without_improvement)
+        logger.debug("final RMSE_test %.9f" % RMSE_test)
 
 #----------------------------------------------------------------
 # Test
