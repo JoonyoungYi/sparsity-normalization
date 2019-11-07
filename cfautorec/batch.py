@@ -212,8 +212,37 @@ class Batch:
                         np.save(test_file_path, test_x)
 
                     else:
-                        train_x = np.load(train_file_path)
-                        test_x = np.load(test_file_path)
+                        if args.imputation == 'mice' and args.use_user_vector:
+
+                            def _align_a_with_b(a, b):
+                                if a.shape == b.shape:
+                                    return a
+
+                                a_j = 0
+                                c = 0
+                                for b_j in range(b.shape[1]):
+                                    col_b = b[:, b_j]
+
+                                    if np.nansum(col_b) > 0.1:
+                                        b[:, b_j] = a[:, a_j]
+                                        a_j += 1
+
+                                    else:
+                                        b[:, b_j] = 3
+                                        c += 1
+                                    # print(a_j, b_j)
+
+
+                                return b
+
+                            train_x = _align_a_with_b(
+                                np.load(train_file_path), train_x)
+                            test_x = _align_a_with_b(
+                                np.load(test_file_path), test_x)
+
+                        else:
+                            train_x = np.load(train_file_path)
+                            test_x = np.load(test_file_path)
 
             self.train_x = train_x
             self.train_y = train_y

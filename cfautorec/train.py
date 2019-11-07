@@ -101,31 +101,45 @@ def main():
     # ]
     # commands = _get_commands()
 
-    commands = []
+    # commands = []
 
     # imputation = 'mean'
     # imputation = 'median'
     # imputation = 'knn'
-    imputation = 'mice'
+    # imputation = 'mice'
     # imputation = 'soft-impute'
 
     # use_user_vector = True
-    use_user_vector = False
-    # for use_user_vector in [True, False]:
+    # use_user_vector = False
 
+    # for lambda_w in [
+    #         0, 1, 20, 30, 40, 50, 70, 80, 90, 100, 200, 600, 700, 800, 900
+    # ]:
+    #     for seed in [1]:
+    #         command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+    #             lambda_w=lambda_w,
+    #             use_user_vector=use_user_vector,
+    #             imputation=imputation,
+    #             seed=seed)
+    #         commands.append(command)
+
+    commands = []
     for lambda_w in [
-            0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
-            600, 700, 800, 900, 1000
+            # 0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
+            # 600, 700, 800, 900, 1000
+            400
     ]:
-        for seed in [1]:
-            command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
-                lambda_w=lambda_w,
-                use_user_vector=use_user_vector,
-                imputation=imputation,
-                seed=seed)
-            commands.append(command)
+        imputation = 'mice'
+        for use_user_vector in [True]:
+            for seed in [2,3,4,5]:
+                command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                    lambda_w=lambda_w,
+                    use_user_vector=use_user_vector,
+                    imputation=imputation,
+                    seed=seed)
+                commands.append(command)
 
-    run_parallel(commands, n_worker=15)
+    run_parallel(commands, n_worker=5)
 
 
 if __name__ == '__main__':

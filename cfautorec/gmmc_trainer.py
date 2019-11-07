@@ -1,4 +1,5 @@
 import os
+import random
 
 import numpy as np
 import tensorflow as tf
@@ -6,7 +7,11 @@ from sklearn.impute import SimpleImputer
 from sklearn.mixture import GaussianMixture
 from tqdm import tqdm
 
+from common.datasets.movielens import Dataset
 from common.utils import set_seed
+from common.utils import str2bool
+from common.utils import append_text_results
+from .batch import Batch
 
 
 def nr(mu, sigma):
@@ -132,21 +137,10 @@ def prep_x(x, y):
     return tf.concat((y_valid, y_miss), axis=0)
 
 
-def _load_data(args):
-    mnist = tf.keras.datasets.mnist
-    (train_x, _), (_, _) = mnist.load_data()
-    train_x = 1 - train_x / 255.0
-    train_x = train_x[:1000]
-    del mnist
-    train_x = train_x.reshape([-1, 784])
-
-    train_x[np.random.random(train_x.shape) < 0.9] = np.nan
-    return train_x
-
-
-def _init_gmm(data_train, args):
+def _init_gmm(train_x, args):
     imp = SimpleImputer(missing_values=np.nan, strategy='mean')
-    data = imp.fit_transform(data_train)
+    data = imp.fit_transform(train_x)
+    print(data.shape)
 
     gmm = GaussianMixture(
         n_components=args.n_distribution, covariance_type='diag').fit(data)
@@ -192,15 +186,17 @@ def _init_models(gmm, args):
         biases,
         args=args)
     y_pred = decoder(h, weights, biases)
-    y_true = prep_x(x, y)  # Targets (Labels) are the input data_rbfn.
+    y_true = prep_x(x, y)
 
     where_isnan = tf.is_nan(y_true)
     y_pred = tf.where(where_isnan, tf.zeros_like(y_pred), y_pred)
     y_true = tf.where(where_isnan, tf.zeros_like(y_true), y_true)
 
     # Define loss and optimizer, minimize the squared error
-    loss = tf.reduce_sum(tf.pow(y_true - y_pred, 2))
-    rmse = tf.sqrt(loss / tf.reduce_sum(
+    sse = tf.reduce_sum(tf.pow(y_true - y_pred, 2))
+    loss = sse + args.lambda_w * (tf.reduce_sum(tf.square(weights['0'])) +
+                                  tf.reduce_sum(tf.square(weights['1'])))
+    rmse = tf.sqrt(sse / tf.reduce_sum(
         tf.where(where_isnan, tf.zeros_like(y_pred), tf.ones_like(y_pred))))
     optimizer = tf.train.AdamOptimizer(args.learning_rate)
     train_op = optimizer.minimize(loss)
@@ -213,19 +209,62 @@ def _init_models(gmm, args):
     }
 
 
+def _handle_x(x):
+    x[x < 0.1] = np.nan
+    for j in range(x.shape[1]):
+        col = x[:, j]
+        if np.nansum(col) < 0.1:
+            x[random.choice(range(x.shape[0])), j] = 3
+    return x
+
+
+def _handle_y(y):
+    y[y < 0.1] = np.nan
+    return y
+
+
 def _train(args):
     set_seed(args.seed)
 
-    train_x = _load_data(args)
-    gmm = _init_gmm(train_x, args)
+    dataset = Dataset(
+        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
+    batch = Batch(dataset, args)
+    train_x, train_y = batch.batch_train()
+    valid_x, valid_y = batch.batch_valid()
+    test_x, test_y = batch.batch_test()
+    # np.save(
+    #     'cfautorec/train_x-{use_user_vector}.npy'.format(
+    #         use_user_vector=args.use_user_vector),
+    #     train_x)
+    # np.save(
+    #     'cfautorec/test_x-{use_user_vector}.npy'.format(
+    #         use_user_vector=args.use_user_vector),
+    #     test_x)
 
+    train_x = _handle_x(train_x)
+    train_y = _handle_y(train_y)
+    # valid_x = _handle_x(valid_x)
+    valid_y = _handle_y(valid_y)
+    test_x = _handle_x(test_x)
+    test_y = _handle_y(test_y)
+
+    args.n_input_unit = train_x.shape[1]
+
+    gmm = _init_gmm(train_x, args)
     models = _init_models(gmm, args)
 
-    with tf.Session() as sess:
+    gpu_options = tf.GPUOptions()
+    gpu_options.allow_growth = True
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
         sess.run(tf.global_variables_initializer())
 
+        min_valid_epoch_idx = -1
+        min_valid_rmse = float('inf')
+        final_test_rmse = float('inf')
+        min_test_rmse = float('inf')
+
         for epoch_idx in range(1, args.max_epoch + 1):
-            print('>> EPOCH:', epoch_idx)
+            print('\n>> EPOCH:', epoch_idx)
 
             _, train_rmse = sess.run(
                 (models['train_op'], models['rmse']),
@@ -233,20 +272,118 @@ def _train(args):
                     models['x']: train_x,
                     models['y']: train_x,
                 })
-            print('%.6f' % train_rmse)
+
+            valid_rmse = sess.run(
+                models['rmse'],
+                feed_dict={
+                    models['x']: valid_x,
+                    models['y']: valid_y,
+                })
+
+            test_rmse = sess.run(
+                models['rmse'],
+                feed_dict={
+                    models['x']: test_x,
+                    models['y']: test_y,
+                })
+
+            if valid_rmse < min_valid_rmse:
+                min_valid_rmse = valid_rmse
+                final_test_rmse = test_rmse
+                min_valid_epoch_idx = epoch_idx
+
+            min_test_rmse = min(min_test_rmse, test_rmse)
+
+            print('%.6f' % train_rmse, '%.6f' % valid_rmse, '%.6f' % test_rmse)
+            print('%.6f' % min_valid_rmse, '%.6f' % final_test_rmse)
+
+            if epoch_idx > min_valid_epoch_idx + args.epoch_early_stop:
+                break
+
+    results = []
+    results.append(args.max_epoch)
+    results.append(False)
+    results.append(args.dataset_seed)
+    results.append(args.seed)
+    results.append(0)
+    results.append(args.n_hidden_unit)
+    results.append('adam')
+    results.append(args.n_batch)
+    results.append(args.lambda_w)
+    results.append(min_valid_rmse)
+    results.append(final_test_rmse)
+    results.append(min_test_rmse)
+
+    append_text_results(
+        'autorec',
+        args.dataset,
+        'sigmoid',
+        'uservec{use_user_vector}_Kprime{K_denominator}_clip{clipping}_sn{normalize_input}_imputationgmmc'.
+        format(
+            normalize_input=False,
+            use_user_vector=args.use_user_vector,
+            K_denominator=500,
+            clipping=False),
+        '\t'.join([str(r) for r in results]), )
 
 
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='AutoRecGMMC')
     parser.add_argument('--n_distribution', type=int, default=5, help='')
-    parser.add_argument('--n_batch', type=int, default=2000, help='')
-    parser.add_argument('--max_epoch', type=int, default=100000, help='')
+    parser.add_argument(
+        '--max_epoch',
+        type=int,
+        # default=1,
+        default=100000,
+        help='')
     parser.add_argument('--n_hidden_unit', type=int, default=500, help='')
-    parser.add_argument('--n_input_unit', type=int, default=784, help='')
     parser.add_argument('--seed', type=int, default=1, help='')
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='')
+    parser.add_argument(
+        '--lambda_w',
+        type=float,
+        default=0.0,
+        help='lambda for weight decay.', )
+    parser.add_argument(
+        '--epoch_early_stop',
+        type=int,
+        default=1000,
+        help='the number of epochation for early stop.')
+    parser.add_argument(
+        '--dataset_seed',
+        type=int,
+        # default=None,
+        default=1,
+        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
+    parser.add_argument(
+        '--use_user_vector',
+        type=str2bool,
+        default=True,
+        # default=False,
+        help='Whether use user vector.')
+    parser.add_argument(
+        '--n_batch',
+        type=int,
+        default=0,
+        # default=1000,
+        help='0 for full batch. integer for batch number.')
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        choices=[
+            Dataset.KIND_MOVIELENS_100k,
+            Dataset.KIND_MOVIELENS_1M,
+            Dataset.KIND_MOVIELENS_10M,
+        ],
+        default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_1M,
+        # default=Dataset.KIND_MOVIELENS_10M,
+        help='dataset')
     args = parser.parse_args()
+    args.sparse_tensor = False
+    args.imputation = 'zero'
+    args.normalize_input = False
     _train(args)
 
 

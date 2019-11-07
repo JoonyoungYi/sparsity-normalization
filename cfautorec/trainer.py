@@ -277,11 +277,11 @@ def main():
     parser.add_argument(
         '--imputation',
         type=str,
-        # default='zero',
-        default='mean',
+        default='zero',
+        # default='mean',
         # default='median',
         # default='knn',
-        # default='mice',
+        default='mice',
         # default='soft-impute', # matrix
         # default='miss-forest',
         choices=[
