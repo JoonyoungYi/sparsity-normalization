@@ -173,3 +173,5 @@ made/binarized_mnist.npz
 made/performances/
 uci/datasets/
 uci/preprocess/
+cfuica/data/MovieLens
+cfuica/output/
