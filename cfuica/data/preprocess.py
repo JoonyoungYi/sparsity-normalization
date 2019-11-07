@@ -14,7 +14,7 @@ def read_csv_to_R(fn, delimiter, rating_scale=1, is_double_ch_delimiter=False):
         d = list(reader)
 
         if is_double_ch_delimiter:
-            R = np.array(d).astype('str')
+            R = np.array(d).astype('string')
             R = R[:, [0, 2, 4]]
             R = R.astype('float32')
         else:
