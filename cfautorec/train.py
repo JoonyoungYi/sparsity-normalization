@@ -128,8 +128,26 @@ def main():
 
     commands = []
     for lambda_w in [
-            # 0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
-            # 600, 700, 800, 900, 1000
+            0,
+            1,
+            10,
+            20,
+            30,
+            40,
+            50,
+            60,
+            70,
+            80,
+            90,
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900,
             1000,
             2000,
             3000,
@@ -149,36 +167,37 @@ def main():
             80000,
             90000,
             100000,
-            200000,
-            300000,
-            400000,
-            500000,
-            600000,
-            700000,
-            800000,
-            900000,
-            1000000,
-            2000000,
-            3000000,
-            4000000,
-            5000000,
-            6000000,
-            7000000,
-            8000000,
-            9000000,
-            10000000,
-            20000000,
-            30000000,
-            40000000,
-            50000000,
-            60000000,
-            70000000,
-            80000000,
-            90000000,
+            # 200000,
+            # 300000,
+            # 400000,
+            # 500000,
+            # 600000,
+            # 700000,
+            # 800000,
+            # 900000,
+            # 1000000,
+            # 2000000,
+            # 3000000,
+            # 4000000,
+            # 5000000,
+            # 6000000,
+            # 7000000,
+            # 8000000,
+            # 9000000,
+            # 10000000,
+            # 20000000,
+            # 30000000,
+            # 40000000,
+            # 50000000,
+            # 60000000,
+            # 70000000,
+            # 80000000,
+            # 90000000,
     ]:
         # for imputation in ['batch-norm']:
         # for imputation in ['layer-norm']:
-        for imputation in ['batch-norm', 'layer-norm']:
+        # for imputation in ['batch-norm', 'layer-norm']:
+        for imputation in ['gmmc', 'soft-impute']:
             # for imputation in ['knn']:
 
             # for use_user_vector in [True]:
@@ -187,12 +206,19 @@ def main():
 
                 # for seed in [2, 3, 4, 5]:
                 for seed in [1]:
-                    command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
-                        lambda_w=lambda_w,
-                        dataset=dataset,
-                        use_user_vector=use_user_vector,
-                        imputation=imputation,
-                        seed=seed)
+                    if imputation != 'gmmc':
+                        command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                            lambda_w=lambda_w,
+                            dataset=dataset,
+                            use_user_vector=use_user_vector,
+                            imputation=imputation,
+                            seed=seed)
+                    else:
+                        command = "python3 -m cfautorec.gmmc_trainer --dataset={dataset} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                            lambda_w=lambda_w,
+                            dataset=dataset,
+                            use_user_vector=use_user_vector,
+                            seed=seed)
 
                     if imputation in ['layer-norm', 'batch-norm']:
                         command = command + ' --epoch_early_stop=10000'

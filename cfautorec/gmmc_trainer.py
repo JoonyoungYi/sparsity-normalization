@@ -240,6 +240,7 @@ def _train(args):
     #     'cfautorec/test_x-{use_user_vector}.npy'.format(
     #         use_user_vector=args.use_user_vector),
     #     test_x)
+    # input('!')
 
     train_x = _handle_x(train_x)
     train_y = _handle_y(train_y)
@@ -376,8 +377,8 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_100k,
-        # default=Dataset.KIND_MOVIELENS_1M,
+        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_1M,
         # default=Dataset.KIND_MOVIELENS_10M,
         help='dataset')
     args = parser.parse_args()
