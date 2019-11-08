@@ -123,30 +123,37 @@ def main():
     #             seed=seed)
     #         commands.append(command)
 
+    dataset = 'movielens-100k'
+
     commands = []
     for lambda_w in [
-            0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
-            600, 700, 800, 900, 1000
+            # 0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
+            # 600, 700, 800, 900, 1000
+            80000
     ]:
-        for imputation in ['mean', 'median']:
-            # for use_user_vector in [True]:
-            # for use_user_vector in [False]:
-            for use_user_vector in [True, False]:
+        # for imputation in ['batch-norm']:
+        for imputation in ['layer-norm']:
+            # for imputation in ['mean', 'median']:
 
-                # for seed in [2,3,4,5]:
-                for seed in [1]:
-                    command = "python3 -m cfautorec.trainer --dataset=movielens-1m --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+            for use_user_vector in [True]:
+                # for use_user_vector in [False]:
+                # for use_user_vector in [True, False]:
+
+                for seed in [2, 3, 4, 5]:
+                    # for seed in [1]:
+                    command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
                         lambda_w=lambda_w,
+                        dataset=dataset,
                         use_user_vector=use_user_vector,
                         imputation=imputation,
                         seed=seed)
 
                     if imputation in ['layer-norm', 'batch-norm']:
                         command = command + ' --epoch_early_stop=10000'
-                        
+
                     commands.append(command)
 
-    run_parallel(commands, n_worker=4)
+    run_parallel(commands, n_worker=1)
 
 
 if __name__ == '__main__':
