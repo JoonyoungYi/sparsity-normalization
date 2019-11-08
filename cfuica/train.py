@@ -1,9 +1,17 @@
 import os
 
-from common.parallel import run_parallel
-
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-seed',
+        type=int,
+        default=12345,
+        help="numpy random seed for reproducibility")
+    args = parser.parse_args()
+
+    commands = []
     for lambda_w in [
             0.00005,
             0.00006,
@@ -16,10 +24,12 @@ def main():
             0.0004,
             0.0005,
     ]:
-        command = "python3 -m cfuica.trainer -seed=1 -weight-decay={lambda_w} -sparsity_normalization=y".format(
-            lambda_w=lambda_w)
+        command = "python trainer.py -seed={seed} -weight_decay={lambda_w} -sparsity_normalization=y".format(
+            lambda_w=lambda_w, seed=args.seed)
         commands.append(command)
-    run_parallel(commands, n_worker=1)
+
+    for command in commands:
+        os.system(command)
 
 
 if __name__ == '__main__':

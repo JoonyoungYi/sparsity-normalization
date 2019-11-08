@@ -175,3 +175,4 @@ uci/datasets/
 uci/preprocess/
 cfuica/data/MovieLens
 cfuica/output/
+cfuica/results.txt

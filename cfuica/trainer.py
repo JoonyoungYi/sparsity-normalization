@@ -493,8 +493,8 @@ def run_experiment(args):
             "n_epocs_without_improvement: %d" % n_epocs_without_improvement)
         # logger.debug("min RMSE_valid %.9f" % RMSE_valid)
 
-#----------------------------------------------------------------
-# Test
+    #----------------------------------------------------------------
+    # Test
     RMSE_test = predict('test')
     logger.debug("final RMSE_test %.9f" % RMSE_test)
 
@@ -502,6 +502,13 @@ def run_experiment(args):
     # Summarization
     for k, v in six.iteritems(args_dict):
         logger.info("  %20s: %s" % (k, v))
+
+    results = [
+        args.max_epoch, args.sparsity_normalization, args.seed,
+        args.weight_decay, RMSE_valid, RMSE_test
+    ]
+    with open('results.txt', 'a') as f:
+        f.write('\t'.join([str(r) for r in results]) + '\n')
 
 
 #==========================================================================
@@ -553,7 +560,11 @@ if __name__ == "__main__":
         '-lookahead', type=int, default=50, help="# epochs lookahead")
 
     parser.add_argument(
-        '-max_epoch', type=int, default=99999, help="Max # epochs")
+        '-max_epoch',
+        type=int,
+        # default=1,
+        default=99999,
+        help="Max # epochs")
 
     parser.add_argument(
         '-batch_size_u',
