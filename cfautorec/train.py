@@ -145,24 +145,56 @@ def main():
             # 80000,
             # 90000,
             # 100000,
-            200
+            # 200000,
+            # 300000,
+            # 400000,
+            # 500000,
+            # 600000,
+            # 700000,
+            # 800000,
+            # 900000,
+            # 1000000,
+            # 2000000,
+            # 3000000,
+            # 4000000,
+            # 5000000,
+            # 6000000,
+            # 7000000,
+            # 8000000,
+            # 9000000,
+            # 10000000,
+            # 20000000,
+            # 30000000,
+            # 40000000,
+            # 50000000,
+            # 60000000,
+            # 70000000,
+            # 80000000,
+            # 90000000,
+            # 100000000,
+            200000000,
+            300000000,
+            400000000,
+            500000000,
+            600000000,
+            700000000,
+            800000000,
+            900000000,
+            1000000000,
     ]:
-        imputation = 'gain'
-        # imputation = 'batch-norm'
-        # imputation = 'layer-norm'
+        for imputation in ['batch-norm', 'layer-norm']:
+            # for use_user_vector in [True]:
+            # for use_user_vector in [False]:
+            for use_user_vector in [True, False]:
 
-        for use_user_vector in [True]:
-        # for use_user_vector in [False]:
-        # for use_user_vector in [True, False]:
-
-            for seed in [2,3,4,5]:
-            # for seed in [1]:
-                command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed} --epoch_early_stop=10000".format(
-                    lambda_w=lambda_w,
-                    use_user_vector=use_user_vector,
-                    imputation=imputation,
-                    seed=seed)
-                commands.append(command)
+                # for seed in [2,3,4,5]:
+                for seed in [1]:
+                    command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed} --epoch_early_stop=10000".format(
+                        lambda_w=lambda_w,
+                        use_user_vector=use_user_vector,
+                        imputation=imputation,
+                        seed=seed)
+                    commands.append(command)
 
     run_parallel(commands, n_worker=4)
 

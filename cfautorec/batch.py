@@ -147,15 +147,15 @@ class Batch:
                     np.reshape(test_c, [-1, 1]), np.ones((1, n_col)))
                 test_x *= n_col
             else:
-                if args.imputation in [ 'zero','batch-norm','layer-norm']:
+                if args.imputation in ['zero', 'batch-norm', 'layer-norm']:
                     pass
                 else:
-                    assert train_x.shape == (943, 1682) or train_x.shape == (
-                        1682, 943)  # Movielens 100K assumption
+                    assert args.dataset in ['movielens-100k', 'movielens-1m']
 
-                    base_path = '.datasets/movielens-100k/{imputation}-user{use_user_vector}-'.format(
+                    base_path = '.datasets/{dataset}/{imputation}-user{use_user_vector}-'.format(
                         imputation=args.imputation,
-                        use_user_vector=args.use_user_vector)
+                        use_user_vector=args.use_user_vector,
+                        dataset=args.dataset)
                     train_file_path = base_path + 'train.npy'
                     test_file_path = base_path + 'test.npy'
 
@@ -184,6 +184,9 @@ class Batch:
                         elif args.imputation == 'soft-impute':
                             from fancyimpute import SoftImpute
                             imputer = SoftImpute()
+
+                        elif args.imputation == 'gain':
+                            raise Exception("GAIN은 다른 코드에서 미리 데이터를 넣어두어야 합니다!")
 
                         # elif args.imputation == 'miss-forest':
                         #     from missingpy import MissForest
@@ -231,7 +234,6 @@ class Batch:
                                         b[:, b_j] = 3
                                         c += 1
                                     # print(a_j, b_j)
-
 
                                 return b
 
