@@ -53,6 +53,10 @@ def _forward(train_x, weights, biases, training, args):
             layer = tf.where(tf.is_nan(layer), tf.zeros_like(layer), layer)
         else:
             layer = tf.matmul(layer, weight)
+            if args.imputation == 'batch-norm':
+                layer = tf.layers.batch_normalization(layer, training=training)
+            elif args.imputation == 'layer-norm':
+                layer = tf.contrib.layers.layer_norm(layer)
         layer = layer + bias
 
         if i < len(biases) - 1:
@@ -127,7 +131,9 @@ def init_models(n_col, args):
     else:
         raise NotImplementedError()
 
-    train_op = optimizer.minimize(loss, var_list=weights + biases)
+    extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(extra_update_ops):
+        train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
         'x': x,

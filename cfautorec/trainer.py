@@ -277,13 +277,16 @@ def main():
     parser.add_argument(
         '--imputation',
         type=str,
-        default='zero',
+        # default='zero',
         # default='mean',
         # default='median',
         # default='knn',
-        default='mice',
+        # default='mice',
         # default='soft-impute', # matrix
         # default='miss-forest',
+        # default='gain',
+        # default='batch-norm',
+        default='layer-norm',
         choices=[
             'zero',
             'mean',
@@ -292,6 +295,9 @@ def main():
             'mice',
             'soft-impute',
             # 'miss-forest',
+            'gain',
+            'batch-norm',
+            'layer-norm',
         ],
         help='')
 

@@ -127,19 +127,44 @@ def main():
     for lambda_w in [
             # 0, 1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500,
             # 600, 700, 800, 900, 1000
-            400
+            # 2000,
+            # 3000,
+            # 4000,
+            # 5000,
+            # 6000,
+            # 7000,
+            # 8000,
+            # 9000,
+            # 10000,
+            # 20000,
+            # 30000,
+            # 40000,
+            # 50000,
+            # 60000,
+            # 70000,
+            # 80000,
+            # 90000,
+            # 100000,
+            200
     ]:
-        imputation = 'mice'
+        imputation = 'gain'
+        # imputation = 'batch-norm'
+        # imputation = 'layer-norm'
+
         for use_user_vector in [True]:
+        # for use_user_vector in [False]:
+        # for use_user_vector in [True, False]:
+
             for seed in [2,3,4,5]:
-                command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+            # for seed in [1]:
+                command = "python3 -m cfautorec.trainer --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed} --epoch_early_stop=10000".format(
                     lambda_w=lambda_w,
                     use_user_vector=use_user_vector,
                     imputation=imputation,
                     seed=seed)
                 commands.append(command)
 
-    run_parallel(commands, n_worker=5)
+    run_parallel(commands, n_worker=4)
 
 
 if __name__ == '__main__':

@@ -147,7 +147,7 @@ class Batch:
                     np.reshape(test_c, [-1, 1]), np.ones((1, n_col)))
                 test_x *= n_col
             else:
-                if args.imputation == 'zero':
+                if args.imputation in [ 'zero','batch-norm','layer-norm']:
                     pass
                 else:
                     assert train_x.shape == (943, 1682) or train_x.shape == (
