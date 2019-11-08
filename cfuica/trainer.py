@@ -7,7 +7,8 @@ def run_experiment(args):
     import os
     # set environment variables for theano
     os.environ['THEANO_FLAGS'] = "lib.cnmem=" + str(
-        args.mem) + ",device=cuda" + str(args.gpu)
+        args.mem) + ",device=cuda,gpuarray.preallocate=0.9"
+    #+ str(args.gpu)
 
     import inspect
     import shutil
@@ -473,8 +474,6 @@ def run_experiment(args):
                 ], trainable=True)
             logger.debug("New best model found!")
 
-            RMSE_test = predict('test')
-
         else:
             n_epocs_without_improvement += 1
             if n_epocs_without_improvement >= lookahead:
@@ -490,12 +489,14 @@ def run_experiment(args):
                     logger.warning("Training finished.")
                     break
 
-        logger.debug("n_epocs_without_improvement: %d" % n_epocs_without_improvement)
-        logger.debug("final RMSE_test %.9f" % RMSE_test)
+        logger.debug(
+            "n_epocs_without_improvement: %d" % n_epocs_without_improvement)
+        # logger.debug("min RMSE_valid %.9f" % RMSE_valid)
 
 #----------------------------------------------------------------
 # Test
     RMSE_test = predict('test')
+    logger.debug("final RMSE_test %.9f" % RMSE_test)
 
     #----------------------------------------------------------------
     # Summarization
@@ -509,8 +510,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        '-gpu', type=int, default=0, help="ID of the gpu device to use")
+    # parser.add_argument(
+    #     '-gpu', type=int, default=0, help="ID of the gpu device to use")
 
     parser.add_argument(
         '-mem', type=float, default=0.45, help="Theano lib.cnmem")
