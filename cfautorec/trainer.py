@@ -304,8 +304,8 @@ def main():
     parser.add_argument(
         '--lambda_w',
         type=float,
-        # default=0.0,
-        default=500.0,
+        default=0.0,
+        # default=500.0,
         help='lambda for weight decay.', )
     parser.add_argument(
         '--optimizer',
