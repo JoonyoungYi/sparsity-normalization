@@ -141,8 +141,9 @@ def main():
     ]:
         # for imputation in ['batch-norm']:
         # for imputation in ['layer-norm']:
-        for imputation in ['batch-norm', 'layer-norm']:
-        # for imputation in ['knn', 'mean', 'median']:
+        for imputation in ['soft-impute', 'gain']:
+            # for imputation in ['batch-norm', 'layer-norm']:
+            # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
             # for use_user_vector in [True]:
