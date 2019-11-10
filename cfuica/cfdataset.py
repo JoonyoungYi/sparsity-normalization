@@ -37,7 +37,7 @@ class CFdata(object):
     def __init__(self, name='ml-1m', split=1):
 
         CFdatasets = {
-                #'ml-100k': 'MovieLens/ml-100k/pickled_data/',
+                'ml-100k': 'MovieLens/ml-100k/pickled_data/',
                 'ml-1m': 'MovieLens/ml-1m/pickled_data/',
                 #'ml-10m': 'MovieLens/ml-10M100K/pickled_data/',
                 #'netflix': 'Netflix/pickled_data/',

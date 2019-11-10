@@ -504,6 +504,7 @@ def run_experiment(args):
         logger.info("  %20s: %s" % (k, v))
 
     results = [
+        args.dataset,
         args.max_epoch, args.sparsity_normalization, args.seed,
         args.weight_decay, RMSE_valid, RMSE_test
     ]
@@ -532,7 +533,11 @@ if __name__ == "__main__":
     parser.add_argument('-loglv', type=str, default="debug", help="Log level")
 
     parser.add_argument(
-        '-dataset', type=str, default="ml-1m", help="Dataset name")
+        '-dataset',
+        type=str,
+        default="ml-100k",
+        # default="ml-1m",
+        help="Dataset name")
 
     parser.add_argument(
         '-split', type=int, default=1, help="Which train-test split")
@@ -593,8 +598,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '-sparsity_normalization',
         type=str,
-        default='y',
-        # default='n',
+        # default='y',
+        default='n',
         choices=['y', 'n'],
         help="Whether use sparsity normalization")
 
