@@ -249,8 +249,8 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,
-        default=True,
-        # default=False,
+        # default=True,
+        default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -277,7 +277,7 @@ def main():
     parser.add_argument(
         '--imputation',
         type=str,
-        # default='zero',
+        default='zero',
         # default='mean',
         # default='median',
         # default='knn',
@@ -286,7 +286,7 @@ def main():
         # default='miss-forest',
         # default='gain',
         # default='batch-norm',
-        default='layer-norm',
+        # default='layer-norm',
         choices=[
             'zero',
             'mean',
@@ -304,7 +304,8 @@ def main():
     parser.add_argument(
         '--lambda_w',
         type=float,
-        default=0.0,
+        # default=0.0,
+        default=500.0,
         help='lambda for weight decay.', )
     parser.add_argument(
         '--optimizer',
@@ -345,8 +346,8 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        default=Dataset.KIND_MOVIELENS_100k,
-        # default=Dataset.KIND_MOVIELENS_1M,
+        # default=Dataset.KIND_MOVIELENS_100k,
+        default=Dataset.KIND_MOVIELENS_1M,
         # default=Dataset.KIND_MOVIELENS_10M,
         help='dataset')
     parser.add_argument(
