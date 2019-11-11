@@ -172,7 +172,37 @@ def main():
 
                     commands.append(command)
 
-    run_parallel(commands, n_worker=1)
+    commands = []
+    for use_user_vector, imputation, lambda_w in [
+        (True, 'mean', 900),
+        (True, 'median', 900),
+        (True, 'knn', 900),
+        (False, 'mean', 200),
+        (False, 'median', 900),
+        (False, 'knn', 800),
+    ]:
+        for seed in [2, 3, 4, 5]:
+            # for seed in [1]:
+            if imputation != 'gmmc':
+                command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                    lambda_w=lambda_w,
+                    dataset=dataset,
+                    use_user_vector=use_user_vector,
+                    imputation=imputation,
+                    seed=seed)
+            else:
+                command = "python3 -m cfautorec.gmmc_trainer --dataset={dataset} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
+                    lambda_w=lambda_w,
+                    dataset=dataset,
+                    use_user_vector=use_user_vector,
+                    seed=seed)
+
+            if imputation in ['layer-norm', 'batch-norm']:
+                command = command + ' --epoch_early_stop=10000'
+
+            commands.append(command)
+
+    run_parallel(commands, n_worker=5)
 
 
 if __name__ == '__main__':
