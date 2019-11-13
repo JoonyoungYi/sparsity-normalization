@@ -25,7 +25,7 @@ def main():
             # 0.0005,
     ]:
         for seed in [12345, 1, 2, 3, 4]:
-            command = "python trainer.py -seed={seed} -weight_decay={lambda_w} -sparsity_normalization=y".format(
+            command = "python trainer.py -seed={seed} -weight_decay={lambda_w} -sparsity_normalization=n".format(
                 lambda_w=lambda_w, seed=seed)
             commands.append(command)
 
@@ -35,3 +35,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+python trainer.py -weight_decay=0.0001 -sparsity_normalization=n -seed=1

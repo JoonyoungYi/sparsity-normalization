@@ -163,17 +163,34 @@ def _train(args):
             if (epoch_idx > min_valid_rmse_epoch_idx + args.epoch_early_stop):
                 break
 
-    session.close()
-
     if args.save_weights:
+
         test_weights = {
             'test_y_hat': test_y_hat,
             'weights': weights,
             'biases': biases
         }
-        with open('autorec/weights/{}.pickle'.format(get_name_from_args(args)),
-                  'wb') as f:
+
+        results = session.run(models['ln-variables'])
+        for v, d in zip(models['ln-variables'], results):
+            test_weights[v.name] = d
+            print(v.name, d.shape)
+
+        results = session.run(models['bn-variables'])
+        for v, d in zip(models['bn-variables'], results):
+            test_weights[v.name] = d
+            print(v.name, d.shape)
+
+        with open(
+                'cfautorec/weights/{}.pickle'.format(get_name_from_args(args)),
+                'wb') as f:
             pickle.dump(test_weights, f)
+
+        # results = session.run(models['bn_variables'])
+        # print(models['bn_variables'])
+        # print(results)
+
+    session.close()
 
     results = []
     results.append(args.max_epoch)
@@ -249,8 +266,8 @@ def main():
     parser.add_argument(
         '--use_user_vector',
         type=str2bool,
-        # default=True,
-        default=False,
+        default=True,
+        # default=False,
         help='Whether use user vector.')
     parser.add_argument(
         '--learning_rate',
@@ -277,20 +294,22 @@ def main():
     parser.add_argument(
         '--imputation',
         type=str,
-        default='zero',
+        # default='zero',
         # default='mean',
         # default='median',
+        # default='dropout',
         # default='knn',
         # default='mice',
         # default='soft-impute', # matrix
         # default='miss-forest',
         # default='gain',
         # default='batch-norm',
-        # default='layer-norm',
+        default='layer-norm',
         choices=[
             'zero',
             'mean',
             'median',
+            'dropout',
             'knn',
             'mice',
             'soft-impute',
@@ -304,8 +323,10 @@ def main():
     parser.add_argument(
         '--lambda_w',
         type=float,
-        default=0.0,
+        # default=0.0,
         # default=500.0,
+        default=80000.0,
+        # default=100000.0,
         help='lambda for weight decay.', )
     parser.add_argument(
         '--optimizer',
@@ -334,7 +355,7 @@ def main():
     parser.add_argument(
         '--K_denominator',
         type=float,
-        default=500,
+        default=500.0,
         # default=52.44,
         # default=None,
         help='K')
@@ -346,8 +367,8 @@ def main():
             Dataset.KIND_MOVIELENS_1M,
             Dataset.KIND_MOVIELENS_10M,
         ],
-        # default=Dataset.KIND_MOVIELENS_100k,
-        default=Dataset.KIND_MOVIELENS_1M,
+        default=Dataset.KIND_MOVIELENS_100k,
+        # default=Dataset.KIND_MOVIELENS_1M,
         # default=Dataset.KIND_MOVIELENS_10M,
         help='dataset')
     parser.add_argument(

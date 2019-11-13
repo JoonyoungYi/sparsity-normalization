@@ -126,32 +126,51 @@ def main():
     # dataset = 'movielens-100k'
     dataset = 'movielens-1m'
 
+    # 0,
+    # 1,
+    # 10,
+    # 100,
+    # 1000,
+    # 10000,
+    # 100000,
+    # 1000000,
+    # 10000000,
+    # 100000000,
     commands = []
     for lambda_w in [
-            0,
-            1,
-            10,
-            100,
-            1000,
-            10000,
-            100000,
-            1000000,
-            10000000,
-            100000000,
+            200000,
+            300000,
+            400000,
+            500000,
+            600000,
+            700000,
+            800000,
+            900000,
+            2000000,
+            3000000,
+            4000000,
+            5000000,
+            6000000,
+            7000000,
+            8000000,
     ]:
-        # for imputation in ['batch-norm']:
-        # for imputation in ['layer-norm']:
-        # for imputation in ['soft-impute', 'gain']:
-        for imputation in ['gmmc']:
+        for imputation in ['batch-norm']:
+            # for imputation in ['layer-norm']:
+            # for imputation in ['soft-impute', 'gain']:
+            # for imputation in ['soft-impute']:
+            # for imputation in ['dropout']:
+            # for imputation in ['gain']:
+            # for imputation in ['gmmc']:
             # for imputation in ['batch-norm', 'layer-norm']:
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            # for use_user_vector in [True]:
-            # for use_user_vector in [False]:
-            for use_user_vector in [True, False]:
+            for use_user_vector in [True]:
+                # for use_user_vector in [False]:
+                # for use_user_vector in [True, False]:
 
                 # for seed in [2, 3, 4, 5]:
+                # for seed in [6, 7, 8, 9, 10]:
                 for seed in [1]:
                     if imputation != 'gmmc':
                         command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
@@ -171,36 +190,6 @@ def main():
                         command = command + ' --epoch_early_stop=10000'
 
                     commands.append(command)
-
-    commands = []
-    for use_user_vector, imputation, lambda_w in [
-        (True, 'mean', 900),
-        (True, 'median', 900),
-        (True, 'knn', 900),
-        (False, 'mean', 200),
-        (False, 'median', 900),
-        (False, 'knn', 800),
-    ]:
-        for seed in [2, 3, 4, 5]:
-            # for seed in [1]:
-            if imputation != 'gmmc':
-                command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
-                    lambda_w=lambda_w,
-                    dataset=dataset,
-                    use_user_vector=use_user_vector,
-                    imputation=imputation,
-                    seed=seed)
-            else:
-                command = "python3 -m cfautorec.gmmc_trainer --dataset={dataset} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
-                    lambda_w=lambda_w,
-                    dataset=dataset,
-                    use_user_vector=use_user_vector,
-                    seed=seed)
-
-            if imputation in ['layer-norm', 'batch-norm']:
-                command = command + ' --epoch_early_stop=10000'
-
-            commands.append(command)
 
     run_parallel(commands, n_worker=5)
 

@@ -136,13 +136,27 @@ def init_models(n_col, args):
         train_op = optimizer.minimize(loss, var_list=weights + biases)
 
     return {
-        'x': x,
-        'y': y,
-        'weights': weights,
-        'biases': biases,
-        'y_hat': y_hat,
-        'training': training,
-        'loss': loss,
-        'rmse': rmse,
-        'train_op': train_op,
+        'x':
+        x,
+        'y':
+        y,
+        'weights':
+        weights,
+        'biases':
+        biases,
+        'y_hat':
+        y_hat,
+        'training':
+        training,
+        'loss':
+        loss,
+        'rmse':
+        rmse,
+        'train_op':
+        train_op,
+        'ln-variables':
+        tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='LayerNorm'),
+        'bn-variables':
+        tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES, scope='batch_normalization')
     }

@@ -29,7 +29,7 @@ def _plot_mean_and_confidence_interval(ax,
 
 
 def _plot(ax, dataset):
-    f = open('auto_impute/imputation_performances/{}.tsv'.format(dataset), 'r')
+    f = open('autoimpute/imputation_performances/{}.tsv'.format(dataset), 'r')
     results = []
     for line in f:
         line = line.strip()
@@ -80,18 +80,19 @@ def main():
     axs[0].set_ylabel('RMSE')
     axs[1].legend(
         loc='upper center',
-        bbox_to_anchor=(+1.0, -0.2),
+        bbox_to_anchor=(+1.0, -0.25),
         ncol=2,
         edgecolor='none')
-    # axs[1].set_xlabel('# train / # total')
+    for i in range(4):
+        axs[i].set_xlabel('Test Set Size (Ratio)')
 
     plt.savefig(
-        'auto_impute/imputation_performances/summary.png',
+        'autoimpute/imputation_performances/summary.png',
         format='png',
         bbox_inches='tight',
         pad_inches=0)
     plt.savefig(
-        'auto_impute/imputation_performances/summary.pdf',
+        'autoimpute/imputation_performances/summary.pdf',
         format='pdf',
         bbox_inches='tight',
         pad_inches=0)
@@ -119,15 +120,16 @@ def sub():
         bbox_to_anchor=(+0.5, -0.2),
         ncol=2,
         edgecolor='none')
-    # axs[1].set_xlabel('# train / # total')
+    for i in range(3):
+        axs[i].set_xlabel('Test Set Size (Ratio)')
 
     plt.savefig(
-        'auto_impute/imputation_performances/summary-sub.png',
+        'autoimpute/imputation_performances/summary-sub.png',
         format='png',
         bbox_inches='tight',
         pad_inches=0)
     plt.savefig(
-        'auto_impute/imputation_performances/summary-sub.pdf',
+        'autoimpute/imputation_performances/summary-sub.pdf',
         format='pdf',
         bbox_inches='tight',
         pad_inches=0)
@@ -135,5 +137,5 @@ def sub():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     sub()

@@ -149,6 +149,11 @@ class Batch:
             else:
                 if args.imputation in ['zero', 'batch-norm', 'layer-norm']:
                     pass
+                elif args.imputation == 'dropout':
+                    multiplier = train_x.shape[0] * train_x.shape[
+                        1] / np.count_nonzero(train_x > 1e-5)
+                    train_x *= multiplier
+                    test_x *= multiplier
                 else:
                     assert args.dataset in ['movielens-100k', 'movielens-1m']
 

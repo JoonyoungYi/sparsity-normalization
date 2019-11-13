@@ -71,10 +71,11 @@ def main():
     axs[0].set_ylabel('RMSE')
     axs[1].legend(
         loc='upper center',
-        bbox_to_anchor=(+0.5, -0.2),
+        bbox_to_anchor=(+0.5, -0.25),
         ncol=2,
         edgecolor='none')
-    # axs[1].set_xlabel('# train / # total')
+    for i in range(3):
+        axs[i].set_xlabel('Dropout Prob.')
 
     plt.savefig(
         'dropout/results/summary.png',
