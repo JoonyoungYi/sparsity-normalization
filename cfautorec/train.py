@@ -138,18 +138,9 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
-            600,
             700,
-            800,
-            900,
-            2000,
-            3000,
             4000,
-            5000,
-            6000,
             7000,
-            8000,
-            9000,
     ]:
         # for imputation in ['batch-norm']:
         # for imputation in ['layer-norm']:
@@ -188,7 +179,7 @@ def main():
 
                     commands.append(command)
 
-    run_parallel(commands, n_worker=5)
+    run_parallel(commands, n_worker=1)
 
 
 if __name__ == '__main__':
