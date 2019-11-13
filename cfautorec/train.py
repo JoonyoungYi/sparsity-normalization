@@ -138,6 +138,8 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
+            70,
+            400,
             700,
             4000,
             7000,
@@ -153,8 +155,8 @@ def main():
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            # for use_user_vector in [True]:
-            for use_user_vector in [False]:
+            for use_user_vector in [True]:
+            # for use_user_vector in [False]:
                 # for use_user_vector in [True, False]:
 
                 # for seed in [2, 3, 4, 5]:
