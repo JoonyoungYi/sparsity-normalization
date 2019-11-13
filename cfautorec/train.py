@@ -138,21 +138,21 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
+            20000,
+            30000,
+            40000,
+            50000,
+            60000,
+            70000,
+            80000,
+            90000,
             200000,
             300000,
-            400000,
             500000,
             600000,
             700000,
             800000,
             900000,
-            2000000,
-            3000000,
-            4000000,
-            5000000,
-            6000000,
-            7000000,
-            8000000,
     ]:
         for imputation in ['batch-norm']:
             # for imputation in ['layer-norm']:
@@ -165,8 +165,8 @@ def main():
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            for use_user_vector in [True]:
-                # for use_user_vector in [False]:
+            # for use_user_vector in [True]:
+            for use_user_vector in [False]:
                 # for use_user_vector in [True, False]:
 
                 # for seed in [2, 3, 4, 5]:
