@@ -138,25 +138,27 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
-            70,
-            400,
-            700,
-            4000,
-            7000,
+            9000,
+            40000,
+            70000,
+            400000,
+            700000,
+            4000000,
+            7000000,
     ]:
         # for imputation in ['batch-norm']:
-        # for imputation in ['layer-norm']:
+        for imputation in ['layer-norm']:
         # for imputation in ['soft-impute', 'gain']:
         # for imputation in ['soft-impute']:
         # for imputation in ['dropout']:
         # for imputation in ['gain']:
-        for imputation in ['gmmc']:
+        # for imputation in ['gmmc']:
             # for imputation in ['batch-norm', 'layer-norm']:
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            for use_user_vector in [True]:
-            # for use_user_vector in [False]:
+            # for use_user_vector in [True]:
+            for use_user_vector in [False]:
                 # for use_user_vector in [True, False]:
 
                 # for seed in [2, 3, 4, 5]:
@@ -181,7 +183,7 @@ def main():
 
                     commands.append(command)
 
-    run_parallel(commands, n_worker=1)
+    run_parallel(commands, n_worker=5)
 
 
 if __name__ == '__main__':
