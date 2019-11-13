@@ -138,29 +138,26 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
-            20000,
-            30000,
-            40000,
-            50000,
-            60000,
-            70000,
-            80000,
-            90000,
-            200000,
-            300000,
-            500000,
-            600000,
-            700000,
-            800000,
-            900000,
+            600,
+            700,
+            800,
+            900,
+            2000,
+            3000,
+            4000,
+            5000,
+            6000,
+            7000,
+            8000,
+            9000,
     ]:
-        for imputation in ['batch-norm']:
-            # for imputation in ['layer-norm']:
-            # for imputation in ['soft-impute', 'gain']:
-            # for imputation in ['soft-impute']:
-            # for imputation in ['dropout']:
-            # for imputation in ['gain']:
-            # for imputation in ['gmmc']:
+        # for imputation in ['batch-norm']:
+        # for imputation in ['layer-norm']:
+        # for imputation in ['soft-impute', 'gain']:
+        # for imputation in ['soft-impute']:
+        # for imputation in ['dropout']:
+        # for imputation in ['gain']:
+        for imputation in ['gmmc']:
             # for imputation in ['batch-norm', 'layer-norm']:
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
