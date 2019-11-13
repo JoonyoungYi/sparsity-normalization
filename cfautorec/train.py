@@ -138,32 +138,26 @@ def main():
     # 100000000,
     commands = []
     for lambda_w in [
-            9000,
-            40000,
-            70000,
-            400000,
-            700000,
-            4000000,
-            7000000,
+            500000
     ]:
         # for imputation in ['batch-norm']:
         for imputation in ['layer-norm']:
-        # for imputation in ['soft-impute', 'gain']:
-        # for imputation in ['soft-impute']:
-        # for imputation in ['dropout']:
-        # for imputation in ['gain']:
-        # for imputation in ['gmmc']:
+            # for imputation in ['soft-impute', 'gain']:
+            # for imputation in ['soft-impute']:
+            # for imputation in ['dropout']:
+            # for imputation in ['gain']:
+            # for imputation in ['gmmc']:
             # for imputation in ['batch-norm', 'layer-norm']:
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            # for use_user_vector in [True]:
-            for use_user_vector in [False]:
+            for use_user_vector in [True]:
+            # for use_user_vector in [False]:
                 # for use_user_vector in [True, False]:
 
-                # for seed in [2, 3, 4, 5]:
+                for seed in [2, 3, 4, 5]:
                 # for seed in [6, 7, 8, 9, 10]:
-                for seed in [1]:
+                # for seed in [1]:
                     if imputation != 'gmmc':
                         command = "python3 -m cfautorec.trainer --dataset={dataset} --imputation={imputation} --lambda_w={lambda_w} --use_user_vector={use_user_vector} --seed={seed}".format(
                             lambda_w=lambda_w,
