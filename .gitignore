@@ -95,4 +95,9 @@ cfautorec/*.pdf
 emr/datasets/
 uci/datasets/
 uci/preprocess/
+
+# figures 출력물
 figures/vsps/
+figures/**/*.png
+figures/**/*.pdf
+figures/**/*.csv
