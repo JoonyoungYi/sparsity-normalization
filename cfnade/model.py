@@ -12,11 +12,7 @@ def _init_weights(n_col, args):
     n_units = [n_col, args.n_hidden_unit, n_col]
     for n_in_unit, n_out_unit in zip(n_units[:-1], n_units[1:]):
         limit = math.sqrt(3 / n_in_unit)
-        weight = tf.Variable(
-            tf.random_uniform([n_in_unit, n_out_unit], -limit, limit))
-        # weight = tf.Variable(
-        #     tf.random.truncated_normal(
-        #         [n_in_unit, n_out_unit], mean=0, stddev=1 / n_in_unit))
+        weight = tf.Variable(tf.random_uniform([n_in_unit, n_out_unit], -limit, limit))
         bias = tf.Variable(tf.zeros([n_out_unit]))
         weights.append(weight)
         biases.append(bias)
@@ -27,9 +23,6 @@ def _forward(x_hot, weights, biases, args, training, x=None, n_class=None):
     assert len(weights) == len(biases)
 
     if args.parameter_sharing:
-        # QUESTION: I think this part is author's mistake.
-        # reverse=False should be added in cumsum function.
-        # _x_hot = tf.cumsum(x_hot, axis=2, reverse=True)
         _x_hot = tf.cumsum(x_hot, axis=2, reverse=False)
     else:
         _x_hot = x_hot
@@ -41,21 +34,6 @@ def _forward(x_hot, weights, biases, args, training, x=None, n_class=None):
         layer = tf.matmul(layer, weight)
         if i == 0:
             if args.sparsity_normalization:
-                # if args.parameter_sharing:
-                #     assert x is not None
-                #     # parameter sharing을 하는 경우에는 5개 별점으로 보고 별점의 합으로 나눠줘야 한다.
-                #     divider = tf.cast(
-                #         tf.reduce_sum(
-                #             tf.reduce_sum(_x_hot, axis=2),
-                #             axis=1,
-                #             keepdims=True), tf.float32)
-                #     divider = tf.maximum(divider, 1.0)
-                #
-                #     if n_class != 5:
-                #         raise NotImplementedError()
-                # else:
-
-                # parameter sharing을 하지 않는 경우에는 그냥 observed entries 수로 나눠주면 됨.
                 divider = tf.reduce_sum(x_hot, axis=2)
                 divider = tf.reduce_sum(divider, axis=1, keepdims=True)
                 divider = tf.reshape(tf.maximum(divider, 1.0), [-1, 1])

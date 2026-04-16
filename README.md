@@ -1,68 +1,104 @@
 # Sparsity Normalization
 
-* Official Codes for "Sparsity Normalization: Stabilizing the Expected Outputs of Deep Networks"
-* Sparsity Normalization에 관한 연구 실험.
+**"Sparsity Normalization: Stabilizing the Expected Outputs of Deep Networks"** 공식 구현 코드
 
-## Environment
+> arXiv: https://arxiv.org/abs/1906.00150
 
-* ```python 3.5.2```
-* ```tensorflow 1.12.0```
+---
 
-## How to initialize
+## 개요
 
-* docker 이미지 만들기
-```
+희소 입력(sparse input)이 있을 때 신경망의 출력이 불안정해지는 **Variable Sparsity Problem (VSP)** 을 분석하고, 이를 해결하는 **Sparsity Normalization (SN)** 기법을 제안합니다.
+
+Sparsity Normalization은 각 샘플의 관찰된 피처 수 $c_i$로 출력을 정규화합니다:
+
+$$\hat{y}_i = f\left(\mathbf{x}_i \cdot W\right) \cdot \frac{K'}{c_i}$$
+
+여기서 $K'$는 학습 데이터의 평균 관찰 피처 수입니다.
+
+---
+
+## 실험 모듈
+
+| 모듈 | 설명 | 데이터셋 |
+|------|------|---------|
+| `uci/` | UCI 회귀 실험 (결측값 삽입) | Boston, Diabetes, California 등 (sklearn) |
+| `cfautorec/` | AutoRec 협업 필터링 | MovieLens 100K / 1M / 10M |
+| `cfnade/` | CF-NADE 협업 필터링 | MovieLens 100K / 1M |
+| `emr/` | 의료 시계열 사망률 예측 (LSTM) | PhysioNet 2012 Challenge |
+
+---
+
+## 환경 설정
+
+### Docker (권장)
+
+```bash
 sh docker/build.sh
-```
-
-* docker 실행하기
-```
 sh docker/run.sh
-cd ../home/server01/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server02/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server03/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server04/sparsity-normalization
-cd ../home/server05/joonyoung_workspace/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server06/joonyoung_workspace/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/joonyoung/ml/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server09/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server10/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server12/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server13/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server14/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server17/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server19/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server20/joonyoung/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server22/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server23/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
-cd ../home/server24/sparsity-normalization && export CUDA_VISIBLE_DEVICES=0
 ```
 
-### How to run
+### 직접 설치
 
-* AutoRec 실험. 자세한 하이퍼파라미터는 autorec/trainer.py 파일 참조.
-```
-python3 -m autorec.trainer
+```bash
+pip install tensorflow==1.12.0 torch numpy scikit-learn tqdm
 ```
 
-* CF-NADE 실험. 자세한 하이퍼파라미터는 cfnade/trainer.py 파일 참조.
+---
+
+## 실행 방법
+
+### UCI 회귀 실험
+
+```bash
+python3 -m uci.trainer \
+  --dataset=boston \
+  --sparsity_normalization=True \
+  --imputation=zero \
+  --missing_rate=0.5
 ```
+
+전체 실험 (병렬):
+
+```bash
+python3 -m uci.train
+```
+
+### AutoRec 협업 필터링
+
+```bash
+python3 -m cfautorec.trainer \
+  --dataset=movielens-100k \
+  --normalize_input=True \
+  --imputation=layer-norm
+```
+
+### CF-NADE 협업 필터링
+
+```bash
 python3 -m cfnade.trainer
 ```
 
-* UCI 데이터셋 실험. 자세한 하이퍼파라미터는 uci/trainer.py 파일 참조.
-```
-python3 -m uci.trainer
+### PhysioNet 2012 의료 시계열
+
+데이터셋은 [PhysioNet](https://physionet.org/content/challenge-2012/1.0.0/) 에서 직접 다운로드 후 `emr/datasets/physionet2012/` 에 압축 해제하세요.
+
+전처리 후 실행:
+
+```bash
+python3 -m emr.preprocessor
+python3 -m emr.trainer --mode=SN --sn_imputation=none
 ```
 
-* Vision 데이터셋(MNIST, Fashion MNIST, CIFAR-10, CIFAR-100) MLP 실험.
-  * 자세한 하이퍼파라미터는 vision_mlp/trainer.py 파일 참조.
-```
-python3 -m vision_mlp.trainer
-```
+---
 
-* AITRICS 데이터셋 실험. 자세한 하이퍼파라미터는 aitrics/trainer.py 파일 참조.
-```
-python3 -m aitrics.data_preprocessing --data_path={data_path}
-python3 -m aitrics.trainer --data_path={data_path}
+## 인용
+
+```bibtex
+@article{yi2019sparsity,
+  title={Sparsity Normalization: Stabilizing the Expected Outputs of Deep Networks},
+  author={Yi, Joonyoung},
+  journal={arXiv preprint arXiv:1906.00150},
+  year={2019}
+}
 ```

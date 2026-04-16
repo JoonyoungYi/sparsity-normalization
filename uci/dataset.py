@@ -1,110 +1,65 @@
-import math
-
 import torch
 import numpy as np
+from sklearn.datasets import (fetch_california_housing, load_diabetes,
+                               load_boston, load_wine, load_breast_cancer)
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
-def _get_data(train=True, dataset=None):
-    if train:
-        xs = np.load(
-            'uci/datasets/{dataset}/train_x.npy'.format(dataset=dataset))
-        ys = np.load(
-            'uci/datasets/{dataset}/train_y.npy'.format(dataset=dataset))
+def _load_sklearn_dataset(dataset):
+    if dataset == 'boston':
+        data = load_boston()
+    elif dataset == 'diabetes':
+        data = load_diabetes()
+    elif dataset == 'california':
+        data = fetch_california_housing()
+    elif dataset == 'wine':
+        data = load_wine()
+    elif dataset == 'cancer':
+        data = load_breast_cancer()
     else:
-        xs = np.load(
-            'uci/datasets/{dataset}/test_x.npy'.format(dataset=dataset))
-        ys = np.load(
-            'uci/datasets/{dataset}/test_y.npy'.format(dataset=dataset))
-
-    ys = ys.reshape([-1, 1])
-    return xs, ys
-
-    # if imputation == 'zero':
-    #     xs[np.isnan(xs)] = 0
-    #     if sparsity_normalization:
-    #         l0 = np.maximum(np.sum(xs, axis=1, keepdims=True), 1)
-    #         xs = xs * n_feature / l0
-    # elif imputation == 'mean':
-    #     for j in range(xs.shape[1]):
-    #         _xs = xs[:, j]
-    #         _mean = np.mean(_xs[~np.isnan(_xs)])
-    #         _xs[np.isnan(_xs)] = _mean
-    # else:
-    #     raise NotImplementedError()
+        raise NotImplementedError(f'Dataset {dataset} not supported.')
+    return data.data.astype(np.float32), data.target.astype(np.float32)
 
 
-# assert imputation in ['zero', 'mean']
-# if sparsity_normalization:
-#     assert imputation == 'zero'
-#
-#
-# imputation='zero',
-# # imputation='mean',
-# # sparsity_normalization=True,
-# sparsity_normalization=False
+def _inject_sparsity(x, missing_rate):
+    """각 샘플에 무작위로 missing_rate 비율의 결측값(NaN)을 삽입."""
+    if missing_rate <= 0:
+        return x
+    mask = np.random.random(x.shape) < missing_rate
+    x = x.copy()
+    x[mask] = np.nan
+    return x
+
+
+def _normalize_input(train_x, test_x, method):
+    if method == 'min-max':
+        scaler = MinMaxScaler()
+        train_x = scaler.fit_transform(train_x)
+        test_x = scaler.transform(test_x)
+    elif method == 'standardization':
+        scaler = StandardScaler()
+        train_x = scaler.fit_transform(train_x)
+        test_x = scaler.transform(test_x)
+    else:
+        raise NotImplementedError(f'Normalization {method} not supported.')
+    return train_x.astype(np.float32), test_x.astype(np.float32)
 
 
 def _normalize_output(train_y, test_y):
     y_mean = np.mean(train_y)
     y_std = np.std(train_y)
-
     train_y = (train_y - y_mean) / y_std
     test_y = (test_y - y_mean) / y_std
     return train_y, test_y
 
-    # y_max = np.max(train_y)
-    # y_min = np.min(train_y)
-    #
-    # train_y = (train_y - y_min) / (y_max - y_min)
-    # test_y = (test_y - y_min) / (y_max - y_min)
-
-    # train_y = (train_y - y_min)
-    # test_y = (test_y - y_min)
-    return train_y, test_y
-
-
-def _normalize_input(train_x, test_x, input_normalization):
-    # for j in range(train_x.shape[1]):
-    #     _train_x = train_x[:, j]
-    #     _train_x = _train_x[~np.isnan(_train_x)]
-    #     mean = np.mean(_train_x)
-    #     std = np.std(_train_x)
-    #
-    #     if math.isnan(mean) or math.isnan(std):
-    #         continue
-    #     elif std <= 1e-20:
-    #         train_x[:, j] = 0
-    #         test_x[:, j] = 0
-    #     else:
-    #         # print(mean, std)
-    #         train_x[:, j] = (train_x[:, j] - mean) / std
-    #         test_x[:, j] = (test_x[:, j] - mean) / std
-
-    if input_normalization == 'min-max':
-        train_x = (train_x + 104) / 104
-        test_x = (test_x + 104) / 104
-        return train_x, test_x
-
-    elif input_normalization == 'standardization':
-        train_x_valid = train_x[~np.isnan(train_x)]
-        x_mean = np.mean(train_x_valid)
-        x_std = np.std(train_x_valid)
-
-        train_x = (train_x - x_mean) / x_std
-        test_x = (test_x - x_mean) / x_std
-        return train_x, test_x
-
-    else:
-        raise NotImplementedError()
-
 
 def _sparsity_normalization(train_x, test_x):
-    train_c = np.sum(~np.isnan(train_x), axis=1, keepdims=True)
+    """Sparsity Normalization: 관찰된 피처 수로 정규화."""
+    train_c = np.sum(~np.isnan(train_x), axis=1, keepdims=True).astype(np.float32)
     k_prime = np.mean(train_c)
-    print(k_prime)
     train_c = np.maximum(train_c, 1.0)
 
-    test_c = np.sum(~np.isnan(test_x), axis=1, keepdims=True)
+    test_c = np.sum(~np.isnan(test_x), axis=1, keepdims=True).astype(np.float32)
     test_c = np.maximum(test_c, 1.0)
 
     train_x = train_x * k_prime / train_c
@@ -112,54 +67,57 @@ def _sparsity_normalization(train_x, test_x):
     return train_x, test_x
 
 
-def _impute(train_x, test_x, imputation):
-
-    if imputation == 'mean':
-        mean = np.mean(train_x[~np.isnan(train_x)])
-        train_x[np.isnan(train_x)] = mean
-        test_x[np.isnan(test_x)] = mean
-    elif imputation == 'zero':
-        train_x[np.isnan(train_x)] = 0
-        test_x[np.isnan(test_x)] = 0
+def _impute(train_x, test_x, method):
+    if method == 'zero':
+        train_x = np.nan_to_num(train_x, nan=0.0)
+        test_x = np.nan_to_num(test_x, nan=0.0)
+    elif method == 'mean':
+        col_means = np.nanmean(train_x, axis=0)
+        for j in range(train_x.shape[1]):
+            train_x[np.isnan(train_x[:, j]), j] = col_means[j]
+            test_x[np.isnan(test_x[:, j]), j] = col_means[j]
     else:
-        raise NotImplementedError()
-
+        raise NotImplementedError(f'Imputation {method} not supported.')
     return train_x, test_x
 
 
-def _convert(xs, ys):
-    xs = torch.from_numpy(xs).type(torch.FloatTensor).cuda()
-    ys = torch.from_numpy(ys).type(torch.FloatTensor).cuda()
-    return xs, ys
+def _to_tensor(x, y):
+    x = torch.from_numpy(x).float().cuda()
+    y = torch.from_numpy(y).float().cuda()
+    return x, y
 
 
 class Dataset:
     def __init__(self,
                  dataset,
                  sparsity_normalization=False,
-                 imputation=None,
-                 input_normalization=None):
-        assert imputation
-        assert input_normalization
+                 imputation='zero',
+                 input_normalization='min-max',
+                 missing_rate=0.5,
+                 seed=1):
+        np.random.seed(seed)
 
-        train_x, train_y = _get_data(train=True, dataset=dataset)
-        test_x, test_y = _get_data(train=False, dataset=dataset)
+        x, y = _load_sklearn_dataset(dataset)
+        y = y.reshape(-1, 1)
 
+        perm = np.random.permutation(x.shape[0])
+        x, y = x[perm], y[perm]
+
+        split = int(x.shape[0] * 0.8)
+        train_x, test_x = x[:split], x[split:]
+        train_y, test_y = y[:split], y[split:]
+
+        train_x, test_x = _normalize_input(train_x, test_x, input_normalization)
         train_y, test_y = _normalize_output(train_y, test_y)
 
-        train_x, test_x = _normalize_input(train_x, test_x,
-                                           input_normalization)
+        # 결측값 삽입 (SN 실험용)
+        train_x = _inject_sparsity(train_x, missing_rate)
+        test_x = _inject_sparsity(test_x, missing_rate)
+
         if sparsity_normalization:
             train_x, test_x = _sparsity_normalization(train_x, test_x)
-        train_x, test_x = _impute(train_x, test_x, imputation=imputation)
 
-        # test_x, test_y = train_x[-2000:], train_y[-2000:]
-        # train_x, train_y = train_x[:-2000], train_y[:-2000]
+        train_x, test_x = _impute(train_x, test_x, imputation)
 
-        train_x, train_y = _convert(train_x, train_y)
-        test_x, test_y = _convert(test_x, test_y)
-
-        self.train_x = train_x
-        self.train_y = train_y
-        self.test_x = test_x
-        self.test_y = test_y
+        self.train_x, self.train_y = _to_tensor(train_x, train_y)
+        self.test_x, self.test_y = _to_tensor(test_x, test_y)

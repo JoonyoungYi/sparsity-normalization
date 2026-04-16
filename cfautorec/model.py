@@ -43,7 +43,6 @@ def _forward(train_x, weights, biases, training, args):
     elif args.activation_fn == 'softplus':
         activation_fn = tf.math.softplus
     else:
-        # ACTIVATION_FUNCTION = tf.nn.tanh
         raise NotImplementedError()
 
     layer = train_x
@@ -133,7 +132,8 @@ def init_models(n_col, args):
 
     extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(extra_update_ops):
-        train_op = optimizer.minimize(loss, var_list=weights + biases)
+        # train_op = optimizer.minimize(loss, var_list=weights + biases)
+        train_op = optimizer.minimize(loss)
 
     return {
         'x':

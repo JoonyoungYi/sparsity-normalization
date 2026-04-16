@@ -123,8 +123,8 @@ def main():
     #             seed=seed)
     #         commands.append(command)
 
-    # dataset = 'movielens-100k'
-    dataset = 'movielens-1m'
+    dataset = 'movielens-100k'
+    # dataset = 'movielens-1m'
 
     # 0,
     # 1,
@@ -137,9 +137,16 @@ def main():
     # 10000000,
     # 100000000,
     commands = []
-    for lambda_w in [40000, 70000, 50000, 60000, 700000]:
-        for imputation in ['batch-norm']:
-            # for imputation in ['layer-norm']:
+    for lambda_w in [
+            5,
+            50,
+            500,
+            5000,
+            50000,
+    ]:
+        # for imputation in ['batch-norm']:
+        # for imputation in ['layer-norm']:
+        for imputation in ['zero']:
             # for imputation in ['soft-impute', 'gain']:
             # for imputation in ['soft-impute']:
             # for imputation in ['dropout']:
@@ -149,8 +156,8 @@ def main():
             # for imputation in ['knn', 'mean', 'median']:
             # for imputation in ['gmmc', 'soft-impute']:
 
-            # for use_user_vector in [True]:
-            for use_user_vector in [False]:
+            for use_user_vector in [True]:
+                # for use_user_vector in [False]:
                 # for use_user_vector in [True, False]:
 
                 # for seed in [2, 3, 4, 5]:
@@ -170,8 +177,11 @@ def main():
                             use_user_vector=use_user_vector,
                             seed=seed)
 
-                    if imputation in ['layer-norm', 'batch-norm']:
-                        command = command + ' --epoch_early_stop=10000'
+                    command += ' --save_weights=True --normalize_input=True --K_denominator=52.44'
+                    # command += ' --save_weights=True --normalize_input=False --K_denominator=500.0'
+
+                    # if imputation in ['layer-norm', 'batch-norm']:
+                    #     command = command + ' --epoch_early_stop=10000'
 
                     commands.append(command)
 

@@ -93,10 +93,6 @@ def _train(args):
     models = init_models(batch.n_col, args)
     session.run(tf.global_variables_initializer())
 
-    # print(batch.n_row, batch.n_col)
-    # print(dataset.train_data.shape)
-    # input('')
-
     min_valid_rmse = float('inf')
     min_valid_rmse_epoch_idx = 0
     min_test_rmse = float('inf')
@@ -163,6 +159,7 @@ def _train(args):
             if (epoch_idx > min_valid_rmse_epoch_idx + args.epoch_early_stop):
                 break
 
+
     if args.save_weights:
 
         test_weights = {
@@ -174,21 +171,17 @@ def _train(args):
         results = session.run(models['ln-variables'])
         for v, d in zip(models['ln-variables'], results):
             test_weights[v.name] = d
-            print(v.name, d.shape)
+            print(v.name, d.shape, np.mean(d))
 
         results = session.run(models['bn-variables'])
         for v, d in zip(models['bn-variables'], results):
             test_weights[v.name] = d
-            print(v.name, d.shape)
+            print(v.name, d.shape, np.mean(d))
 
         with open(
                 'cfautorec/weights/{}.pickle'.format(get_name_from_args(args)),
                 'wb') as f:
             pickle.dump(test_weights, f)
-
-        # results = session.run(models['bn_variables'])
-        # print(models['bn_variables'])
-        # print(results)
 
     session.close()
 
@@ -202,6 +195,7 @@ def _train(args):
     results.append(args.optimizer)
     results.append(args.n_batch)
     results.append(args.lambda_w)
+    results.append(train_rmse)
     results.append(min_valid_rmse)
     results.append(final_test_rmse)
     results.append(min_test_rmse)
@@ -324,8 +318,10 @@ def main():
         '--lambda_w',
         type=float,
         # default=0.0,
+        # default=0.0,
         # default=500.0,
-        default=80000.0,
+        # default=500.0,
+        # default=80000.0,
         # default=100000.0,
         help='lambda for weight decay.', )
     parser.add_argument(
@@ -417,7 +413,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-100k --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
-# python3 -m autorec.trainer --epoch_early_stop=1000 --use_user_vector=False --learning_rate=1e-3 --optimizer=adam --dataset=movielens-1m --sparse_tensor=True --seed=1 --filename=user-normal --normalize_input=True --n_hidden_layer=2 --lambda_w=500
-# python3 -m autorec.trainer --use_user_vector=False --learning_rate=1e-4 --optimizer=adam --dataset=movielens-10m --sparse_tensor=True --n_batch=1000 --filename=item-normal --normalize_input=True --epoch_early_stop=1000 --seed=1 --n_hidden_layer=1 --n_hidden_unit=1000 --K_denominator=1000 --lambda_w=45
