@@ -1,42 +1,35 @@
-import os
 import random
 
 import numpy as np
 from scipy.sparse import csr_matrix
 
 
-def _sparse__swith_row_col(_x):
-    x = _x.copy()
-    x[:, 0] = _x[:, 1]
-    x[:, 1] = _x[:, 0]
-    return x
+def _swap_user_item(x):
+    out = x.copy()
+    out[:, 0] = x[:, 1]
+    out[:, 1] = x[:, 0]
+    return out
 
 
-def _sparse__get_count(x, n_row):
+def _row_counts(x, n_row):
     c = np.zeros(n_row)
-    for i in range(x.shape[0]):
-        row = x[i]
+    for row in x:
         c[int(row[0])] += 1
     return c
 
 
-def _sparse__normalize(x, c, n_col):
-    for i in range(x.shape[0]):
-        x[i][2] = (x[i][2]) * (n_col / c[int(x[i][0])])
-    return x
+def _sn_normalize(x, counts, k_prime):
+    out = x.copy()
+    for i in range(out.shape[0]):
+        out[i][2] = out[i][2] * k_prime / max(counts[int(out[i][0])], 1)
+    return out
 
 
-def _sparse__standardize(x):
-    for i in range(x.shape[0]):
-        x[i][2] = (x[i][2] - 3.533424036281179)
-    return x
+def _to_sparse_tensor(x, n_row, n_col):
+    return (x[:, :2].astype(np.int64), x[:, 2], (n_row, n_col))
 
 
-def _sparse__tensor(x, n_row, n_col):
-    return (x[:, :2], x[:, 2], (n_row, n_col))
-
-
-def _sparse__csr_matrix(x, n_row, n_col):
+def _to_csr(x, n_row, n_col):
     return csr_matrix((x[:, 2], (x[:, 0], x[:, 1])), shape=(n_row, n_col))
 
 
@@ -45,271 +38,120 @@ class Batch:
         self.n_batch = args.n_batch
 
         if args.sparse_tensor:
-            n_user, n_item = dataset.get_n_user_and_n_item()
-
-            train_x = dataset.train_data
-            train_y = train_x.copy()
-            valid_y = dataset.valid_data
-            test_x = np.concatenate([dataset.train_data, dataset.valid_data])
-            test_y = dataset.test_data
-
-            if args.use_user_vector:
-                n_row = n_user
-                n_col = n_item
-            else:
-                n_row = n_item
-                n_col = n_user
-
-                train_x = _sparse__swith_row_col(train_x)
-                train_y = _sparse__swith_row_col(train_y)
-                valid_y = _sparse__swith_row_col(valid_y)
-                test_x = _sparse__swith_row_col(test_x)
-                test_y = _sparse__swith_row_col(test_y)
-
-            row_indices = list(range(n_row))
-            random.shuffle(row_indices)
-            self.row_indices = row_indices
-
-            if args.standardization:
-                train_x = _sparse__standardize(train_x)
-                train_y = _sparse__standardize(train_y)
-                valid_y = _sparse__standardize(valid_y)
-                test_x = _sparse__standardize(test_x)
-                test_y = _sparse__standardize(test_y)
-
-            if args.normalize_input:
-                # n_mutiplier = n_col
-                if args.K_denominator:
-                    n_mutiplier = args.K_denominator
-                else:
-                    n_mutiplier = n_col
-
-                train_c = np.clip(
-                    _sparse__get_count(train_x, n_row), a_min=1, a_max=None)
-                train_x = _sparse__normalize(train_x, train_c, n_mutiplier)
-                # train_x *= n_col
-
-                test_c = np.clip(
-                    _sparse__get_count(test_x, n_row), a_min=1, a_max=None)
-                test_x = _sparse__normalize(test_x, test_c, n_mutiplier)
-                # train_x *= n_col
-
-            # self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-            self.train_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-            self.train_csr_y = _sparse__csr_matrix(train_y, n_row, n_col)
-            self.valid_csr_x = _sparse__csr_matrix(train_x, n_row, n_col)
-            self.valid_csr_y = _sparse__csr_matrix(valid_y, n_row, n_col)
-            self.test_csr_x = _sparse__csr_matrix(test_x, n_row, n_col)
-            self.test_csr_y = _sparse__csr_matrix(test_y, n_row, n_col)
-
-            self.train_x = _sparse__tensor(train_x, n_row, n_col)
-            self.train_y = _sparse__tensor(train_y, n_row, n_col)
-            self.valid_x = _sparse__tensor(train_x, n_row, n_col)
-            self.valid_y = _sparse__tensor(valid_y, n_row, n_col)
-            self.test_x = _sparse__tensor(test_x, n_row, n_col)
-            self.test_y = _sparse__tensor(test_y, n_row, n_col)
-
-            self.n_row = n_row
-            self.n_col = n_col
+            self._init_sparse(dataset, args)
         else:
-            dataset.init_full_matrices()
-            n_user, n_item = dataset.get_n_user_and_n_item()
+            self._init_dense(dataset, args)
 
-            train_x = dataset.train_matrix
-            train_y = train_x.copy()
-            valid_y = dataset.valid_matrix
-            test_x = dataset.train_matrix + dataset.valid_matrix
-            test_y = dataset.test_matrix
+    def _init_sparse(self, dataset, args):
+        n_user, n_item = dataset.get_n_user_and_n_item()
 
-            if args.use_user_vector:
-                n_row = n_user
-                n_col = n_item
-            else:
-                n_row = n_item
-                n_col = n_user
-                train_x = train_x.T
-                train_y = train_y.T
-                valid_y = valid_y.T
-                test_x = test_x.T
-                test_y = test_y.T
+        train_x = dataset.train_data
+        train_y = train_x.copy()
+        valid_y = dataset.valid_data
+        test_x = np.concatenate([dataset.train_data, dataset.valid_data])
+        test_y = dataset.test_data
 
-            if args.normalize_input:
-                assert args.imputation == 'zero'
-                train_c = np.clip(
-                    np.count_nonzero(train_x, axis=1), a_min=1, a_max=None)
-                train_x /= np.matmul(
-                    np.reshape(train_c, [-1, 1]), np.ones((1, n_col)))
-                train_x *= n_col
+        if args.use_user_vector:
+            n_row, n_col = n_user, n_item
+        else:
+            n_row, n_col = n_item, n_user
+            train_x = _swap_user_item(train_x)
+            train_y = _swap_user_item(train_y)
+            valid_y = _swap_user_item(valid_y)
+            test_x = _swap_user_item(test_x)
+            test_y = _swap_user_item(test_y)
 
-                test_c = np.clip(
-                    np.count_nonzero(test_x, axis=1), a_min=1, a_max=None)
-                test_x /= np.matmul(
-                    np.reshape(test_c, [-1, 1]), np.ones((1, n_col)))
-                test_x *= n_col
-            else:
-                if args.imputation in ['zero', 'batch-norm', 'layer-norm']:
-                    pass
-                elif args.imputation == 'dropout':
-                    multiplier = train_x.shape[0] * train_x.shape[
-                        1] / np.count_nonzero(train_x > 1e-5)
-                    train_x *= multiplier
-                    test_x *= multiplier
-                else:
-                    assert args.dataset in ['movielens-100k', 'movielens-1m']
+        row_indices = list(range(n_row))
+        random.shuffle(row_indices)
+        self.row_indices = row_indices
 
-                    base_path = '.datasets/{dataset}/{imputation}-user{use_user_vector}-'.format(
-                        imputation=args.imputation,
-                        use_user_vector=args.use_user_vector,
-                        dataset=args.dataset)
-                    train_file_path = base_path + 'train.npy'
-                    test_file_path = base_path + 'test.npy'
+        if args.normalize_input:
+            k_prime = args.K_denominator or n_col
+            train_counts = _row_counts(train_x, n_row)
+            test_counts = _row_counts(test_x, n_row)
+            train_x = _sn_normalize(train_x, train_counts, k_prime)
+            test_x = _sn_normalize(test_x, test_counts, k_prime)
 
-                    if not os.path.exists(
-                            train_file_path) or not os.path.exists(
-                                test_file_path):
-                        train_x[train_x < 1e-5] = np.nan
-                        test_x[test_x < 1e-5] = np.nan
+        self.train_x = _to_sparse_tensor(train_x, n_row, n_col)
+        self.train_y = _to_sparse_tensor(train_y, n_row, n_col)
+        self.valid_x = _to_sparse_tensor(train_x, n_row, n_col)
+        self.valid_y = _to_sparse_tensor(valid_y, n_row, n_col)
+        self.test_x = _to_sparse_tensor(test_x, n_row, n_col)
+        self.test_y = _to_sparse_tensor(test_y, n_row, n_col)
 
-                        if args.imputation == 'mean':
-                            from fancyimpute import SimpleFill
-                            imputer = SimpleFill('mean')
+        self.train_csr_x = _to_csr(train_x, n_row, n_col)
+        self.train_csr_y = _to_csr(train_y, n_row, n_col)
+        self.valid_csr_x = _to_csr(train_x, n_row, n_col)
+        self.valid_csr_y = _to_csr(valid_y, n_row, n_col)
+        self.test_csr_x = _to_csr(test_x, n_row, n_col)
+        self.test_csr_y = _to_csr(test_y, n_row, n_col)
 
-                        elif args.imputation == 'median':
-                            from fancyimpute import SimpleFill
-                            imputer = SimpleFill('median')
+        self.n_row = n_row
+        self.n_col = n_col
 
-                        elif args.imputation == 'knn':
-                            from fancyimpute import KNN
-                            imputer = KNN(k=5)
+    def _init_dense(self, dataset, args):
+        dataset.init_full_matrices()
+        n_user, n_item = dataset.get_n_user_and_n_item()
 
-                        elif args.imputation == 'mice':
-                            from fancyimpute import IterativeImputer
-                            imputer = IterativeImputer(verbose=2)
+        train_x = dataset.train_matrix
+        train_y = train_x.copy()
+        valid_y = dataset.valid_matrix
+        test_x = dataset.train_matrix + dataset.valid_matrix
+        test_y = dataset.test_matrix
 
-                        elif args.imputation == 'soft-impute':
-                            from fancyimpute import SoftImpute
-                            imputer = SoftImpute()
+        if args.use_user_vector:
+            n_row, n_col = n_user, n_item
+        else:
+            n_row, n_col = n_item, n_user
+            train_x = train_x.T
+            train_y = train_y.T
+            valid_y = valid_y.T
+            test_x = test_x.T
+            test_y = test_y.T
 
-                        elif args.imputation == 'gain':
-                            raise Exception("GAIN은 다른 코드에서 미리 데이터를 넣어두어야 합니다!")
+        if args.normalize_input:
+            assert args.imputation == 'zero'
+            k_prime = args.K_denominator or n_col
+            train_c = np.maximum(np.count_nonzero(train_x, axis=1, keepdims=True), 1).astype(np.float32)
+            test_c = np.maximum(np.count_nonzero(test_x, axis=1, keepdims=True), 1).astype(np.float32)
+            train_x = train_x * k_prime / train_c
+            test_x = test_x * k_prime / test_c
 
-                        # elif args.imputation == 'miss-forest':
-                        #     from missingpy import MissForest
-                        #     imputer = MissForest(
-                        #         verbose=0, max_depth=1, max_iter=1,  n_estimators=1)
-                        #
-                        #     def _handle_all_missing_rows(x):
-                        #         mean = np.nanmean(x, axis=1)
-                        #         for j in range(x.shape[1]):
-                        #             col = x[:, j]
-                        #             if col[~np.isnan(col)].shape[0] == 0:
-                        #                 x[:, j] = mean
-                        #         return x
-                        #
-                        #     train_x = _handle_all_missing_rows(train_x)
-                        #     test_x = _handle_all_missing_rows(test_x)
-
-                        else:
-                            raise NotImplementedError()
-
-                        assert imputer
-                        train_x = imputer.fit_transform(train_x)
-                        test_x = imputer.fit_transform(test_x)
-
-                        np.save(train_file_path, train_x)
-                        np.save(test_file_path, test_x)
-
-                    else:
-                        if args.imputation == 'mice' and args.use_user_vector:
-
-                            def _align_a_with_b(a, b):
-                                if a.shape == b.shape:
-                                    return a
-
-                                a_j = 0
-                                c = 0
-                                for b_j in range(b.shape[1]):
-                                    col_b = b[:, b_j]
-
-                                    if np.nansum(col_b) > 0.1:
-                                        b[:, b_j] = a[:, a_j]
-                                        a_j += 1
-
-                                    else:
-                                        b[:, b_j] = 3
-                                        c += 1
-                                    # print(a_j, b_j)
-
-                                return b
-
-                            train_x = _align_a_with_b(
-                                np.load(train_file_path), train_x)
-                            test_x = _align_a_with_b(
-                                np.load(test_file_path), test_x)
-
-                        else:
-                            train_x = np.load(train_file_path)
-                            test_x = np.load(test_file_path)
-
-            self.train_x = train_x
-            self.train_y = train_y
-            self.valid_x = train_x
-            self.valid_y = valid_y
-            self.test_x = test_x
-            self.test_y = test_y
-
-            self.train_csr_x = None
-            self.train_csr_y = None
-            self.valid_csr_x = None
-            self.valid_csr_y = None
-            self.test_csr_x = None
-            self.test_csr_y = None
-
-            self.n_row = n_row
-            self.n_col = n_col
+        self.train_x = train_x
+        self.train_y = train_y
+        self.valid_x = train_x
+        self.valid_y = valid_y
+        self.test_x = test_x
+        self.test_y = test_y
+        self.train_csr_x = self.train_csr_y = None
+        self.valid_csr_x = self.valid_csr_y = None
+        self.test_csr_x = self.test_csr_y = None
+        self.n_row = n_row
+        self.n_col = n_col
 
     def batch_train(self, iter_idx=None):
-        return self._batch(
-            self.train_x,
-            self.train_y,
-            self.train_csr_x,
-            self.train_csr_y,
-            iter_idx=iter_idx)
+        return self._batch(self.train_x, self.train_y, self.train_csr_x, self.train_csr_y, iter_idx)
 
     def batch_valid(self, iter_idx=None):
-        return self._batch(
-            self.valid_x,
-            self.valid_y,
-            self.valid_csr_x,
-            self.valid_csr_y,
-            iter_idx=iter_idx)
+        return self._batch(self.valid_x, self.valid_y, self.valid_csr_x, self.valid_csr_y, iter_idx)
 
     def batch_test(self, iter_idx=None):
-        return self._batch(
-            self.test_x,
-            self.test_y,
-            self.test_csr_x,
-            self.test_csr_y,
-            iter_idx=iter_idx)
+        return self._batch(self.test_x, self.test_y, self.test_csr_x, self.test_csr_y, iter_idx)
 
     def _batch(self, x, y, csr_x, csr_y, iter_idx=None):
         if iter_idx is None:
             return x, y
 
-        assert type(self.n_batch) == int
-        start_idx = iter_idx * self.n_batch
-        end_idx = min((iter_idx + 1) * self.n_batch, self.n_row)
+        start = iter_idx * self.n_batch
+        end = min((iter_idx + 1) * self.n_batch, self.n_row)
 
-        if args.sparse_tensor:
-            batch_x = csr_x[self.row_indices[start_idx:end_idx]].tocoo()
-            batch_y = csr_y[self.row_indices[start_idx:end_idx]].tocoo()
-
-            _x = (np.mat([batch_x.row, batch_x.col]).transpose(), batch_x.data,
-                  (end_idx - start_idx, self.n_col))
-            _y = (np.mat([batch_y.row, batch_y.col]).transpose(), batch_y.data,
-                  (end_idx - start_idx, self.n_col))
-            return _x, _y
+        if csr_x is not None:
+            bx = csr_x[self.row_indices[start:end]].tocoo()
+            by = csr_y[self.row_indices[start:end]].tocoo()
+            size = (end - start, self.n_col)
+            return (
+                (np.column_stack([bx.row, bx.col]), bx.data, size),
+                (np.column_stack([by.row, by.col]), by.data, size),
+            )
         else:
-            _x = x[start_idx:end_idx]
-            _y = y[start_idx:end_idx]
-            return _x, _y
+            return x[start:end], y[start:end]

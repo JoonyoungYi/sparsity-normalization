@@ -1,412 +1,158 @@
-import time
-import random
 import math
-import pickle
-from datetime import datetime
+import argparse
 
 import numpy as np
 import tensorflow as tf
 
 from common.datasets.movielens import Dataset
-from .configs import *
 from .model import init_models
 from .batch import Batch
-from .plotter import get_name
-from common.utils import str2bool
-from common.utils import set_seed
-from common.utils import append_text_results
+from common.utils import str2bool, set_seed, append_text_results
+
+IMPUTATION_CHOICES = ['zero', 'mean', 'dropout', 'batch-norm', 'layer-norm']
 
 
-def get_name_from_args(args):
-    return get_name(
-        normalize_input=args.normalize_input,
-        standardization=args.standardization,
-        lambda_w=args.lambda_w,
-        K_prime=args.K_denominator,
-        use_user_vector=args.use_user_vector,
-        clipping=args.clipping,
-        activation_fn=args.activation_fn,
-        imputation=args.imputation, )
-
-
-def __get_test_y_hat(session, models, batch):
-    x, y = batch.batch_test()
-    y_hat = session.run(
-        models['y_hat'],
-        feed_dict={
-            models['x']: x,
-            models['y']: y,
-            models['training']: False,
-        }, )
-    return y_hat
-
-
-def __get_rmse(session, models, batch, key, args):
+def _get_rmse(session, models, batch, key, args):
     func = getattr(batch, 'batch_' + key)
 
     if args.n_batch is None:
         x, y = func()
-        rmse = session.run(
-            models['rmse'],
-            feed_dict={
-                models['x']: x,
-                models['y']: y,
-                models['training']: False,
-            }, )
-        return rmse
+        return session.run(models['rmse'], feed_dict={
+            models['x']: x, models['y']: y, models['training']: False,
+        })
     else:
         sse, n = 0.0, 0.0
         for iter_idx in range(batch.n_row // args.n_batch):
             x, y = func(iter_idx)
-            _rmse = session.run(
-                (models['rmse']),
-                feed_dict={
-                    models['x']: x,
-                    models['y']: y,
-                    models['training']: False,
-                }, )
-            _n = x[2][0]
-            _sse = math.pow(_rmse, 2) * _n
+            _rmse, _n = session.run((models['rmse'], models['n']), feed_dict={
+                models['x']: x, models['y']: y, models['training']: False,
+            })
             n += _n
-            sse += _sse
+            sse += math.pow(_rmse, 2) * _n
         return math.sqrt(sse / n)
 
 
 def _validate(session, models, batch, args):
-    train_rmse = __get_rmse(session, models, batch, 'train', args)
-    valid_rmse = __get_rmse(session, models, batch, 'valid', args)
-    test_rmse = __get_rmse(session, models, batch, 'test', args)
+    train_rmse = _get_rmse(session, models, batch, 'train', args)
+    valid_rmse = _get_rmse(session, models, batch, 'valid', args)
+    test_rmse = _get_rmse(session, models, batch, 'test', args)
     return train_rmse, valid_rmse, test_rmse
 
 
 def _train(args):
-    dataset = Dataset(
-        args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
+    dataset = Dataset(args.dataset, Dataset.SPLIT_DEFAULT_10_PERCENT, seed=args.dataset_seed)
     set_seed(args.seed)
 
-    gpu_options = tf.GPUOptions()
-    gpu_options.allow_growth = True
+    gpu_options = tf.GPUOptions(allow_growth=True)
     session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     batch = Batch(dataset, args)
-
     models = init_models(batch.n_col, args)
     session.run(tf.global_variables_initializer())
 
     min_valid_rmse = float('inf')
-    min_valid_rmse_epoch_idx = 0
-    min_test_rmse = float('inf')
-    min_test_rmse_epoch_idx = 0
+    min_valid_rmse_epoch = 0
     final_test_rmse = float('inf')
     final_train_rmse = float('inf')
+    min_test_rmse = float('inf')
+    min_test_rmse_epoch = 0
 
     for epoch_idx in range(1, args.max_epoch + 1):
-
         if args.n_batch is None:
-            batch_x, batch_y = batch.batch_train()
-            session.run(
-                (models['train_op']),
-                feed_dict={
-                    models['x']: batch_x,
-                    models['y']: batch_y,
-                    models['training']: True,
-                }, )
+            bx, by = batch.batch_train()
+            session.run(models['train_op'], feed_dict={
+                models['x']: bx, models['y']: by, models['training']: True,
+            })
         else:
-            for iter_idx in range(batch.n_row // args.n_batch):
-                batch_x, batch_y = batch.batch_train(iter_idx)
-                if epoch_idx == 1:
-                    # print(list(batch_x[1]))
-                    assert batch_x[1][batch_x[1] < 1e-8].shape[0] == 0
+            for i in range(batch.n_row // args.n_batch):
+                bx, by = batch.batch_train(i)
+                session.run(models['train_op'], feed_dict={
+                    models['x']: bx, models['y']: by, models['training']: True,
+                })
 
-                session.run(
-                    (models['train_op']),
-                    feed_dict={
-                        models['x']: batch_x,
-                        models['y']: batch_y,
-                        models['training']: True,
-                    }, )
-
-        if (epoch_idx) % args.epoch_validation == 0:
-            train_rmse, valid_rmse, test_rmse = _validate(
-                session, models, batch, args)
+        if epoch_idx % args.epoch_validation == 0:
+            train_rmse, valid_rmse, test_rmse = _validate(session, models, batch, args)
 
             if train_rmse < 0.1:
                 break
 
-            if min_valid_rmse - 1e-5 > valid_rmse:
+            if valid_rmse < min_valid_rmse - 1e-5:
                 min_valid_rmse = valid_rmse
                 final_test_rmse = test_rmse
                 final_train_rmse = train_rmse
-                min_valid_rmse_epoch_idx = epoch_idx
+                min_valid_rmse_epoch = epoch_idx
 
-                test_y_hat = __get_test_y_hat(session, models, batch)
-                weights, biases = session.run(
-                    [models['weights'], models['biases']])
-
-            if min_test_rmse - 1e-5 > test_rmse:
+            if test_rmse < min_test_rmse - 1e-5:
                 min_test_rmse = test_rmse
-                min_test_rmse_epoch_idx = epoch_idx
+                min_test_rmse_epoch = epoch_idx
 
-            msg = '\n[EPOCH %6d]\n' % (epoch_idx)
-            msg += '  - train rmse: {:12.8f}\n'.format(train_rmse)
-            msg += '  - valid rmse: {:12.8f}    (min: {:12.8f}, epoch: {:d}, final: {:12.8f})\n'.format(
-                valid_rmse, min_valid_rmse, min_valid_rmse_epoch_idx,
-                final_test_rmse)
-            msg += '  - test  rmse: {:12.8f}    (min: {:12.8f}, epoch: {:d})\n'.format(
-                test_rmse, min_test_rmse, min_test_rmse_epoch_idx)
-            print(msg)
+            print(
+                f'\n[Epoch {epoch_idx:6d}]'
+                f'\n  train: {train_rmse:.6f}'
+                f'\n  valid: {valid_rmse:.6f}  (best: {min_valid_rmse:.6f} @ {min_valid_rmse_epoch}, test: {final_test_rmse:.6f})'
+                f'\n  test:  {test_rmse:.6f}  (best: {min_test_rmse:.6f} @ {min_test_rmse_epoch})'
+            )
 
-            if (epoch_idx > min_valid_rmse_epoch_idx + args.epoch_early_stop):
+            if epoch_idx > min_valid_rmse_epoch + args.epoch_early_stop:
                 break
-
-
-    if args.save_weights:
-
-        test_weights = {
-            'test_y_hat': test_y_hat,
-            'weights': weights,
-            'biases': biases
-        }
-
-        results = session.run(models['ln-variables'])
-        for v, d in zip(models['ln-variables'], results):
-            test_weights[v.name] = d
-            print(v.name, d.shape, np.mean(d))
-
-        results = session.run(models['bn-variables'])
-        for v, d in zip(models['bn-variables'], results):
-            test_weights[v.name] = d
-            print(v.name, d.shape, np.mean(d))
-
-        with open(
-                'cfautorec/weights/{}.pickle'.format(get_name_from_args(args)),
-                'wb') as f:
-            pickle.dump(test_weights, f)
 
     session.close()
 
-    results = []
-    results.append(args.max_epoch)
-    results.append(args.sparse_tensor)
-    results.append(args.dataset_seed)
-    results.append(args.seed)
-    results.append(args.dropout_rate)
-    results.append(args.n_hidden_unit)
-    results.append(args.optimizer)
-    results.append(args.n_batch)
-    results.append(args.lambda_w)
-    results.append(train_rmse)
-    results.append(min_valid_rmse)
-    results.append(final_test_rmse)
-    results.append(min_test_rmse)
-
-    append_text_results(
-        'autorec',
-        args.dataset,
-        args.activation_fn,
-        'uservec{use_user_vector}_Kprime{K_denominator}_clip{clipping}_sn{normalize_input}_imputation{imputation}'.
-        format(
-            normalize_input=args.normalize_input,
-            use_user_vector=args.use_user_vector,
-            K_denominator=args.K_denominator,
-            clipping=args.clipping,
-            imputation=args.imputation),
-        '\t'.join([str(r) for r in results]), )
+    results = [
+        args.dataset_seed, args.seed, args.dropout_rate, args.n_hidden_unit,
+        args.optimizer, args.n_batch, args.lambda_w,
+        final_train_rmse, min_valid_rmse, final_test_rmse, min_test_rmse,
+    ]
+    label = (f'sn{args.normalize_input}_imp{args.imputation}'
+             f'_K{args.K_denominator}_uv{args.use_user_vector}')
+    append_text_results('autorec', args.dataset, args.activation_fn, label,
+                        '\t'.join(str(r) for r in results))
 
 
 def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description='AutoRec')
-    parser.add_argument(
-        '--epoch_validation',
-        type=int,
-        default=1,
-        help='epoch unit for validation')
-    parser.add_argument(
-        '--max_epoch',
-        type=int,
-        default=100000,
-        # default=1,
-        help='Max epoch')
-    parser.add_argument(
-        '--n_hidden_unit',
-        type=int,
-        default=500,
-        help='The number of hidden unit')
-    parser.add_argument(
-        '--n_hidden_layer',
-        type=int,
-        default=1,
-        help='The number of hidden unit')
-    parser.add_argument(
-        '--normalize_input',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='Whether normalize input.')
-    parser.add_argument(
-        '--standardization',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='')
-    parser.add_argument(
-        '--clipping',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='')
-    parser.add_argument(
-        '--use_user_vector',
-        type=str2bool,
-        default=True,
-        # default=False,
-        help='Whether use user vector.')
-    parser.add_argument(
-        '--learning_rate',
-        type=float,
-        default=1e-3,
-        help='learning rate for optimizer.')
-    parser.add_argument(
-        '--dropout_rate',
-        type=float,
-        default=0.0,
-        help='drop rate for dropout')
-    parser.add_argument('--seed', type=int, default=1, help='the seed')
-    parser.add_argument(
-        '--dataset_seed',
-        type=int,
-        # default=None,
-        default=1,
-        help='the seed for dataset. None 일 때는 seed 값을 따라갑니다.')
-    parser.add_argument(
-        '--epoch_early_stop',
-        type=int,
-        default=1000,
-        help='the number of epochation for early stop.')
-    parser.add_argument(
-        '--imputation',
-        type=str,
-        # default='zero',
-        # default='mean',
-        # default='median',
-        # default='dropout',
-        # default='knn',
-        # default='mice',
-        # default='soft-impute', # matrix
-        # default='miss-forest',
-        # default='gain',
-        # default='batch-norm',
-        default='layer-norm',
-        choices=[
-            'zero',
-            'mean',
-            'median',
-            'dropout',
-            'knn',
-            'mice',
-            'soft-impute',
-            # 'miss-forest',
-            'gain',
-            'batch-norm',
-            'layer-norm',
-        ],
-        help='')
-
-    parser.add_argument(
-        '--lambda_w',
-        type=float,
-        # default=0.0,
-        # default=0.0,
-        # default=500.0,
-        # default=500.0,
-        # default=80000.0,
-        # default=100000.0,
-        help='lambda for weight decay.', )
-    parser.add_argument(
-        '--optimizer',
-        type=str,
-        choices=['rprop', 'adam'],
-        default='adam',
-        help='Optimizer')
-    parser.add_argument(
-        '--filename', type=str, default='None', help='log filename')
-    parser.add_argument(
-        '--activation_fn',
-        type=str,
-        # default='relu',
-        default='sigmoid',
-        choices=[
-            'relu',
-            'sigmoid',
-            'identity',
-            'tanh',
-            'leaky_relu',
-            'relu6',
-            'elu',
-            'softplus',
-        ],
-        help='')
-    parser.add_argument(
-        '--K_denominator',
-        type=float,
-        default=500.0,
-        # default=52.44,
-        # default=None,
-        help='K')
-    parser.add_argument(
-        '--dataset',
-        type=str,
-        choices=[
-            Dataset.KIND_MOVIELENS_100k,
-            Dataset.KIND_MOVIELENS_1M,
-            Dataset.KIND_MOVIELENS_10M,
-        ],
-        default=Dataset.KIND_MOVIELENS_100k,
-        # default=Dataset.KIND_MOVIELENS_1M,
-        # default=Dataset.KIND_MOVIELENS_10M,
-        help='dataset')
-    parser.add_argument(
-        '--sparse_tensor',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='whether use sparse tensor.')
-    parser.add_argument(
-        '--save_weights',
-        type=str2bool,
-        # default=True,
-        default=False,
-        help='')
-    parser.add_argument(
-        '--n_batch',
-        type=int,
-        default=0,
-        # default=1000,
-        help='0 for full batch. integer for batch number.')
-
+    parser = argparse.ArgumentParser(description='AutoRec with Sparsity Normalization')
+    parser.add_argument('--dataset', type=str, default=Dataset.KIND_MOVIELENS_100k,
+                        choices=[Dataset.KIND_MOVIELENS_100k,
+                                 Dataset.KIND_MOVIELENS_1M,
+                                 Dataset.KIND_MOVIELENS_10M])
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--dataset_seed', type=int, default=1)
+    parser.add_argument('--max_epoch', type=int, default=100000)
+    parser.add_argument('--epoch_validation', type=int, default=1)
+    parser.add_argument('--epoch_early_stop', type=int, default=1000)
+    parser.add_argument('--n_hidden_unit', type=int, default=500)
+    parser.add_argument('--n_hidden_layer', type=int, default=1)
+    parser.add_argument('--learning_rate', type=float, default=1e-3)
+    parser.add_argument('--dropout_rate', type=float, default=0.0)
+    parser.add_argument('--lambda_w', type=float, default=500.0,
+                        help='L2 regularization coefficient')
+    parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'rprop'])
+    parser.add_argument('--activation_fn', type=str, default='sigmoid',
+                        choices=['relu', 'sigmoid', 'identity', 'tanh',
+                                 'leaky_relu', 'relu6', 'elu', 'softplus'])
+    parser.add_argument('--imputation', type=str, default='layer-norm',
+                        choices=IMPUTATION_CHOICES)
+    parser.add_argument('--normalize_input', type=str2bool, default=False,
+                        help='Sparsity Normalization 적용 여부')
+    parser.add_argument('--K_denominator', type=float, default=500.0,
+                        help='SN의 K 값 (normalize_input=True 시 사용)')
+    parser.add_argument('--use_user_vector', type=str2bool, default=True,
+                        help='True: user 기준, False: item 기준')
+    parser.add_argument('--sparse_tensor', type=str2bool, default=False)
+    parser.add_argument('--clipping', type=str2bool, default=False)
+    parser.add_argument('--standardization', type=str2bool, default=False)
+    parser.add_argument('--n_batch', type=int, default=0,
+                        help='0=full batch')
     args = parser.parse_args()
 
-    if args.n_batch == 0:
-        args.n_batch = None
-    elif args.n_batch < 0:
-        print('args.n_batch should not be negative.')
-        assert False
-
-    if args.dataset_seed is None:
-        args.dataset_seed = args.seed
+    args.n_batch = None if args.n_batch == 0 else args.n_batch
+    assert args.n_batch is None or args.n_batch > 0
 
     if args.sparse_tensor:
-        # RProp optimizer can be used only for dense tensor.
         assert args.optimizer != 'rprop'
         assert args.imputation == 'zero'
-
     if args.imputation != 'zero':
         assert not args.normalize_input
-
-    if not args.normalize_input:
-        assert args.K_denominator == 500
 
     _train(args)
 
